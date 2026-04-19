@@ -1,8 +1,8 @@
 name: CI
 
 on:
-  push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,6 +26,6 @@ jobs:
       - name: Distribution smoke
         run: bun run smoke:distribution
       - name: Release readiness dry run
-        run: bun run release:check
-      - name: Public artifact freshness
-        run: bun apps/cli/src/index.ts artifact verify --fresh
+        run: bun tooling/scripts/verify.ts
+      - name: Public artifact verification
+        run: bun apps/cli/src/index.ts artifact verify
