@@ -1,0 +1,59 @@
+# dependencies (bun install)
+node_modules
+
+# output
+out
+dist
+*.tgz
+
+# internal planning and historical implementation notes
+.planning/
+docs/archive/
+
+# code coverage
+coverage
+*.lcov
+
+# logs
+logs
+_.log
+*.log
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+.ruff_cache/
+
+# local ATLAS runtime config
+atlas.config.json
+atlas.config.yaml
+atlas.config.yml
+!atlas.config.example.json
+!atlas.config.example.yaml
+!atlas.config.example.yml
+
+# IntelliJ based IDEs
+.idea
+
+# Finder (MacOS) folder config
+.DS_Store
+.atlas
+
+.pi/
+.pi-lens/
+.codex
+.pi-loop.json.lock
+
+# temp/placeholders
+*.tmp
+*.temp
+.gitkeep

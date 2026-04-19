@@ -1,0 +1,93 @@
+{
+	"version": 1,
+	"cacheDir": "~/.moxel/atlas",
+	"corpusDbPath": "~/.moxel/atlas/corpus.db",
+	"logLevel": "info",
+	"server": {
+		"transport": "http",
+		"host": "127.0.0.1",
+		"port": 3711
+	},
+	"identity": {
+		"root": ".acme/knowledge",
+		"mcp": {
+			"name": "acme-knowledge",
+			"title": "Acme Knowledge MCP",
+			"resourcePrefix": "acme"
+		}
+	},
+	"repos": [
+		{
+			"repoId": "atlas",
+			"mode": "local-git",
+			"git": {
+				"remote": "file:///absolute/path/to/atlas",
+				"localPath": "~/.acme/knowledge/repos/atlas",
+				"ref": "main"
+			},
+			"workspace": {
+				"packageGlobs": [
+					"apps/*",
+					"packages/*"
+				],
+				"packageManifestFiles": [
+					"package.json"
+				]
+			},
+			"topology": [
+				{
+					"id": "repo-docs",
+					"kind": "repo-doc",
+					"match": {
+						"include": [
+							"docs/**/*.md"
+						],
+						"exclude": [
+							"docs/archive/**/*.md"
+						]
+					},
+					"ownership": {
+						"attachTo": "repo"
+					},
+					"authority": "canonical",
+					"priority": 10
+				}
+			]
+		}
+	],
+	"docs": {
+		"metadata": {
+			"rules": [
+				{
+					"id": "planning-internal",
+					"match": {
+						"include": [
+							".planning/**"
+						]
+					},
+					"metadata": {
+						"visibility": "internal",
+						"audience": [
+							"internal"
+						],
+						"purpose": [
+							"planning",
+							"implementation"
+						]
+					},
+					"priority": 100
+				}
+			],
+			"profiles": {
+				"public": {
+					"visibility": [
+						"public"
+					],
+					"audience": [
+						"consumer"
+					]
+				}
+			}
+		}
+	}
+}

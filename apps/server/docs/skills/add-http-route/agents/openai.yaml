@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add HTTP Route"
+  short_description: "Add Atlas server routes safely"
+  default_prompt: "Use $add-http-route to add or change an Atlas HTTP route with schemas, services, OpenAPI docs, and tests."

@@ -1,0 +1,10 @@
+{
+  "schema": "moxel-atlas-repo/v1",
+  "repoId": "github.com/moxellabs/atlas",
+  "host": "github.com",
+  "owner": "moxellabs",
+  "name": "atlas",
+  "ref": "master",
+  "createdAt": "2026-04-28T06:39:05.490Z",
+  "artifactPath": ".moxel/atlas"
+}

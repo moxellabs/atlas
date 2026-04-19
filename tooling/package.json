@@ -1,0 +1,19 @@
+{
+	"name": "@atlas/tooling",
+	"private": true,
+	"type": "module",
+	"license": "AGPL-3.0-or-later",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/moxellabs/atlas.git"
+	},
+	"homepage": "https://github.com/moxellabs/atlas#readme",
+	"bugs": {
+		"url": "https://github.com/moxellabs/atlas/issues"
+	},
+	"funding": {
+		"type": "github",
+		"url": "https://github.com/sponsors/moxellabs"
+	},
+	"description": "Private Atlas workspace package: @atlas/tooling."
+}

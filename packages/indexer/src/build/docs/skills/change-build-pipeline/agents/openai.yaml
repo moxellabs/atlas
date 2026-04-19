@@ -1,0 +1,4 @@
+interface:
+  display_name: "Change Build Pipeline"
+  short_description: "Change Atlas build pipelines safely"
+  default_prompt: "Use $change-build-pipeline to change Atlas indexer build behavior while preserving persistence, recovery, and tests."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Change Doc Classification"
+  short_description: "Change Atlas classification safely"
+  default_prompt: "Use $change-doc-classification to change Atlas document or skill classification with correct scopes, fallbacks, and tests."

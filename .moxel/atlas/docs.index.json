@@ -1,0 +1,1003 @@
+{
+  "schema": "moxel-atlas-docs-index/v1",
+  "repoId": "github.com/moxellabs/atlas",
+  "generatedAt": "2026-04-28T15:53:37.586Z",
+  "counts": {
+    "documents": 35,
+    "skills": 8,
+    "packages": 15,
+    "modules": 57
+  },
+  "documents": [
+    {
+      "path": "apps/cli/docs/index.md",
+      "docId": "doc_5488bf869375b804ed3cd682",
+      "title": "CLI App",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_bf94a374346c5cdd52ae58ea",
+      "description": "CLI command parsing, local config mutation, artifact workflows, runtime launchers, and inspection commands.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 100,
+      "profile": "public",
+      "contentHash": "c0d7ea40508ca44d32a4dc47eabdcee2c606b8bde8600a6e7d183a5db5d34936",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_bf94a374346c5cdd52ae58ea"
+        }
+      ]
+    },
+    {
+      "path": "apps/cli/docs/skills/add-cli-command/SKILL.md",
+      "docId": "doc_98906e8fbdccebff1d6679ca",
+      "title": "Add CLI Command",
+      "kind": "skill-doc",
+      "authority": "canonical",
+      "packageId": "pkg_bf94a374346c5cdd52ae58ea",
+      "skillId": "skill_4436778c959e2ee0844bc584",
+      "description": "Add or modify an Atlas CLI command. Use when an agent needs to change apps/cli command behavior, argument parsing, human or JSON output, exit codes, command help, config mutation workflows, sync/build/list/inspect/doctor/eval flows, or CLI tests.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "profile": "public",
+      "contentHash": "63e11f97640801079103f0fbeeaa16b69b4cfba132123c00926435711f6fc9e4",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "skill",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_bf94a374346c5cdd52ae58ea",
+          "skillId": "skill_4436778c959e2ee0844bc584"
+        }
+      ]
+    },
+    {
+      "path": "apps/server/docs/index.md",
+      "docId": "doc_11124f0ed6cd3bae8a805479",
+      "title": "Server App",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_6040b9d2d791d0970152c676",
+      "description": "HTTP server, route composition, OpenAPI, local runtime services, and MCP bridge.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 110,
+      "profile": "public",
+      "contentHash": "bb2dd61c1cb8923b9b1b38aa83c3b8e7e104bf4ffaca58e7d344d3f3867a4a7e",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_6040b9d2d791d0970152c676"
+        }
+      ]
+    },
+    {
+      "path": "apps/server/docs/skills/add-http-route/SKILL.md",
+      "docId": "doc_1851c67a6d5b09b702e0806a",
+      "title": "Add HTTP Route",
+      "kind": "skill-doc",
+      "authority": "canonical",
+      "packageId": "pkg_6040b9d2d791d0970152c676",
+      "skillId": "skill_e3e9f3519a662a767980827f",
+      "description": "Add or modify an Atlas server HTTP route. Use when an agent needs to change apps/server Elysia routes, schemas, services, presenters, OpenAPI docs, local mutation boundaries, error envelopes, sync/build/search/context/docs/skills/inspect endpoints, or server route tests.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "profile": "public",
+      "contentHash": "a7ef1a8430c0b858303d693190a6a6b3db0b99c87b8662babc71deb03e6f166d",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "skill",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_6040b9d2d791d0970152c676",
+          "skillId": "skill_e3e9f3519a662a767980827f"
+        }
+      ]
+    },
+    {
+      "path": "docs/architecture.md",
+      "docId": "doc_ae362e14d2c060720781c322",
+      "title": "Atlas Architecture",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "contentHash": "a3f40fc23704e9648671b53cbb0ee0be0c1490f3084980c8d77d364cd50b7749",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "docs/architecture/plan-white-label-artifacts-and-mcp.md",
+      "docId": "doc_34d3a31a455f4eeb3645e8e7",
+      "title": "White-Label Artifact Roots and MCP Identity",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "contentHash": "7fd7c943a126f5022a1cf926f955fc1a57baefbf44bfe03fd229b3c823b933f5",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "docs/configuration.md",
+      "docId": "doc_8d0e8cf4c147ff5876d01f45",
+      "title": "Configuration",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "description": "Configure Atlas identity roots, runtime paths, repository sources, hosts, profiles, and metadata rules.",
+      "audience": [
+        "consumer",
+        "contributor",
+        "maintainer"
+      ],
+      "purpose": [
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 20,
+      "contentHash": "9bf85d8b9f7354a0c666648886a90e6b518af5dd42976b2fd714daa5a2317baa",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "docs/enterprise-cli-mount.md",
+      "docId": "doc_ec67aa389bedb3dae8d8aa1a",
+      "title": "Enterprise CLI Mount",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "description": "Mount Atlas commands under an existing Commander CLI namespace.",
+      "audience": [
+        "consumer",
+        "maintainer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 55,
+      "contentHash": "f9886355e65d790284e8eee63284064987d652762e81287613c5c1dca74c2b69",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "docs/index.md",
+      "docId": "doc_1e63b89e569d61629a753c2f",
+      "title": "Atlas Documentation",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "description": "Start here for Atlas concepts, workflows, runtime surfaces, security, and self-indexing docs.",
+      "audience": [
+        "consumer",
+        "contributor",
+        "maintainer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 10,
+      "contentHash": "8160c230ae9ca1c7f1c7d4a32545d8353edc832459ba2af0b1b9f6d62cee3fa2",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "docs/ingestion-build-flow.md",
+      "docId": "doc_1d0895602737144988dc7aa4",
+      "title": "Ingestion And Build Flow",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "description": "Understand Atlas sync, build, artifact publishing, add-repo, local-only indexing, and adoption workflows.",
+      "audience": [
+        "consumer",
+        "contributor",
+        "maintainer"
+      ],
+      "purpose": [
+        "guide",
+        "workflow"
+      ],
+      "visibility": "public",
+      "order": 30,
+      "contentHash": "4be22ff0fa7656174190117d8f9437b226203322f5547f49d2bbd7e585c4f7c4",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "docs/prd/PRD-001-white-label-artifacts-and-mcp.md",
+      "docId": "doc_2ae2bafe386edab2fbed30fe",
+      "title": "White-Label Artifact Roots and MCP Identity",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "contentHash": "f7e5cd7f51501408509815e2fdcc94238d0367ea6fc694e621a29e590e6da3c1",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "docs/release.md",
+      "docId": "doc_5a676d9333c55fd1d5af5a00",
+      "title": "Release process",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "description": "Maintainer-only npm and GitHub release process for Atlas.",
+      "audience": [
+        "maintainer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "order": 12,
+      "contentHash": "6c3d4b8b6ea5d9d0e838137889459e97f3464d0c1844957071348ac5fbd56557",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "docs/retrieval-and-context.md",
+      "docId": "doc_d4c49c8c77e916c7a95c7f7f",
+      "title": "Retrieval And Context Planning",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "description": "Learn how Atlas searches, ranks, filters, and plans retrieval context from local public artifacts.",
+      "audience": [
+        "consumer",
+        "contributor",
+        "maintainer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 40,
+      "contentHash": "f3f96a689849d02a7d6d0a9c3d17e005c17e9ebd20385701b56f786c1cbd02cf",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "docs/runtime-surfaces.md",
+      "docId": "doc_e48251936fb867c18350042b",
+      "title": "Runtime Surfaces",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "description": "Map Atlas CLI, HTTP server, OpenAPI, MCP, and first-party skill surfaces.",
+      "audience": [
+        "consumer",
+        "contributor",
+        "maintainer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 50,
+      "contentHash": "0903658ab2f6b0ca720681597a881f57b6d1ad7f0eed35cf038b0cd066a8b37a",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "docs/security.md",
+      "docId": "doc_732979400e0464893d26fdb1",
+      "title": "Local-First Security",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "description": "Atlas local-first guarantees, credential handling rules, and adoption permission boundaries.",
+      "audience": [
+        "consumer",
+        "contributor",
+        "maintainer"
+      ],
+      "purpose": [
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 60,
+      "contentHash": "d2efccad175ea2dea71f12a860754b55dc008ed88cedab668c6cbd677e4a5aed",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "docs/self-indexing.md",
+      "docId": "doc_d9739bbd4a5a395e31e72fac",
+      "title": "Self-Indexing Atlas",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "description": "Build, verify, inspect, and consume Atlas public self-indexed artifact and first-party skills.",
+      "audience": [
+        "consumer",
+        "contributor",
+        "maintainer"
+      ],
+      "purpose": [
+        "workflow"
+      ],
+      "visibility": "public",
+      "order": 70,
+      "contentHash": "36a61f723f14fa308f62cb8897dff1621a1443a13c6a1d14753540957f35cad1",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "packages/compiler/docs/index.md",
+      "docId": "doc_91693ed2936dea5340835f0e",
+      "title": "Compiler Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_52ef0abfa284a71633749c0b",
+      "description": "Markdown, frontmatter, canonical document, section, code fragment, and skill metadata compilation.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 200,
+      "profile": "public",
+      "contentHash": "bcdd02e31f63b6df53138a6632e83568cd5230ea3547d5a51d7f68153ac05faa",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_52ef0abfa284a71633749c0b"
+        }
+      ]
+    },
+    {
+      "path": "packages/config/docs/index.md",
+      "docId": "doc_036f7f77092e0ad5cac2b4a9",
+      "title": "Config Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_994e088f673c59a5bd29e300",
+      "description": "Config schema loading, identity roots, runtime paths, host/source settings, and credential resolution.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 210,
+      "profile": "public",
+      "contentHash": "b3aa88d3bdb15144193690f8246c4e605d9aa689173a780f08159a4f6448274e",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_994e088f673c59a5bd29e300"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/docs/index.md",
+      "docId": "doc_3cef5ef79febf891bac48c62",
+      "title": "Core Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_6635f43a6576c6a52b170ecb",
+      "description": "Shared Atlas contracts, enums, IDs, source types, provenance, freshness, and deterministic utilities.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 220,
+      "profile": "public",
+      "contentHash": "7fb1795faf607cd851baae5355ebd84d8998a3eda977acf914fa4c07f35a05d2",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_6635f43a6576c6a52b170ecb"
+        }
+      ]
+    },
+    {
+      "path": "packages/indexer/docs/index.md",
+      "docId": "doc_9b79395b81bf284decbb767a",
+      "title": "Indexer Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_db1bc63ba6abd7035e4f8eda",
+      "description": "Source sync, topology discovery, compile/tokenize/store orchestration, artifact export, and build reports.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 230,
+      "profile": "public",
+      "contentHash": "f8703558075f7f2de8b74f66ec751bca339d6c6bfcb667f545f4b1df107cbf99",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_db1bc63ba6abd7035e4f8eda"
+        }
+      ]
+    },
+    {
+      "path": "packages/indexer/src/build/docs/skills/change-build-pipeline/SKILL.md",
+      "docId": "doc_0e73797f57f69024707c0d04",
+      "title": "Change Build Pipeline",
+      "kind": "skill-doc",
+      "authority": "canonical",
+      "packageId": "pkg_db1bc63ba6abd7035e4f8eda",
+      "moduleId": "mod_040558c98a27b15fea53d661",
+      "skillId": "skill_88a3e15923c197b15066a7fc",
+      "description": "Change Atlas indexer build pipeline behavior. Use when an agent needs to modify packages/indexer build, rebuild, persistence, incremental selection, summaries, skill extraction, tokenizer/compiler/store coordination, recovery semantics, build reports, or indexer integration tests.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "profile": "public",
+      "contentHash": "f87bcbbfb09337d6edf17fba5a21f8e7fbc2b30ca6a090f32919129e6ab62d95",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "skill",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_db1bc63ba6abd7035e4f8eda",
+          "moduleId": "mod_040558c98a27b15fea53d661",
+          "skillId": "skill_88a3e15923c197b15066a7fc"
+        }
+      ]
+    },
+    {
+      "path": "packages/mcp/docs/index.md",
+      "docId": "doc_efeecbe4666c328f44b6b8b6",
+      "title": "MCP Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_f09e3904238d52abefa5f789",
+      "description": "MCP tools, resources, prompts, transports, skill artifact access, and identity-aware aliases.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 240,
+      "profile": "public",
+      "contentHash": "6473322ddaf2b8e31ce95f83d0a32bf8c96fb5e0ed7407249ed722d7a68e2c76",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_f09e3904238d52abefa5f789"
+        }
+      ]
+    },
+    {
+      "path": "packages/mcp/src/tools/docs/skills/add-mcp-tool/SKILL.md",
+      "docId": "doc_0757b470e06231247064382d",
+      "title": "Add MCP Tool",
+      "kind": "skill-doc",
+      "authority": "canonical",
+      "packageId": "pkg_f09e3904238d52abefa5f789",
+      "moduleId": "mod_754061e5d9e38953dd87adcc",
+      "skillId": "skill_3e90922f500e2e5455f0e857",
+      "description": "Add or modify an Atlas MCP tool. Use when an agent needs to change packages/mcp tool schemas, executors, registration, structured results, tool exports, MCP tests, or the protocol surface over Atlas retrieval, store, freshness, docs, skills, and source diff capabilities.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "profile": "public",
+      "contentHash": "f2e28a06a95231c56a1a1d7e50dcea5c13a8dea04f3c6c41feee09a9a6948beb",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "skill",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_f09e3904238d52abefa5f789",
+          "moduleId": "mod_754061e5d9e38953dd87adcc",
+          "skillId": "skill_3e90922f500e2e5455f0e857"
+        }
+      ]
+    },
+    {
+      "path": "packages/retrieval/docs/index.md",
+      "docId": "doc_a532307d7b2832d8b27b61ad",
+      "title": "Retrieval Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_575cf354ce5c9c77bf8a3c4f",
+      "description": "Local corpus query classification, ranking, metadata filtering, and token-budgeted context planning.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 250,
+      "profile": "public",
+      "contentHash": "430b7b18706f0cd18b2960b4f077f303c8276bbe4d338c20bbccdd8c9873a80e",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_575cf354ce5c9c77bf8a3c4f"
+        }
+      ]
+    },
+    {
+      "path": "packages/source-ghes/docs/index.md",
+      "docId": "doc_d0162917708e563d7d50f2ca",
+      "title": "Source GHES Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_8c87f190a37de62dfcc588c6",
+      "description": "GitHub Enterprise Server REST source reads, artifact fetches, diagnostics, and credential-safe errors.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 260,
+      "profile": "public",
+      "contentHash": "283b3d434f24167fe0d783cc92771cfa41fe9cc3412042c5db05481d19d78f91",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_8c87f190a37de62dfcc588c6"
+        }
+      ]
+    },
+    {
+      "path": "packages/source-git/docs/index.md",
+      "docId": "doc_e8823a5aefc56669f40985dd",
+      "title": "Source Git Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_74b1cf73fdf9744887765f2f",
+      "description": "Local Git cache management, revision/file reads, sparse fetches, and diff normalization.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 270,
+      "profile": "public",
+      "contentHash": "514ac7de15c1347263a854923c09afd3799272b924f2e55f90a165f09302afa3",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_74b1cf73fdf9744887765f2f"
+        }
+      ]
+    },
+    {
+      "path": "packages/store/docs/index.md",
+      "docId": "doc_26e5de4fdf96d48d21eb7d6f",
+      "title": "Store Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_dced5e7ca00f81d277f8fb43",
+      "description": "SQLite corpus migrations, repositories, FTS/search rows, diagnostics, and local persistence.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 280,
+      "profile": "public",
+      "contentHash": "dd9feb218e2dcdcb8fc738216bec00af54a36110ca893221fa97fe8171b81cd6",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_dced5e7ca00f81d277f8fb43"
+        }
+      ]
+    },
+    {
+      "path": "packages/testkit/docs/index.md",
+      "docId": "doc_731b7933c46963505e68a1f4",
+      "title": "Testkit Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_13d295e4f46ffce7a38ddfef",
+      "description": "Deterministic fixtures, fake repositories, and evaluation helpers for Atlas tests.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 290,
+      "profile": "public",
+      "contentHash": "44db678efc27287c15d2921d7343ddab258744c348b8b08d1ca0cce53b9a2fb4",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_13d295e4f46ffce7a38ddfef"
+        }
+      ]
+    },
+    {
+      "path": "packages/tokenizer/docs/index.md",
+      "docId": "doc_cb29429fdbd3642ac02d6f29",
+      "title": "Tokenizer Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_7801cc65135e961b3bd775f3",
+      "description": "Exact token counting, budget validation, text splitting, overlap, and chunk construction.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 300,
+      "profile": "public",
+      "contentHash": "44461d92d4539dde34d36eac678c001984033a87c147f914eda0761cb4aee822",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_7801cc65135e961b3bd775f3"
+        }
+      ]
+    },
+    {
+      "path": "packages/topology/docs/index.md",
+      "docId": "doc_1f8763605194c9786ca4f4e3",
+      "title": "Topology Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_e31de698ac98ed3d50937090",
+      "description": "Workspace, package, module, doc, and skill classification from source paths and rules.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 310,
+      "profile": "public",
+      "contentHash": "8e3a5b8893080fbc53bde76e34cd6e6eda1b0c8e9956a400c8a04dee87a93b41",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_e31de698ac98ed3d50937090"
+        }
+      ]
+    },
+    {
+      "path": "packages/topology/src/classifiers/docs/skills/change-doc-classification/SKILL.md",
+      "docId": "doc_aa851203d132a00f48230e82",
+      "title": "Change Doc Classification",
+      "kind": "skill-doc",
+      "authority": "canonical",
+      "packageId": "pkg_e31de698ac98ed3d50937090",
+      "moduleId": "mod_7c4993a4d080c8b0203d1984",
+      "skillId": "skill_552092255ceef3cc6c5e294e",
+      "description": "Change Atlas document or skill classification. Use when an agent needs to modify packages/topology doc classification, skill classification, fallback docs behavior, topology rules, package/module/skill scope inference, authority selection, diagnostics, archive exclusion, or topology discovery tests.",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "profile": "public",
+      "contentHash": "2b954ca4a78f3cf025abcc36f24d845698e3f95a1350ec7ae38d4bd589c8a80e",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "skill",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_e31de698ac98ed3d50937090",
+          "moduleId": "mod_7c4993a4d080c8b0203d1984",
+          "skillId": "skill_552092255ceef3cc6c5e294e"
+        }
+      ]
+    },
+    {
+      "path": "README.md",
+      "docId": "doc_fc739ea7e38ce98759ebaa41",
+      "title": "Atlas",
+      "kind": "repo-doc",
+      "authority": "canonical",
+      "description": "Local-first documentation compiler, retrieval planner, and MCP/server runtime for multi-repo engineering docs.",
+      "audience": [
+        "consumer",
+        "contributor",
+        "maintainer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "order": 1,
+      "contentHash": "d8e65c44b1776465cf0d5aa163357789030fd061eb24b0a04aeaac5c9f3ff82f",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "skills/atlas-contributor/SKILL.md",
+      "docId": "doc_bd7302cb5a67d07adb5b4dfa",
+      "title": "Atlas Contributor",
+      "kind": "skill-doc",
+      "authority": "canonical",
+      "skillId": "skill_1d83c12ea8541c065fd171f9",
+      "description": "Contribute safely to the Atlas codebase. Use when an agent needs to add or change Atlas features, choose the right app/package/module boundary, preserve local-first behavior, update docs, or run the correct validation gates across CLI, server, indexer, MCP, retrieval, topology, compiler, tokenizer, store, source adapters, config, or core contracts.",
+      "audience": [
+        "contributor",
+        "maintainer"
+      ],
+      "purpose": [
+        "workflow"
+      ],
+      "visibility": "public",
+      "order": 120,
+      "contentHash": "1361005bf48db15843d2153a972ed53f19808c76c05789b6a91e8cf98681460c",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "skill",
+          "repoId": "github.com/moxellabs/atlas",
+          "skillId": "skill_1d83c12ea8541c065fd171f9"
+        }
+      ]
+    },
+    {
+      "path": "skills/document-codebase/SKILL.md",
+      "docId": "doc_454b76a0c89a8e31ccff82fb",
+      "title": "Document Codebase",
+      "kind": "skill-doc",
+      "authority": "canonical",
+      "skillId": "skill_a53837078681ed949d292c0e",
+      "description": "Analyze a software repository and create or update durable codebase documentation. Use when an agent needs to document a codebase, audit existing docs, add package/app/module docs, organize architecture or operations docs, prepare a repository for self-indexing or retrieval, or make targeted documentation updates without rewriting useful existing documentation.",
+      "audience": [
+        "contributor",
+        "maintainer"
+      ],
+      "purpose": [
+        "workflow"
+      ],
+      "visibility": "public",
+      "order": 100,
+      "contentHash": "6629d7b887940d84fb6e270d158e452a7ac751b68e9710ec94aca163ff466bb6",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "skill",
+          "repoId": "github.com/moxellabs/atlas",
+          "skillId": "skill_a53837078681ed949d292c0e"
+        }
+      ]
+    },
+    {
+      "path": "skills/skill-creator/SKILL.md",
+      "docId": "doc_9c5d9b5bb3926423853def62",
+      "title": "Skill Creator",
+      "kind": "skill-doc",
+      "authority": "canonical",
+      "skillId": "skill_c5171a5560ada6c737d9c638",
+      "description": "Research Atlas docs and source structure, recommend useful skills, discuss specs, and create approved skill assets.",
+      "audience": [
+        "contributor",
+        "maintainer"
+      ],
+      "purpose": [
+        "workflow"
+      ],
+      "visibility": "public",
+      "order": 110,
+      "contentHash": "05e72505af32c589628909d5d04b7e25bf5fb334713708ebdcdd2990215d3ddf",
+      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "skill",
+          "repoId": "github.com/moxellabs/atlas",
+          "skillId": "skill_c5171a5560ada6c737d9c638"
+        }
+      ]
+    }
+  ]
+}
