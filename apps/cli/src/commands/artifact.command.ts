@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
 	type ArtifactDiagnostic,
@@ -7,6 +8,7 @@ import {
 import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
+import { runProcess } from "../utils/node-runtime";
 import {
 	maybeRenderArtifactRootMigrationHint,
 	renderSuccess,
@@ -201,13 +203,12 @@ async function resolveCurrentHead(
 		? artifactDir.slice(0, -suffix.length - 1)
 		: cwd;
 	try {
-		const subprocess = Bun.spawn(["git", "-C", repoRoot, "rev-parse", "HEAD"], {
-			stdout: "pipe",
-			stderr: "pipe",
-		});
-		const [exitCode, stdout] = await Promise.all([
-			subprocess.exited,
-			Bun.readableStreamToText(subprocess.stdout),
+		const { exitCode, stdout } = await runProcess([
+			"git",
+			"-C",
+			repoRoot,
+			"rev-parse",
+			"HEAD",
 		]);
 		if (exitCode !== 0) return undefined;
 		const head = stdout.trim();
@@ -231,7 +232,7 @@ async function readArtifactIndexedRevision(
 ): Promise<string | undefined> {
 	try {
 		const manifest = JSON.parse(
-			await Bun.file(join(artifactDir, "manifest.json")).text(),
+			await readFile(join(artifactDir, "manifest.json"), "utf8"),
 		) as { indexedRevision?: unknown };
 		return typeof manifest.indexedRevision === "string"
 			? manifest.indexedRevision
@@ -247,20 +248,13 @@ async function onlyArtifactFilesChanged(
 	toRevision: string,
 	artifactRoot: string,
 ): Promise<boolean> {
-	const subprocess = Bun.spawn(
-		[
-			"git",
-			"-C",
-			repoRoot,
-			"diff",
-			"--name-only",
-			`${fromRevision}..${toRevision}`,
-		],
-		{ stdout: "pipe", stderr: "pipe" },
-	);
-	const [exitCode, stdout] = await Promise.all([
-		subprocess.exited,
-		Bun.readableStreamToText(subprocess.stdout),
+	const { exitCode, stdout } = await runProcess([
+		"git",
+		"-C",
+		repoRoot,
+		"diff",
+		"--name-only",
+		`${fromRevision}..${toRevision}`,
 	]);
 	if (exitCode !== 0) return false;
 	const changed = stdout

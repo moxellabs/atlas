@@ -1,4 +1,5 @@
 import type { FileEntry, PackageNode, WorkspaceConfig } from "@atlas/core";
+import { readFile } from "node:fs/promises";
 import { createPackageId } from "@atlas/core";
 import { join } from "node:path";
 
@@ -83,7 +84,7 @@ async function readPackageManifestName(rootPath: string, manifestPath: string): 
   }
 
   try {
-    const content = await Bun.file(join(rootPath, manifestPath)).text();
+    const content = await readFile(join(rootPath, manifestPath), "utf8");
     const parsed = JSON.parse(content) as { name?: unknown };
     return typeof parsed.name === "string" && parsed.name.trim().length > 0 ? parsed.name : undefined;
   } catch {

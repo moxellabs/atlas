@@ -1,7 +1,7 @@
 {
   "schema": "moxel-atlas-docs-index/v1",
   "repoId": "github.com/moxellabs/atlas",
-  "generatedAt": "2026-04-28T15:53:37.586Z",
+  "generatedAt": "2026-04-28T17:14:45.654Z",
   "counts": {
     "documents": 35,
     "skills": 8,
@@ -28,7 +28,7 @@
       "order": 100,
       "profile": "public",
       "contentHash": "c0d7ea40508ca44d32a4dc47eabdcee2c606b8bde8600a6e7d183a5db5d34936",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -57,7 +57,7 @@
       "visibility": "public",
       "profile": "public",
       "contentHash": "63e11f97640801079103f0fbeeaa16b69b4cfba132123c00926435711f6fc9e4",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -87,7 +87,7 @@
       "order": 110,
       "profile": "public",
       "contentHash": "bb2dd61c1cb8923b9b1b38aa83c3b8e7e104bf4ffaca58e7d344d3f3867a4a7e",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -116,7 +116,7 @@
       "visibility": "public",
       "profile": "public",
       "contentHash": "a7ef1a8430c0b858303d693190a6a6b3db0b99c87b8662babc71deb03e6f166d",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -142,7 +142,7 @@
       ],
       "visibility": "public",
       "contentHash": "a3f40fc23704e9648671b53cbb0ee0be0c1490f3084980c8d77d364cd50b7749",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -166,7 +166,7 @@
       ],
       "visibility": "public",
       "contentHash": "7fd7c943a126f5022a1cf926f955fc1a57baefbf44bfe03fd229b3c823b933f5",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -193,7 +193,7 @@
       "visibility": "public",
       "order": 20,
       "contentHash": "9bf85d8b9f7354a0c666648886a90e6b518af5dd42976b2fd714daa5a2317baa",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -220,7 +220,7 @@
       "visibility": "public",
       "order": 55,
       "contentHash": "f9886355e65d790284e8eee63284064987d652762e81287613c5c1dca74c2b69",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -248,7 +248,7 @@
       "visibility": "public",
       "order": 10,
       "contentHash": "8160c230ae9ca1c7f1c7d4a32545d8353edc832459ba2af0b1b9f6d62cee3fa2",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -276,7 +276,7 @@
       "visibility": "public",
       "order": 30,
       "contentHash": "4be22ff0fa7656174190117d8f9437b226203322f5547f49d2bbd7e585c4f7c4",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -300,7 +300,7 @@
       ],
       "visibility": "public",
       "contentHash": "f7e5cd7f51501408509815e2fdcc94238d0367ea6fc694e621a29e590e6da3c1",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -325,7 +325,7 @@
       "visibility": "public",
       "order": 12,
       "contentHash": "6c3d4b8b6ea5d9d0e838137889459e97f3464d0c1844957071348ac5fbd56557",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -353,7 +353,7 @@
       "visibility": "public",
       "order": 40,
       "contentHash": "f3f96a689849d02a7d6d0a9c3d17e005c17e9ebd20385701b56f786c1cbd02cf",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -381,7 +381,7 @@
       "visibility": "public",
       "order": 50,
       "contentHash": "0903658ab2f6b0ca720681597a881f57b6d1ad7f0eed35cf038b0cd066a8b37a",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -408,7 +408,7 @@
       "visibility": "public",
       "order": 60,
       "contentHash": "d2efccad175ea2dea71f12a860754b55dc008ed88cedab668c6cbd677e4a5aed",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -435,7 +435,7 @@
       "visibility": "public",
       "order": 70,
       "contentHash": "36a61f723f14fa308f62cb8897dff1621a1443a13c6a1d14753540957f35cad1",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -463,7 +463,7 @@
       "order": 200,
       "profile": "public",
       "contentHash": "bcdd02e31f63b6df53138a6632e83568cd5230ea3547d5a51d7f68153ac05faa",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -492,7 +492,7 @@
       "order": 210,
       "profile": "public",
       "contentHash": "b3aa88d3bdb15144193690f8246c4e605d9aa689173a780f08159a4f6448274e",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -521,7 +521,7 @@
       "order": 220,
       "profile": "public",
       "contentHash": "7fb1795faf607cd851baae5355ebd84d8998a3eda977acf914fa4c07f35a05d2",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -550,7 +550,7 @@
       "order": 230,
       "profile": "public",
       "contentHash": "f8703558075f7f2de8b74f66ec751bca339d6c6bfcb667f545f4b1df107cbf99",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -580,7 +580,7 @@
       "visibility": "public",
       "profile": "public",
       "contentHash": "f87bcbbfb09337d6edf17fba5a21f8e7fbc2b30ca6a090f32919129e6ab62d95",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -611,7 +611,7 @@
       "order": 240,
       "profile": "public",
       "contentHash": "6473322ddaf2b8e31ce95f83d0a32bf8c96fb5e0ed7407249ed722d7a68e2c76",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -641,7 +641,7 @@
       "visibility": "public",
       "profile": "public",
       "contentHash": "f2e28a06a95231c56a1a1d7e50dcea5c13a8dea04f3c6c41feee09a9a6948beb",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -672,7 +672,7 @@
       "order": 250,
       "profile": "public",
       "contentHash": "430b7b18706f0cd18b2960b4f077f303c8276bbe4d338c20bbccdd8c9873a80e",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -701,7 +701,7 @@
       "order": 260,
       "profile": "public",
       "contentHash": "283b3d434f24167fe0d783cc92771cfa41fe9cc3412042c5db05481d19d78f91",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -730,7 +730,7 @@
       "order": 270,
       "profile": "public",
       "contentHash": "514ac7de15c1347263a854923c09afd3799272b924f2e55f90a165f09302afa3",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -759,7 +759,7 @@
       "order": 280,
       "profile": "public",
       "contentHash": "dd9feb218e2dcdcb8fc738216bec00af54a36110ca893221fa97fe8171b81cd6",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -788,7 +788,7 @@
       "order": 290,
       "profile": "public",
       "contentHash": "44db678efc27287c15d2921d7343ddab258744c348b8b08d1ca0cce53b9a2fb4",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -817,7 +817,7 @@
       "order": 300,
       "profile": "public",
       "contentHash": "44461d92d4539dde34d36eac678c001984033a87c147f914eda0761cb4aee822",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -846,7 +846,7 @@
       "order": 310,
       "profile": "public",
       "contentHash": "8e3a5b8893080fbc53bde76e34cd6e6eda1b0c8e9956a400c8a04dee87a93b41",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -876,7 +876,7 @@
       "visibility": "public",
       "profile": "public",
       "contentHash": "2b954ca4a78f3cf025abcc36f24d845698e3f95a1350ec7ae38d4bd589c8a80e",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -906,7 +906,7 @@
       "visibility": "public",
       "order": 1,
       "contentHash": "d8e65c44b1776465cf0d5aa163357789030fd061eb24b0a04aeaac5c9f3ff82f",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -933,7 +933,7 @@
       "visibility": "public",
       "order": 120,
       "contentHash": "1361005bf48db15843d2153a972ed53f19808c76c05789b6a91e8cf98681460c",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -961,7 +961,7 @@
       "visibility": "public",
       "order": 100,
       "contentHash": "6629d7b887940d84fb6e270d158e452a7ac751b68e9710ec94aca163ff466bb6",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {
@@ -989,7 +989,7 @@
       "visibility": "public",
       "order": 110,
       "contentHash": "05e72505af32c589628909d5d04b7e25bf5fb334713708ebdcdd2990215d3ddf",
-      "sourceVersion": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+      "sourceVersion": "c56f3bdf840148ccc625682259f7f7f038a4301d",
       "tags": [],
       "scopes": [
         {

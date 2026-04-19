@@ -22,6 +22,7 @@ import {
 } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
+import { fileExists, runProcess } from "../utils/node-runtime";
 import {
 	loadDependenciesFromGlobal,
 	maybeRenderArtifactRootMigrationHint,
@@ -382,7 +383,7 @@ async function findRepoArtifactMetadata(
 	});
 	const artifactDir = artifactRoot.artifactDir;
 	const path = join(artifactDir, REPO_METADATA_FILE);
-	if (!(await Bun.file(path).exists())) {
+	if (!(await fileExists(path))) {
 		if (migrationHint !== undefined) {
 			throw new CliError(migrationHint, {
 				code: "CLI_ARTIFACT_METADATA_NOT_FOUND",
@@ -410,17 +411,7 @@ async function gitOutput(
 	args: readonly string[],
 ): Promise<string | undefined> {
 	try {
-		const subprocess = Bun.spawn(["git", ...args], {
-			cwd,
-			stdin: "ignore",
-			stdout: "pipe",
-			stderr: "pipe",
-		});
-		const [exitCode, stdout] = await Promise.all([
-			subprocess.exited,
-			Bun.readableStreamToText(subprocess.stdout),
-			Bun.readableStreamToText(subprocess.stderr),
-		]);
+		const { exitCode, stdout } = await runProcess(["git", ...args], { cwd });
 		if (exitCode !== 0) return undefined;
 		const output = stdout.trim();
 		return output.length > 0 ? output : undefined;

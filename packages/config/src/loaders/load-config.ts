@@ -1,3 +1,4 @@
+import { access, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, normalize, resolve } from "node:path";
 
@@ -123,7 +124,8 @@ const CONFIG_FILE_NAMES = [
 
 const fileExists = async (filePath: string): Promise<boolean> => {
 	try {
-		return await Bun.file(filePath).exists();
+		await access(filePath);
+		return true;
 	} catch {
 		return false;
 	}
@@ -204,7 +206,7 @@ const resolveConfigPath = async (
 
 const readConfigFile = async (configPath: string): Promise<string> => {
 	try {
-		return await Bun.file(configPath).text();
+		return await readFile(configPath, "utf8");
 	} catch (error) {
 		throw new AtlasConfigReadError(configPath, error);
 	}
@@ -212,7 +214,7 @@ const readConfigFile = async (configPath: string): Promise<string> => {
 
 const readJsonConfigFile = async (configPath: string): Promise<unknown> => {
 	try {
-		return await Bun.file(configPath).json();
+		return JSON.parse(await readFile(configPath, "utf8"));
 	} catch (error) {
 		throw new AtlasConfigParseError(configPath, error);
 	}

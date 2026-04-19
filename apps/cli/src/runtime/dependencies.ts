@@ -21,6 +21,7 @@ import { openStore } from "@atlas/store";
 
 import { loadServerEnv } from "../../../server/src/env";
 import { startAtlasServer } from "../../../server/src/start-server";
+import { fileExists } from "../utils/node-runtime";
 import type { AtlasCliDependencies } from "./types";
 
 /** Loads the shared CLI dependency graph from config and local runtime state. */
@@ -45,7 +46,7 @@ export async function buildCliDependencies(
 				: identity.runtimeRoot,
 			DEFAULT_MOXEL_ATLAS_CONFIG_RELATIVE_PATH,
 		);
-		if (!(await Bun.file(defaultConfigPath).exists())) throw error;
+		if (!(await fileExists(defaultConfigPath))) throw error;
 		config = await loadConfig({ ...options, configPath: defaultConfigPath });
 	}
 	const db = openStore({ path: config.config.corpusDbPath, migrate: true });
@@ -93,7 +94,7 @@ export async function buildCliDependencies(
 				return startAtlasServer({
 					env: {
 						...loadServerEnv({
-							...Bun.env,
+							...process.env,
 							ATLAS_HOST: startOptions.host,
 							ATLAS_PORT:
 								startOptions.port === undefined

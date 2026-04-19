@@ -48,7 +48,7 @@ const serverEnvSchema = z.object({
 });
 
 /** Loads server-process env from Bun's already-loaded environment. */
-export function loadServerEnv(env: NodeJS.ProcessEnv = Bun.env): ServerEnv {
+export function loadServerEnv(env: NodeJS.ProcessEnv = process.env): ServerEnv {
   const parsed = serverEnvSchema.parse(env);
   return {
     host: parsed.ATLAS_HOST ?? DEFAULT_HOST,

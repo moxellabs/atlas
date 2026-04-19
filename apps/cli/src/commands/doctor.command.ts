@@ -15,6 +15,7 @@ import { openStore } from "@atlas/store";
 
 import { loadServerEnv } from "../../../server/src/env";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
+import { runProcess } from "../utils/node-runtime";
 import { readArgvString, renderSuccess } from "./shared";
 
 /** Runs local readiness and dependency diagnostics. */
@@ -216,13 +217,7 @@ async function cacheDirectoryCheck(cacheDir: string): Promise<{
 
 async function checkGit(): Promise<{ ok: boolean; message: string }> {
 	try {
-		const process = Bun.spawn(["git", "--version"], {
-			stdout: "pipe",
-			stderr: "pipe",
-		});
-		const exitCode = await process.exited;
-		const stdout = await new Response(process.stdout).text();
-		const stderr = await new Response(process.stderr).text();
+		const { exitCode, stdout, stderr } = await runProcess(["git", "--version"]);
 		return exitCode === 0
 			? { ok: true, message: stdout.trim() }
 			: { ok: false, message: stderr.trim() || "git --version failed." };

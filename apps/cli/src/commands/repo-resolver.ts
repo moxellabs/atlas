@@ -6,9 +6,9 @@ import {
 	defaultHost,
 	sortHostsByPriority,
 } from "@atlas/config";
-import { $ } from "bun";
 import type { CliCommandContext } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
+import { runProcess } from "../utils/node-runtime";
 
 export type ParsedRepoInput =
 	| {
@@ -163,11 +163,15 @@ export async function resolveRepoInput(
 		const localPath = resolve(context.cwd, parsed.path);
 		let remote = "";
 		try {
-			remote = (
-				await $`git -C ${localPath} config --get remote.origin.url`
-					.quiet()
-					.text()
-			).trim();
+			const result = await runProcess([
+				"git",
+				"-C",
+				localPath,
+				"config",
+				"--get",
+				"remote.origin.url",
+			]);
+			remote = result.exitCode === 0 ? result.stdout.trim() : "";
 		} catch {}
 		if (!remote) {
 			const metadata = await readLocalArtifactMetadata(localPath);

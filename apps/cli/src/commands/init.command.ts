@@ -14,6 +14,7 @@ import {
 } from "../runtime/dependencies";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
+import { fileExists, runProcess } from "../utils/node-runtime";
 import { displayPath, parentDir, resolveCliPath } from "../utils/paths";
 import {
 	appendRepoConfig,
@@ -81,7 +82,7 @@ async function runRepoArtifactInitCommand(
 	});
 	const artifactDir = artifactRoot.artifactDir;
 	const metadataPath = join(artifactDir, REPO_METADATA_FILE);
-	if (!force && (await Bun.file(metadataPath).exists())) {
+	if (!force && (await fileExists(metadataPath))) {
 		throw new CliError(`Artifact metadata already exists at ${metadataPath}.`, {
 			code: "CLI_ARTIFACT_INIT_EXISTS",
 			exitCode: EXIT_INPUT_ERROR,
@@ -151,7 +152,7 @@ async function runSetupCommand(
 					env: identityEnv,
 					configPath: explicitConfigPath,
 				});
-	if (await Bun.file(configPath).exists()) {
+	if (await fileExists(configPath)) {
 		throw new CliError(`Config already exists at ${configPath}.`, {
 			code: "CLI_CONFIG_EXISTS",
 			exitCode: EXIT_INPUT_ERROR,
@@ -271,17 +272,7 @@ async function gitOutput(
 	args: readonly string[],
 ): Promise<string | undefined> {
 	try {
-		const subprocess = Bun.spawn(["git", ...args], {
-			cwd,
-			stdin: "ignore",
-			stdout: "pipe",
-			stderr: "pipe",
-		});
-		const [exitCode, stdout] = await Promise.all([
-			subprocess.exited,
-			Bun.readableStreamToText(subprocess.stdout),
-			Bun.readableStreamToText(subprocess.stderr),
-		]);
+		const { exitCode, stdout } = await runProcess(["git", ...args], { cwd });
 		if (exitCode !== 0) return undefined;
 		const output = stdout.trim();
 		return output.length > 0 ? output : undefined;

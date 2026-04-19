@@ -1,4 +1,4 @@
-import { chmod, mkdir, rm } from "node:fs/promises";
+import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 
 const distDir = "dist";
 const binDir = "bin";
@@ -18,7 +18,7 @@ for (const bundle of bundles) {
 	const build = await Bun.build({
 		entrypoints: [bundle.entry],
 		outdir: distDir,
-		target: "bun",
+		target: "node",
 		format: "esm",
 		naming: `${bundle.name}.js`,
 		splitting: false,
@@ -41,19 +41,23 @@ for (const bundle of bundles) {
 		);
 		for (const log of build.logs) console.warn(log);
 	}
-	if (!(await Bun.file(bundle.output).exists())) {
+	try {
+		await import("node:fs/promises").then(({ access }) =>
+			access(bundle.output),
+		);
+	} catch {
 		throw new Error(`Expected package bundle missing: ${bundle.output}`);
 	}
 }
 
-await Bun.write(
+await writeFile(
 	"dist/schema.sql",
-	Bun.file("packages/store/src/db/schema.sql"),
+	await readFile("packages/store/src/db/schema.sql"),
 );
 await mkdir(binDir, { recursive: true });
-await Bun.write(
+await writeFile(
 	"bin/atlas",
-	"#!/usr/bin/env bun\nimport '../dist/atlas.js';\n",
+	"#!/usr/bin/env node\nimport '../dist/atlas.js';\n",
 );
 await chmod("bin/atlas", 0o755);
 

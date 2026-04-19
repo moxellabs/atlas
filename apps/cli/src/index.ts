@@ -36,7 +36,7 @@ export type Runner = (context: CliCommandContext) => Promise<CliCommandResult>;
 
 /** Runs Atlas CLI against provided argv tokens. */
 export async function runCli(
-	argv: readonly string[] = Bun.argv.slice(2),
+	argv: readonly string[] = process.argv.slice(2),
 	streams: Partial<
 		Pick<CliCommandContext, "stdin" | "stdout" | "stderr" | "env">
 	> = {},
@@ -45,7 +45,7 @@ export async function runCli(
 		stdin: streams.stdin ?? process.stdin,
 		stdout: streams.stdout ?? process.stdout,
 		stderr: streams.stderr ?? process.stderr,
-		env: streams.env ?? Bun.env,
+		env: streams.env ?? process.env,
 		cwdFallback: process.cwd(),
 	};
 	const json = argv.includes("--json");
