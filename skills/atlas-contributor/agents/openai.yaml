@@ -1,0 +1,4 @@
+interface:
+  display_name: "Atlas Contributor"
+  short_description: "Contribute safely to Atlas"
+  default_prompt: "Use $atlas-contributor to plan and implement an Atlas codebase change with the right package boundaries and validation gates."

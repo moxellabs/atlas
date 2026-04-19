@@ -1,0 +1,2 @@
+logLevel = "warn"
+preload = ["./tooling/scripts/bootstrap.ts"]

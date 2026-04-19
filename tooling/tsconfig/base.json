@@ -1,0 +1,32 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true,
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"allowJs": false,
+		"verbatimModuleSyntax": true,
+		"ignoreDeprecations": "6.0",
+		"types": ["bun"],
+		"baseUrl": "../..",
+		"paths": {
+			"@atlas/config": ["packages/config/src/index.ts"],
+			"@atlas/core": ["packages/core/src/index.ts"],
+			"@atlas/eval": ["packages/eval/src/index.ts"],
+			"@atlas/source-git": ["packages/source-git/src/index.ts"],
+			"@atlas/source-ghes": ["packages/source-ghes/src/index.ts"],
+			"@atlas/topology": ["packages/topology/src/index.ts"],
+			"@atlas/compiler": ["packages/compiler/src/index.ts"],
+			"@atlas/tokenizer": ["packages/tokenizer/src/index.ts"],
+			"@atlas/store": ["packages/store/src/index.ts"],
+			"@atlas/indexer": ["packages/indexer/src/index.ts"],
+			"@atlas/retrieval": ["packages/retrieval/src/index.ts"],
+			"@atlas/mcp": ["packages/mcp/src/index.ts"],
+			"@atlas/testkit": ["packages/testkit/src/index.ts"]
+		}
+	}
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Document Codebase"
+  short_description: "Create or update codebase documentation"
+  default_prompt: "Use $document-codebase to analyze this repository and create targeted package, app, module, and architecture documentation."

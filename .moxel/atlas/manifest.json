@@ -1,0 +1,28 @@
+{
+  "schema": "moxel-atlas-artifact/v1",
+  "repoId": "github.com/moxellabs/atlas",
+  "host": "github.com",
+  "owner": "moxellabs",
+  "name": "atlas",
+  "ref": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+  "indexedRevision": "5fdc03512ecc88b1468c7c45444a65806cec9da6",
+  "createdAt": "2026-04-28T15:53:37.582Z",
+  "atlasVersion": "0.0.0",
+  "format": {
+    "version": 1,
+    "files": [
+      "manifest.json",
+      "corpus.db",
+      "checksums.json",
+      "docs.index.json"
+    ],
+    "corpusDbSchemaVersion": 1
+  },
+  "profiles": {
+    "default": "public",
+    "available": [
+      "public"
+    ],
+    "applied": "public"
+  }
+}

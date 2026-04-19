@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add CLI Command"
+  short_description: "Add Atlas CLI commands safely"
+  default_prompt: "Use $add-cli-command to add or change an Atlas CLI command with correct parsing, output, errors, and tests."

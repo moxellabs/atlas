@@ -1,0 +1,11 @@
+.planning/
+.pi/
+.git/
+.github/
+.cache/
+node_modules/
+docs/archive/
+**/*.test.ts
+**/*.spec.ts
+**/__tests__/
+*.tgz
