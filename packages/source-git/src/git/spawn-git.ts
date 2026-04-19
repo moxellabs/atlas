@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+
 import { GitCommandFailedError, GitCommandTimeoutError, GitExecutableNotFoundError } from "./git-errors";
 
 /** Structured output captured from a Git subprocess invocation. */
@@ -25,40 +27,71 @@ export interface SpawnGitOptions {
 }
 
 /**
- * Runs Git with Bun's subprocess API and returns captured text output without
+ * Runs Git with Node subprocess APIs and returns captured text output without
  * interpreting Git-specific business semantics.
  */
 export async function spawnGit(options: SpawnGitOptions): Promise<GitCommandResult> {
   const command = ["git", ...options.args];
 
-  let subprocess: Bun.Subprocess<"ignore", "pipe", "pipe">;
   try {
-    subprocess = Bun.spawn(command, {
+    const { stdout, stderr } = await execFileText("git", options.args, {
       cwd: options.cwd,
-      stdin: "ignore",
-      stdout: "pipe",
-      stderr: "pipe"
+      timeoutMs: options.timeoutMs
     });
+    return { command, cwd: options.cwd, exitCode: 0, stdout, stderr };
   } catch (cause) {
+    if (cause instanceof GitCommandTimeoutError) throw cause;
     if (isExecutableMissingError(cause)) {
       throw new GitExecutableNotFoundError({ command, localPath: options.cwd, cause });
     }
+    if (isExecFileError(cause)) {
+      return {
+        command,
+        cwd: options.cwd,
+        exitCode: typeof cause.code === "number" ? cause.code : 1,
+        stdout: String(cause.stdout ?? ""),
+        stderr: String(cause.stderr ?? "")
+      };
+    }
     throw new GitCommandFailedError({ command, localPath: options.cwd, cause });
   }
+}
 
-  const stdoutPromise = Bun.readableStreamToText(subprocess.stdout);
-  const stderrPromise = Bun.readableStreamToText(subprocess.stderr);
-  const exitPromise = waitForExit(subprocess, command, options);
+function execFileText(
+  file: string,
+  args: readonly string[],
+  options: { cwd: string; timeoutMs?: number | undefined }
+): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = execFile(
+      file,
+      [...args],
+      { cwd: options.cwd, encoding: "utf8", timeout: options.timeoutMs },
+      (error, stdout, stderr) => {
+        if (error) {
+          if ((error as NodeJS.ErrnoException).code === "ETIMEDOUT") {
+            reject(
+              new GitCommandTimeoutError({
+                command: [file, ...args],
+                localPath: options.cwd,
+                timeoutMs: options.timeoutMs
+              })
+            );
+            return;
+          }
+          Object.assign(error, { stdout, stderr });
+          reject(error);
+          return;
+        }
+        resolve({ stdout, stderr });
+      }
+    );
+    child.stdin?.end();
+  });
+}
 
-  const [exitCode, stdout, stderr] = await Promise.all([exitPromise, stdoutPromise, stderrPromise]);
-
-  return {
-    command,
-    cwd: options.cwd,
-    exitCode,
-    stdout,
-    stderr
-  };
+function isExecFileError(cause: unknown): cause is Error & { code?: unknown; stdout?: unknown; stderr?: unknown } {
+  return typeof cause === "object" && cause !== null && ("stdout" in cause || "stderr" in cause || "code" in cause);
 }
 
 /**
@@ -77,39 +110,6 @@ export async function spawnGitOrThrow(options: SpawnGitOptions): Promise<GitComm
     });
   }
   return result;
-}
-
-async function waitForExit(
-  subprocess: Bun.Subprocess<"ignore", "pipe", "pipe">,
-  command: string[],
-  options: SpawnGitOptions
-): Promise<number> {
-  if (!options.timeoutMs) {
-    return subprocess.exited;
-  }
-
-  let timeout: Timer | undefined;
-  try {
-    return await Promise.race([
-      subprocess.exited,
-      new Promise<number>((_, reject) => {
-        timeout = setTimeout(() => {
-          subprocess.kill();
-          reject(
-            new GitCommandTimeoutError({
-              command,
-              localPath: options.cwd,
-              timeoutMs: options.timeoutMs
-            })
-          );
-        }, options.timeoutMs);
-      })
-    ]);
-  } finally {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-  }
 }
 
 function isExecutableMissingError(cause: unknown): boolean {

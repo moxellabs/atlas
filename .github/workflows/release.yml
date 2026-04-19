@@ -58,17 +58,9 @@ jobs:
       - name: Distribution smoke
         run: bun run smoke:distribution
       - name: Release readiness dry run
-        run: bun tooling/scripts/verify.ts
+        run: bun run release:check
       - name: Public artifact freshness
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git rev-parse HEAD^ >/dev/null 2>&1; then
-            bun apps/cli/src/index.ts artifact verify --fresh
-          else
-            echo "Skipping freshness check for single-commit clean release history."
-            bun apps/cli/src/index.ts artifact verify
-          fi
+        run: bun apps/cli/src/index.ts artifact verify --fresh
 
   publish:
     runs-on: ubuntu-latest

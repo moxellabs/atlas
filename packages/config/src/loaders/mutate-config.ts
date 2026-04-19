@@ -1,4 +1,4 @@
-import { mkdir, rename } from "node:fs/promises";
+import { access, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
@@ -53,13 +53,13 @@ export async function mutateAtlasConfigFile(
 	format: "json" | "yaml";
 }> {
 	const targetPath = await resolveAtlasConfigTarget(options);
-	const existing = await Bun.file(targetPath).exists();
+	const existing = await fileExists(targetPath);
 	const format = targetPath.endsWith(".json") ? "json" : "yaml";
 	const current = existing
 		? atlasConfigSchema.parse(
 				format === "json"
-					? await Bun.file(targetPath).json()
-					: (parseYaml(await Bun.file(targetPath).text()) as unknown),
+					? JSON.parse(await readFile(targetPath, "utf8"))
+					: (parseYaml(await readFile(targetPath, "utf8")) as unknown),
 			)
 		: (options.createDefault ?? buildDefaultConfig());
 	const next = atlasConfigSchema.parse(mutate(current));
@@ -68,11 +68,20 @@ export async function mutateAtlasConfigFile(
 			? `${JSON.stringify(next, null, 2)}\n`
 			: stringifyYaml(next);
 	await mkdir(dirname(targetPath), { recursive: true });
-	await Bun.write(`${targetPath}.tmp`, serialized);
+	await writeFile(`${targetPath}.tmp`, serialized);
 	await rename(`${targetPath}.tmp`, targetPath);
 	return {
 		configPath: targetPath,
 		config: next,
 		format,
 	};
+}
+
+async function fileExists(path: string): Promise<boolean> {
+	try {
+		await access(path);
+		return true;
+	} catch {
+		return false;
+	}
 }

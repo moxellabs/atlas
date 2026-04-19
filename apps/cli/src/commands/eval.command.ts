@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import {
 	type AtlasEvalDataset,
 	type AtlasMcpAdoptionDataset,
@@ -95,7 +96,7 @@ export async function runEvalCommand(
 async function readDataset(path: string): Promise<AtlasEvalDataset> {
 	let raw: unknown;
 	try {
-		raw = await Bun.file(path).json();
+		raw = JSON.parse(await readFile(path, "utf8"));
 	} catch (error) {
 		throw new CliError(`Failed to read eval dataset: ${path}.`, {
 			code: "CLI_EVAL_DATASET_READ_FAILED",
@@ -111,7 +112,7 @@ async function readMcpAdoptionDataset(
 ): Promise<AtlasMcpAdoptionDataset> {
 	let raw: unknown;
 	try {
-		raw = await Bun.file(path).json();
+		raw = JSON.parse(await readFile(path, "utf8"));
 	} catch (error) {
 		throw new CliError(`Failed to read eval dataset: ${path}.`, {
 			code: "CLI_EVAL_DATASET_READ_FAILED",
@@ -130,7 +131,7 @@ async function readMcpAdoptionTrace(
 	}
 	let raw: unknown;
 	try {
-		raw = await Bun.file(path).json();
+		raw = JSON.parse(await readFile(path, "utf8"));
 	} catch (error) {
 		throw new CliError(`Failed to read eval trace: ${path}.`, {
 			code: "CLI_EVAL_TRACE_READ_FAILED",

@@ -28,7 +28,7 @@ export function createAtlasCommand(config: AtlasMountConfig): Command {
 		stdin: process.stdin,
 		stdout: process.stdout,
 		stderr: process.stderr,
-		env: Bun.env,
+		env: process.env,
 		cwdFallback: process.cwd(),
 	};
 	return createAtlasProgram(runtime, {

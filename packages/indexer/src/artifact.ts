@@ -412,6 +412,13 @@ export async function exportCorpusDbSnapshot(
 	await rm(`${targetDbPath}-wal`, { force: true });
 	await rm(`${targetDbPath}-shm`, { force: true });
 	await rm(`${targetDbPath}-journal`, { force: true });
+	let checkpointDb: AtlasStoreClient | undefined;
+	try {
+		checkpointDb = openStore({ path: sourceDbPath, migrate: false });
+		checkpointDb.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+	} finally {
+		checkpointDb?.close();
+	}
 	await copyFile(sourceDbPath, targetDbPath);
 	await rm(`${targetDbPath}-wal`, { force: true });
 	await rm(`${targetDbPath}-shm`, { force: true });

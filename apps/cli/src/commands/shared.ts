@@ -43,6 +43,7 @@ import {
 	exitCodeForReport,
 	summarizeReport,
 } from "../utils/errors";
+import { runProcess } from "../utils/node-runtime";
 import { parentDir, resolveCliPath } from "../utils/paths";
 import {
 	type TopologyTemplate,
@@ -506,12 +507,14 @@ export async function listRepoMetadata(
 	atlasHome: string,
 ): Promise<RepoMetadata[]> {
 	const root = join(atlasHome, DEFAULT_MOXEL_ATLAS_REPOS_RELATIVE_PATH);
-	const proc = Bun.spawn(["find", root, "-name", "repo.json", "-type", "f"], {
-		stdout: "pipe",
-		stderr: "pipe",
-	});
-	await proc.exited;
-	const output = await Bun.readableStreamToText(proc.stdout);
+	const { stdout: output } = await runProcess([
+		"find",
+		root,
+		"-name",
+		"repo.json",
+		"-type",
+		"f",
+	]);
 	const metadata: RepoMetadata[] = [];
 	for (const path of output.split("\n").filter(Boolean)) {
 		metadata.push(await readRepoMetadata(path));
@@ -620,17 +623,7 @@ async function gitOutput(
 	args: readonly string[],
 ): Promise<string | undefined> {
 	try {
-		const subprocess = Bun.spawn(["git", ...args], {
-			cwd,
-			stdin: "ignore",
-			stdout: "pipe",
-			stderr: "pipe",
-		});
-		const [exitCode, stdout] = await Promise.all([
-			subprocess.exited,
-			Bun.readableStreamToText(subprocess.stdout),
-			Bun.readableStreamToText(subprocess.stderr),
-		]);
+		const { exitCode, stdout } = await runProcess(["git", ...args], { cwd });
 		if (exitCode !== 0) {
 			return undefined;
 		}
