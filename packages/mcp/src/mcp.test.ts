@@ -28,6 +28,7 @@ import {
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 
+import * as publicMcp from "./index";
 import { answerFromLocalDocsPrompt } from "./prompts/answer-from-local-docs.prompt";
 import { compareDocsPrompt } from "./prompts/compare-docs.prompt";
 import { onboardToRepoPrompt } from "./prompts/onboard-to-repo.prompt";
@@ -91,6 +92,13 @@ const relatedSectionId = createSectionId({
 });
 
 describe("mcp package", () => {
+	test("public barrel exports first-party skill MCP surface", () => {
+		expect(publicMcp.USE_SKILL_TOOL).toBe("use_skill");
+		expect(publicMcp.executeUseSkill).toBeFunction();
+		expect(publicMcp.registerUseSkillTool).toBeFunction();
+		expect(publicMcp.useSkillInputSchema).toBeDefined();
+		expect(publicMcp.skillArtifactResource).toBeDefined();
+	});
 	let dbPath: string;
 	let store: AtlasStoreClient;
 

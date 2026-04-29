@@ -422,6 +422,14 @@ describe("store integration", () => {
 		});
 		expect(new ChunkRepository(store).getById("missing_chunk")).toBeUndefined();
 
+		new SectionRepository(store).deleteForDocument(docId);
+		expect(new SectionRepository(store).listByDocument(docId)).toEqual([]);
+		expect(new ChunkRepository(store).listByDocument(docId)).toEqual([]);
+		expect(lexicalSearch(store, { query: "rotation", repoId })).toEqual([]);
+		expect(lexicalSearch(store, { query: "authenticate", repoId })).toEqual([
+			expect.objectContaining({ entityType: "document", docId }),
+		]);
+
 		new RepoRepository(store).delete(repoId);
 
 		expect(new DocRepository(store).get(docId)).toBeUndefined();

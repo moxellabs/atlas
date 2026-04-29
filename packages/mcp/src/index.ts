@@ -23,6 +23,7 @@ export { repoResource } from "./resources/repo.resource";
 export type { AtlasResourceDefinition } from "./resources/resource-utils";
 export { registerAtlasResource, resourceId } from "./resources/resource-utils";
 export { skillResource } from "./resources/skill.resource";
+export { skillArtifactResource } from "./resources/skill-artifact.resource";
 export { summaryResource } from "./resources/summary.resource";
 export type {
 	ExpandRelatedInput,
@@ -35,6 +36,7 @@ export type {
 	PlanContextToolInput,
 	ReadOutlineInput,
 	ReadSectionInput,
+	UseSkillInput,
 	WhatChangedInput,
 } from "./schemas/tool-schemas";
 export {
@@ -53,6 +55,7 @@ export {
 	readSectionInputSchema,
 	repoIdSchema,
 	scopeFilterSchema,
+	useSkillInputSchema,
 	whatChangedInputSchema,
 } from "./schemas/tool-schemas";
 export { createAtlasMcpServer } from "./server/create-mcp-server";
@@ -121,6 +124,11 @@ export {
 	READ_SECTION_TOOL,
 	registerReadSectionTool,
 } from "./tools/read-section.tool";
+export {
+	executeUseSkill,
+	registerUseSkillTool,
+	USE_SKILL_TOOL,
+} from "./tools/use-skill.tool";
 export {
 	executeWhatChanged,
 	registerWhatChangedTool,

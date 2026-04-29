@@ -238,12 +238,6 @@ async function runRepoShow(
 async function runRepoRemove(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const repoId = context.argv[1];
-	if (!repoId)
-		throw new CliError("repo remove requires a repoId.", {
-			code: "CLI_REPO_REQUIRED",
-			exitCode: EXIT_INPUT_ERROR,
-		});
 	const yes = context.argv.includes("--yes");
 	const dryRun = context.argv.includes("--dry-run");
 	if (!yes && !dryRun)
@@ -253,6 +247,14 @@ async function runRepoRemove(
 		});
 	const { resolved, atlasHome, configPath } =
 		await loadRegistryContext(context);
+	const target = await resolveRepoTarget(context, {
+		config: resolved.config,
+		...readRepoTargetArg(context.argv, 1),
+		command: "repo remove",
+		nonInteractive: true,
+		allowSingleConfigured: false,
+	});
+	const repoId = target.repoId;
 	const folder = repoFolderPath(atlasHome, repoId);
 	let removedFolder = false;
 	let removedStoreRows = false;
@@ -283,6 +285,7 @@ async function runRepoRemove(
 	}
 	const result = {
 		repoId,
+		targetResolution: target,
 		repoFolder: folder,
 		removedFolder,
 		removedStoreRows,

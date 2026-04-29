@@ -309,6 +309,39 @@ describe("LocalGitSourceAdapter integration", () => {
 		);
 	});
 
+	test("warns when current-checkout mode uses a sparse user checkout", async () => {
+		const checkoutPath = join(fixtureDir, "sparse-current-checkout");
+		await cloneWorkingCheckout(originPath, checkoutPath);
+		await spawnGitOrThrow({
+			cwd: checkoutPath,
+			args: ["sparse-checkout", "init", "--no-cone"],
+		});
+		await spawnGitOrThrow({
+			cwd: checkoutPath,
+			args: ["sparse-checkout", "set", "--no-cone", "src/**"],
+		});
+		const diagnostics: string[] = [];
+		const sparseRepo = buildRepoConfig(
+			originPath,
+			checkoutPath,
+			"main",
+			"current-checkout",
+		);
+
+		const result = await new RepoCacheService({
+			onDiagnostic: (event) => diagnostics.push(event.type),
+		}).ensureCache(sparseRepo);
+
+		expect(result.sparseCheckout.enabled).toBe(true);
+		expect(result.diagnostics.map((event) => event.type)).toContain(
+			"current_checkout_sparse_detected",
+		);
+		expect(diagnostics).toContain("current_checkout_sparse_detected");
+		expect(
+			await Bun.file(join(checkoutPath, "docs", "guide.md")).exists(),
+		).toBe(false);
+	});
+
 	test("resolves detached HEAD with ref HEAD in current-checkout mode", async () => {
 		const checkoutPath = join(fixtureDir, "detached-checkout");
 		await cloneWorkingCheckout(originPath, checkoutPath);
