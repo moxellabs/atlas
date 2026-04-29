@@ -39,87 +39,117 @@ export async function rebuildDocs(
 		const rebuiltDocs: RebuiltDocument[] = [];
 
 		for (const classifiedDoc of affected.selectedDocs) {
-			const sourceFile = await source.readFile(repo, classifiedDoc.path);
-			const compiled = compileMarkdownDocument({
-				markdown: sourceFile.content,
-				classifiedDoc,
-				sourceVersion: currentRevision,
-				metadataRules: repo.docs?.metadata.rules,
-			});
-			const chunked = chunkBySection({
-				document: compiled.canonical.document,
-				options: deps.chunking,
-			});
-			const shortSummary = buildDocSummary(compiled.canonical.document, {
-				level: "short",
-			});
-			const shortSummaryArtifact = withExactSummaryTokenCount(
-				shortSummary.summary,
-			);
-			const mediumSummary = buildDocSummary(compiled.canonical.document, {
-				level: "medium",
-			});
-			const mediumSummaryArtifact = withExactSummaryTokenCount(
-				mediumSummary.summary,
-			);
-			const outline = buildOutline(compiled.canonical.document);
-			const outlineSummary = createOutlineSummary(
-				compiled.canonical.document,
-				outline.outline,
-			);
-			const skillNode = affected.skillsBySourceDocPath.get(classifiedDoc.path);
-			const extractedSkill = skillNode
-				? extractSkill({
-						skill: skillNode,
-						classifiedDoc,
-						document: compiled.canonical.document,
-						frontmatter: compiled.parsed.frontmatter.data,
-					})
-				: undefined;
-			const skillSummary = extractedSkill?.skill.description
-				? createSkillSummary(
-						extractedSkill.skill.skillId,
-						extractedSkill.skill.description,
-					)
-				: undefined;
-			const skillArtifacts =
-				skillNode === undefined
-					? []
-					: await readSkillArtifacts(
-							repo,
-							skillNode.sourceDocPath,
-							skillNode.skillId,
-							files,
-							source,
-						);
+			try {
+				const sourceFile = await source.readFile(repo, classifiedDoc.path);
+				const compiled = tryBuildStage(
+					repo.repoId,
+					classifiedDoc.path,
+					"compile",
+					() =>
+						compileMarkdownDocument({
+							markdown: sourceFile.content,
+							classifiedDoc,
+							sourceVersion: currentRevision,
+							metadataRules: repo.docs?.metadata.rules,
+						}),
+				);
+				const chunked = tryBuildStage(
+					repo.repoId,
+					classifiedDoc.path,
+					"chunk",
+					() =>
+						chunkBySection({
+							document: compiled.canonical.document,
+							options: deps.chunking,
+						}),
+				);
+				const shortSummary = buildDocSummary(compiled.canonical.document, {
+					level: "short",
+				});
+				const shortSummaryArtifact = withExactSummaryTokenCount(
+					shortSummary.summary,
+				);
+				const mediumSummary = buildDocSummary(compiled.canonical.document, {
+					level: "medium",
+				});
+				const mediumSummaryArtifact = withExactSummaryTokenCount(
+					mediumSummary.summary,
+				);
+				const outline = buildOutline(compiled.canonical.document);
+				const outlineSummary = createOutlineSummary(
+					compiled.canonical.document,
+					outline.outline,
+				);
+				const skillNode = affected.skillsBySourceDocPath.get(
+					classifiedDoc.path,
+				);
+				const extractedSkill = skillNode
+					? extractSkill({
+							skill: skillNode,
+							classifiedDoc,
+							document: compiled.canonical.document,
+							frontmatter: compiled.parsed.frontmatter.data,
+						})
+					: undefined;
+				const skillSummary = extractedSkill?.skill.description
+					? createSkillSummary(
+							extractedSkill.skill.skillId,
+							extractedSkill.skill.description,
+						)
+					: undefined;
+				const skillArtifacts =
+					skillNode === undefined
+						? []
+						: await readSkillArtifacts(
+								repo,
+								skillNode.sourceDocPath,
+								skillNode.skillId,
+								files,
+								source,
+							);
 
-			rebuiltDocs.push({
-				classifiedDoc,
-				document: compiled.canonical.document,
-				chunks: chunked.chunks,
-				documentSummaries: [
-					shortSummaryArtifact,
-					mediumSummaryArtifact,
+				rebuiltDocs.push({
+					classifiedDoc,
+					document: compiled.canonical.document,
+					chunks: chunked.chunks,
+					documentSummaries: [
+						shortSummaryArtifact,
+						mediumSummaryArtifact,
+						outlineSummary,
+					],
+					...(skillNode === undefined ? {} : { skillNode }),
+					...(extractedSkill === undefined
+						? {}
+						: { extractedSkill: extractedSkill.skill }),
+					...(skillSummary === undefined ? {} : { skillSummary }),
+					skillArtifacts,
 					outlineSummary,
-				],
-				...(skillNode === undefined ? {} : { skillNode }),
-				...(extractedSkill === undefined
-					? {}
-					: { extractedSkill: extractedSkill.skill }),
-				...(skillSummary === undefined ? {} : { skillSummary }),
-				skillArtifacts,
-				outlineSummary,
-				compilerDiagnostics: [
-					...compiled.parsed.diagnostics,
-					...compiled.normalized.diagnostics,
-					...compiled.canonical.diagnostics,
-					...shortSummary.diagnostics,
-					...mediumSummary.diagnostics,
-					...outline.diagnostics,
-					...(extractedSkill?.diagnostics ?? []),
-				] satisfies CompilerDiagnostic[],
-				chunkingDiagnostics: chunked.diagnostics,
-			});
+					compilerDiagnostics: [
+						...compiled.parsed.diagnostics,
+						...compiled.normalized.diagnostics,
+						...compiled.canonical.diagnostics,
+						...shortSummary.diagnostics,
+						...mediumSummary.diagnostics,
+						...outline.diagnostics,
+						...(extractedSkill?.diagnostics ?? []),
+					] satisfies CompilerDiagnostic[],
+					chunkingDiagnostics: chunked.diagnostics,
+				});
+			} catch (cause) {
+				if (cause instanceof IndexerBuildError) {
+					throw cause;
+				}
+				throw new IndexerBuildError(
+					`Failed to rebuild doc ${classifiedDoc.path} for ${repo.repoId}.`,
+					{
+						operation: "rebuildDocs",
+						stage: "compile",
+						repoId: repo.repoId,
+						entity: classifiedDoc.path,
+						cause,
+					},
+				);
+			}
 		}
 
 		const moduleSummaries = buildAffectedModuleSummaries(
@@ -139,12 +169,37 @@ export async function rebuildDocs(
 			moduleSummaries,
 		};
 	} catch (cause) {
+		if (cause instanceof IndexerBuildError) {
+			throw cause;
+		}
 		throw new IndexerBuildError(`Failed to rebuild docs for ${repo.repoId}.`, {
 			operation: "rebuildDocs",
 			stage: "compile",
 			repoId: repo.repoId,
 			cause,
 		});
+	}
+}
+
+function tryBuildStage<T>(
+	repoId: string,
+	entity: string,
+	stage: "compile" | "chunk",
+	operation: () => T,
+): T {
+	try {
+		return operation();
+	} catch (cause) {
+		throw new IndexerBuildError(
+			`Failed during ${stage} for doc ${entity} in ${repoId}.`,
+			{
+				operation: "rebuildDocs",
+				stage,
+				repoId,
+				entity,
+				cause,
+			},
+		);
 	}
 }
 

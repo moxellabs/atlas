@@ -1,4 +1,7 @@
-import { IndexerBuildError } from "../errors/indexer-errors";
+import {
+	IndexerBuildError,
+	serializeIndexerDiagnosticCause,
+} from "../errors/indexer-errors";
 import { collectAffectedDocs } from "../incremental/collect-affected-docs";
 import { planIncrementalBuild } from "../incremental/plan-incremental-build";
 import { createBuildReport } from "../reports/build-report";
@@ -25,42 +28,46 @@ export async function buildRepo(
 ): Promise<BuildReport> {
 	const startedAt = Date.now();
 	const repo = deps.resolveRepo(repoId);
+	let sourceDiagnostics: IndexerSourceDiagnostic[] = [];
+	let docsConsideredBeforeFailure = 0;
 	try {
-		const { result, diagnostics: sourceDiagnostics } =
-			await deps.withDiagnostics(async () => {
-				const manifest = deps.store.manifests.get(repo.repoId);
-				const storedRepo = deps.store.repos.get(repo.repoId);
-				const update = await computeSourceUpdates(repo, deps, {
-					baselineRevision: manifest?.indexedRevision ?? storedRepo?.revision,
-				});
-				const plan = planIncrementalBuild({
-					repoId: repo.repoId,
+		const diagnosticsResult = await deps.withDiagnostics(async () => {
+			const manifest = deps.store.manifests.get(repo.repoId);
+			const storedRepo = deps.store.repos.get(repo.repoId);
+			const update = await computeSourceUpdates(repo, deps, {
+				baselineRevision: manifest?.indexedRevision ?? storedRepo?.revision,
+			});
+			const plan = planIncrementalBuild({
+				repoId: repo.repoId,
+				update,
+				manifest,
+				storeSchemaVersion: deps.storeSchemaVersion,
+				compilerVersion: deps.compilerVersion,
+				force: options.force,
+				selection: options.selection,
+			});
+
+			if (plan.strategy === "noop") {
+				return {
 					update,
-					manifest,
-					storeSchemaVersion: deps.storeSchemaVersion,
-					compilerVersion: deps.compilerVersion,
-					force: options.force,
-					selection: options.selection,
-				});
+					plan,
+					affected: undefined,
+					artifacts: undefined,
+					persisted: undefined,
+				};
+			}
 
-				if (plan.strategy === "noop") {
-					return {
-						update,
-						plan,
-						affected: undefined,
-						artifacts: undefined,
-						persisted: undefined,
-					};
-				}
-
-				const affected = await collectAffectedDocs(repo, plan, deps);
-				const artifacts = await rebuildDocs(
-					repo,
-					affected,
-					update.currentRevision,
-					deps,
-				);
-				const persisted = persistBuildResults(
+			const affected = await collectAffectedDocs(repo, plan, deps);
+			docsConsideredBeforeFailure = affected.selectedDocs.length;
+			const artifacts = await rebuildDocs(
+				repo,
+				affected,
+				update.currentRevision,
+				deps,
+			);
+			let persisted;
+			try {
+				persisted = persistBuildResults(
 					repo,
 					{
 						currentRevision: update.currentRevision,
@@ -71,9 +78,21 @@ export async function buildRepo(
 					},
 					deps,
 				);
-				return { update, plan, affected, artifacts, persisted };
-			});
-		const { update, plan, artifacts, persisted } = result;
+			} catch (cause) {
+				throw new IndexerBuildError(
+					`Failed to persist build results for ${repo.repoId}.`,
+					{
+						operation: "persistBuildResults",
+						stage: "persistence",
+						repoId: repo.repoId,
+						cause,
+					},
+				);
+			}
+			return { update, plan, affected, artifacts, persisted };
+		});
+		sourceDiagnostics = diagnosticsResult.diagnostics;
+		const { update, plan, artifacts, persisted } = diagnosticsResult.result;
 
 		if (plan.strategy === "noop") {
 			return createBuildReport({
@@ -137,6 +156,7 @@ export async function buildRepo(
 			timings: createTimings(startedAt),
 		});
 	} catch (cause) {
+		sourceDiagnostics = readCapturedDiagnostics(cause, sourceDiagnostics);
 		const error =
 			cause instanceof IndexerBuildError
 				? cause
@@ -152,12 +172,25 @@ export async function buildRepo(
 			reasonCode: options.selection ? "targeted_doc" : "source_full_rebuild",
 			partial: options.selection !== undefined,
 			reason: error.message,
+			docsConsidered: docsConsideredBeforeFailure,
 			diagnostics: [
+				...sourceDiagnostics.map(toIndexerDiagnostic),
 				{
 					severity: "error",
 					stage: error.context.stage ?? "build",
 					message: error.message,
 					code: error.name,
+					...(error.context.entity === undefined
+						? {}
+						: { path: error.context.entity }),
+					details: {
+						operation: error.context.operation,
+						repoId: error.context.repoId ?? repoId,
+						...(error.context.entity === undefined
+							? {}
+							: { entity: error.context.entity }),
+					},
+					cause: serializeIndexerDiagnosticCause(error, { includeStack: true }),
 				},
 			],
 			recovery: recoveryForRepoState(
@@ -232,4 +265,15 @@ function createTimings(startedAt: number): OperationTimings {
 		completedAt: new Date(completedAt).toISOString(),
 		durationMs: completedAt - startedAt,
 	};
+}
+
+function readCapturedDiagnostics(
+	cause: unknown,
+	fallback: IndexerSourceDiagnostic[],
+): IndexerSourceDiagnostic[] {
+	const captured = (cause as { __indexerDiagnostics?: unknown } | undefined)
+		?.__indexerDiagnostics;
+	return Array.isArray(captured)
+		? (captured as IndexerSourceDiagnostic[])
+		: fallback;
 }

@@ -285,6 +285,10 @@ export async function runAddRepoCommand(
 		localPath:
 			readArgvString(context.argv, "--local-path") ?? resolved?.localPath,
 		ref,
+		refMode: readArgvString(context.argv, "--ref-mode") as
+			| "remote"
+			| "current-checkout"
+			| undefined,
 		baseUrl:
 			readArgvString(context.argv, "--base-url") ?? resolved?.host.apiUrl,
 		owner: readArgvString(context.argv, "--owner") ?? resolved?.owner,

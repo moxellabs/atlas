@@ -41,6 +41,17 @@ Atlas v1.0 hardening is complete. The next milestone shifts Atlas from contribut
 - [x] **Phase 28: Public Consumption Docs Site Readiness** - Polish public docs for generated-site consumption. Completed 2026-04-28.
 - [x] **Phase 29: Server Docs Portal and OpenAPI Polish** - Add server docs portal and OpenAPI polish. Completed 2026-04-28.
 - [x] **Phase 30: Scalar-first OpenAPI Docs Refinement** - Correct Phase 29 UAT gap by making `/docs` Scalar/OpenAPI-first and improving OpenAPI content.
+- [x] **Phase 31: Open-source Release Prep** - Define public/private repository boundary, license, attribution, and community docs. Completed 2026-04-28.
+- [x] **Phase 32: CI Validation** - Add public pull-request and push CI validation. Completed 2026-04-28.
+- [x] **Phase 33: Release Pipeline** - Add safe tag-driven npm and GitHub release automation. Completed 2026-04-28.
+- [x] **Phase 34: Commander and Clack CLI Migration** - Hard-cut CLI parsing/help/interactive foundations to Commander and Clack. Completed 2026-04-28.
+- [x] **Phase 35: Embedded Enterprise CLI Mount** - Let enterprise CLIs mount Atlas under an existing Commander namespace. Completed 2026-04-28.
+- [x] **Phase 36: Production Build Diagnostics and Nested Error Surfacing** - Preserve and print nested build causes, failing stage, and entity path for real repo failures. (completed 2026-04-29)
+- [x] **Phase 37: Real-Repo Build Pipeline Repro and Root-Cause Fixes** - Reproduce topology-success/build-failure boundary and fix actual build-stage bugs revealed by diagnostics. (completed 2026-04-29)
+- [x] **Phase 38: Local-Git Checkout Semantics and Local Branch Support** - Support explicit current-checkout local-git mode and clarify remote-ref behavior. (completed 2026-04-29)
+- [x] **Phase 39: Init, Repo State, and Command-State Clarity** - Infer repo targets from cwd, Git origin, repo metadata, and bare repo names; avoid manual default GitHub host setup; explain config/registry/store/cache layers in diagnostics. (completed 2026-04-29)
+- [x] **Phase 40: Command UX Simplification and Production Onboarding** - Simplify `setup`/`init`/`build`/`index` mental model with guided next-step UX, clearer aliases, and no standalone setup branding prompts. (completed 2026-04-29)
+- [x] **Phase 41: Production Onboarding UAT and Release Gate** - Add scripted production-like UAT to prevent regressions before release. (completed 2026-04-29)
 
 ## Phase Details
 
@@ -138,7 +149,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in dependency order: 1 → 2 and 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30
+Phases execute in dependency order: 1 → 2 and 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37 → 38 → 39 → 40 → 41
 
 | Phase                                                        | Plans Complete | Status   | Completed  |
 | ------------------------------------------------------------ | -------------- | -------- | ---------- |
@@ -171,7 +182,18 @@ Phases execute in dependency order: 1 → 2 and 3 → 4 → 5 → 6 → 7 → 8 
 | 27. Interactive Skill Creator Workflow                       | 2/2            | Complete | 2026-04-28 |
 | 28. Public Consumption Docs Site Readiness                   | 2/2            | Complete | 2026-04-28 |
 | 29. Server Docs Portal and OpenAPI Polish                    | 2/2            | Complete | 2026-04-28 |
-| 30. Scalar-first OpenAPI Docs Refinement                     | 0/2            | Planned  |            |
+| 30. Scalar-first OpenAPI Docs Refinement                     | 2/2            | Complete | 2026-04-28 |
+| 31. Open-source Release Prep                                 | 2/2            | Complete | 2026-04-28 |
+| 32. CI Validation                                            | 1/1            | Complete | 2026-04-28 |
+| 33. Release Pipeline                                         | 2/2            | Complete | 2026-04-28 |
+| 34. Commander and Clack CLI Migration                        | 3/3            | Complete | 2026-04-28 |
+| 35. Embedded Enterprise CLI Mount                            | 2/2            | Complete | 2026-04-28 |
+| 36. Production Build Diagnostics and Nested Error Surfacing  | 2/2            | Complete | 2026-04-29 |
+| 37. Real-Repo Build Pipeline Repro and Root-Cause Fixes      | 2/2            | Complete | 2026-04-29 |
+| 38. Local-Git Checkout Semantics and Local Branch Support    | 2/2            | Complete | 2026-04-29 |
+| 39. Init, Repo State, and Command-State Clarity              | 3/3            | Complete | 2026-04-29 |
+| 40. Command UX Simplification and Production Onboarding      | 3/3 | Complete    | 2026-04-29 |
+| 41. Production Onboarding UAT and Release Gate               | 1/1            | Complete | 2026-04-29 |
 
 ### Phase 6: Retrieval and Context Quality
 
@@ -794,3 +816,86 @@ Plans:
 
 - [x] 35-01: Add embedded Commander mount API.
 - [x] 35-02: Add mount tests docs and compatibility guards.
+
+### Phase 36: Production build diagnostics and nested error surfacing
+
+**Goal:** Preserve and print nested build causes, failing phase/stage, and failing entity path so real production build failures can be debugged from `--json --verbose` output.
+**Requirements:** PROD-DIAGNOSTICS
+**Depends on:** Phase 35
+**Plans:** 2/2 plans complete
+
+Plans:
+
+- [x] 36-01: Preserve nested build causes in indexer reports.
+- [x] 36-02: Print actionable verbose and JSON build diagnostics in CLI.
+
+### Phase 37: Real-repo build pipeline repro and root-cause fixes
+
+**Goal:** Reproduce the incident boundary where `inspect topology --live` succeeds but `build` fails, then fix the actual post-discovery build-stage bug exposed by Phase 36 diagnostics.
+**Requirements:** PROD-BUILD-REPRO, PROD-BUILD-FIX
+**Depends on:** Phase 36
+**Plans:** 2/2 plans complete
+
+Plans:
+
+- [x] 37-01: Add topology-success build-failure reproduction harness.
+- [x] 37-02: Fix real build-stage failures exposed by diagnostics.
+
+### Phase 38: Local-git checkout semantics and local branch support
+
+**Goal:** Make `local-git` usable for local-only branches and explicit about whether Atlas reads current checkout or fetches a remote ref.
+**Requirements:** LOCAL-GIT-CHECKOUT, LOCAL-GIT-ERRORS
+**Depends on:** Phase 36
+**Plans:** 2/2 plans complete
+
+Plans:
+
+- [x] 38-01: Add explicit current-checkout local-git mode.
+- [x] 38-02: Clarify remote-ref errors and docs.
+
+### Phase 39: Init, repo state, and command-state clarity
+
+**Goal:** Make repo target inference and repo/config/registry/store/cache state boundaries clear enough that users can run commands from cwd or with bare repo names instead of repeating full ids or manually adding default GitHub host config.
+**Requirements:** INIT-STATE-UX, STATE-LAYER-UX, REPO-TARGET-UX
+**Depends on:** Phase 38
+**Plans:** 3/3 plans complete
+
+Plans:
+
+- [x] 39-01: Add init target inference and precise missing-target errors.
+- [x] 39-02: Make repo doctor and doctor explain checked state layers.
+- [x] 39-03: Add shared repo target resolver across commands.
+
+### Phase 40: Command UX simplification and production onboarding
+
+**Goal:** Simplify Atlas command mental model so users know whether to run `setup`, `init`, `build`, `index`, or repo onboarding commands, can ask Atlas for the next step, and never see wrapper branding prompts in standalone setup.
+**Requirements:** COMMAND-UX, CLI-NO-BRANDING
+**Depends on:** Phase 39
+**Plans:** 3/3 plans complete
+
+**Primary mental model:**
+
+1. `atlas setup` — one-time local runtime setup.
+2. `atlas repo add <repo>` — consume existing artifact from a repo.
+3. `atlas init && atlas build` — maintainer flow inside a repo checkout to publish/update artifact.
+4. `atlas index <path>` — emergency local-only fallback, not primary happy path.
+5. `atlas next` / `atlas status --next` — inspect current state and recommend the next command.
+6. Repo targets infer from cwd/config/git origin/metadata/bare names; full `host/owner/name` ids and manual host setup are only needed for ambiguity or unknown GHES hosts.
+7. Branding/default identity belongs in enterprise Commander wrapper code, not standalone `atlas setup`.
+
+Plans:
+
+- [x] 40-01: Define simplified command model and guided next-step command.
+- [x] 40-02: Consolidate repo onboarding command aliases and docs.
+- [x] 40-03: Remove branding and wrapper-only identity prompts from standalone setup.
+
+### Phase 41: Production onboarding UAT and release gate
+
+**Goal:** Add scripted production-like UAT that validates the full private-monorepo onboarding/debugging experience before release.
+**Requirements:** PROD-UAT
+**Depends on:** Phase 40
+**Plans:** 1/1 plans complete
+
+Plans:
+
+- [x] 41-01: Add production onboarding UAT scenarios.

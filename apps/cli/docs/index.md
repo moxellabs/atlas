@@ -29,17 +29,17 @@ Dependency construction belongs in the runtime layer. Command modules should req
 
 ## Commands
 
-The CLI currently supports `setup`, `init`, `add-repo`, `adoption-template`, `sync`, `build`, `serve`, `mcp`, `inspect`, `install-skill`, `list`, `clean`, `prune`, `doctor`, and `eval`.
+The CLI currently supports `setup`, `next`, `init`, `repo add`, `add-repo`, `adoption-template`, `sync`, `build`, `serve`, `mcp`, `inspect`, `install-skill`, `list`, `clean`, `prune`, `doctor`, and `eval`.
 
-`setup` creates user-home `~/.moxel/atlas` config and runtime directories. `init` initializes repo-local `.moxel/atlas` artifact files for this checkout.
+`setup` creates user-home `~/.moxel/atlas` config and runtime directories. `next` inspects current setup/repo/corpus state and recommends one command. `repo add` imports an existing repo artifact for consumers; `add-repo` remains the compatibility alias. `init` initializes repo-local `.moxel/atlas` artifact files for maintainers. `build` publishes/updates the artifact. `index` is the local-only fallback for repos that do not publish artifacts. `init`, `build`, `repo doctor`, `repo show`, and store-backed inspect commands share repo target inference: explicit flags win, then repo metadata/cwd/config/Git origin/bare-name sources can avoid repeated full IDs.
 
 Command groups:
 
-- Config: `setup`, `add-repo`.
-- Maintainer artifacts: `init`, `build`, `artifact verify`, `artifact inspect`.
-- Source and corpus: `sync`, `sync --check`, `build`, `clean`, `prune`.
-- Inspection and health: `list`, `inspect`, `doctor`.
-- Runtime: `serve`, `mcp`.
+- Start: `setup`, `next`.
+- Use repos: `repo add`, `add-repo`, `repo list`, `repo show`, `sync`.
+- Build artifacts: `init`, `build`, `artifact verify`, `artifact inspect`.
+- Search/query: `search`, `list`, `serve`, `mcp`.
+- Diagnose: `doctor`, `repo doctor`, `inspect`, `clean`, `prune`.
 - Agent/editor workflow: `install-skill`.
 - Evaluation: `eval`.
 
@@ -75,6 +75,9 @@ The CLI should not implement source acquisition, topology classification, compil
 
 - Unknown commands and invalid flags should fail before package services are called.
 - Config and dependency construction errors should preserve structured details for `--verbose` and `--json`.
+- `CLI_BUILD_FAILED` wraps failed indexer build reports. JSON output includes `error.details.diagnostics[]`; `--verbose` preserves nested `cause` stack traces, stage, code, and failing path/entity diagnostics. Non-verbose human output stays concise and tells operators to rerun with `--verbose --json`.
+- Missing repo targets report checked sources (`flags`, positional input, repo metadata, cwd, Git origin, config). Ambiguous bare repo names report candidate canonical IDs and never hang in JSON/non-interactive mode.
+- For production build triage, run `bunx @moxellabs/atlas build --json --verbose --repo <repo-id> --config <config>` and compare with `inspect topology --live`; topology success means discovery worked, not that compile/persist stages succeeded.
 - Commands that mutate config or corpus state should report what changed and leave package-level rollback or recovery semantics to the owning package.
 
 ## Tests
@@ -86,7 +89,7 @@ bun --cwd apps/cli run typecheck
 bun test apps/cli
 ```
 
-Phase 20 command list: `setup`, `hosts`, `add-repo`, `index`, `repo remove`, `search`, `inspect retrieval`, `mcp`, and `artifact` expose consumer, maintainer, and enterprise workflows. `search` and `mcp` use the local imported corpus; `index` is local-only fallback.
+Command UX coverage: `setup`, `next`, `repo add`, `add-repo`, `hosts`, `index`, `repo remove`, `search`, `inspect retrieval`, `mcp`, and `artifact` expose consumer, maintainer, and enterprise workflows. `search` and `mcp` use the local imported corpus; `index` is local-only fallback.
 
 ## Search metadata filters
 

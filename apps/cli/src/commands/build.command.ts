@@ -23,7 +23,9 @@ import {
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { fileExists, runProcess } from "../utils/node-runtime";
+import { resolveRepoTarget } from "./repo-target";
 import {
+	buildFailureLines,
 	loadDependenciesFromGlobal,
 	maybeRenderArtifactRootMigrationHint,
 	renderSuccess,
@@ -89,12 +91,41 @@ export async function runBuildCommand(
 		parsed.config === undefined && parsed.repoId === undefined
 			? await findRepoArtifactMetadata(context)
 			: undefined;
-	const effectiveRepoId = parsed.repoId ?? repoLocal?.metadata.repoId;
+	const deps =
+		repoLocal === undefined
+			? await loadDependenciesFromGlobal(context, parsed.config)
+			: undefined;
+	let targetResolution:
+		| Awaited<ReturnType<typeof resolveRepoTarget>>
+		| undefined;
+	if (repoLocal === undefined && deps !== undefined) {
+		try {
+			targetResolution = await resolveRepoTarget(context, {
+				config: deps.config.config,
+				...(parsed.repoId === undefined ? {} : { explicit: parsed.repoId }),
+				command: "build",
+				nonInteractive: context.argv.includes("--non-interactive"),
+				allowSingleConfigured: selectorCount > 0,
+			});
+		} catch (error) {
+			if (selectorCount > 0 || parsed.repoId !== undefined) throw error;
+			if (
+				!(error instanceof CliError) ||
+				error.code !== "CLI_REPO_TARGET_REQUIRED"
+			)
+				throw error;
+		}
+	}
+	const effectiveRepoId =
+		parsed.repoId ?? repoLocal?.metadata.repoId ?? targetResolution?.repoId;
 	if (selectorCount > 0 && effectiveRepoId === undefined) {
-		throw new CliError("Targeted build selectors require --repo.", {
-			code: "CLI_REPO_REQUIRED",
-			exitCode: EXIT_INPUT_ERROR,
-		});
+		throw new CliError(
+			"Targeted build selectors require a repo target. Use --repo, run from a configured checkout, or pass a unique bare repo name.",
+			{
+				code: "CLI_REPO_REQUIRED",
+				exitCode: EXIT_INPUT_ERROR,
+			},
+		);
 	}
 	if (repoLocal !== undefined && effectiveRepoId !== undefined) {
 		return runRepoLocalBuild(context, repoLocal, {
@@ -116,7 +147,12 @@ export async function runBuildCommand(
 		});
 	}
 
-	const deps = await loadDependenciesFromGlobal(context, parsed.config);
+	if (deps === undefined) {
+		throw new CliError("Build dependencies unavailable.", {
+			code: "CLI_BUILD_DEPENDENCIES_UNAVAILABLE",
+			exitCode: EXIT_INPUT_ERROR,
+		});
+	}
 	try {
 		const report = effectiveRepoId
 			? await deps.indexer.buildRepo(effectiveRepoId, {
@@ -143,13 +179,25 @@ export async function runBuildCommand(
 				});
 		const exitCode = reportExitCode(report);
 		if (exitCode !== 0) {
-			throw new CliError(reportLines(report).join("\n"), {
-				code: "CLI_BUILD_FAILED",
-				exitCode,
-				details: report,
-			});
+			throw new CliError(
+				buildFailureLines(report, context.output.verbose).join("\n"),
+				{
+					code: "CLI_BUILD_FAILED",
+					exitCode,
+					details: report,
+				},
+			);
 		}
-		return await renderSuccess(context, "build", report, reportLines(report));
+		const data =
+			targetResolution === undefined ? report : { ...report, targetResolution };
+		return await renderSuccess(context, "build", data, [
+			...(targetResolution === undefined
+				? []
+				: [
+						`Repo target: ${targetResolution.repoId} (${targetResolution.source})`,
+					]),
+			...reportLines(report),
+		]);
 	} finally {
 		deps.close();
 	}
@@ -180,6 +228,7 @@ async function runRepoLocalBuild(
 		const buildRef =
 			(await gitOutput(repoLocal.root, ["rev-parse", "HEAD"])) ??
 			repoLocal.metadata.ref;
+		const refMode = repoLocal.metadata.refMode ?? "current-checkout";
 		const config: AtlasConfig = {
 			version: 1,
 			cacheDir: tempDir,
@@ -217,8 +266,12 @@ async function runRepoLocalBuild(
 					mode: "local-git",
 					git: {
 						remote: repoLocal.remote,
-						localPath: join(tempDir, "checkout"),
+						localPath:
+							refMode === "current-checkout"
+								? repoLocal.root
+								: join(tempDir, "checkout"),
 						ref: buildRef,
+						refMode,
 					},
 					workspace: {
 						packageGlobs: ["apps/*", "packages/*"],
@@ -296,11 +349,14 @@ async function runRepoLocalBuild(
 		});
 		const exitCode = reportExitCode(report);
 		if (exitCode !== 0) {
-			throw new CliError(reportLines(report).join("\n"), {
-				code: "CLI_BUILD_FAILED",
-				exitCode,
-				details: report,
-			});
+			throw new CliError(
+				buildFailureLines(report, context.output.verbose).join("\n"),
+				{
+					code: "CLI_BUILD_FAILED",
+					exitCode,
+					details: report,
+				},
+			);
 		}
 		filterPublicArtifactCorpus(db);
 		await writePrettyJson(
@@ -365,6 +421,7 @@ interface RepoLocalMetadata {
 		owner: string;
 		name: string;
 		ref: string;
+		refMode?: "remote" | "current-checkout" | undefined;
 		artifactPath: string;
 	};
 }

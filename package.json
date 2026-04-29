@@ -16,6 +16,7 @@
 		"verify": "bun tooling/scripts/verify.ts",
 		"release:check": "bun tooling/scripts/release.ts --dry-run",
 		"smoke:distribution": "bun tooling/scripts/distribution-smoke.ts",
+		"uat:production": "bun tooling/scripts/production-uat.ts",
 		"typecheck": "bunx tsc --noEmit",
 		"test": "bun test",
 		"lint": "eslint .",
@@ -49,7 +50,7 @@
 		"type": "github",
 		"url": "https://github.com/sponsors/moxellabs"
 	},
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Local-first documentation ingestion, retrieval, and MCP/server access for multi-repo engineering docs.",
 	"engines": {
 		"node": ">=24.0.0"

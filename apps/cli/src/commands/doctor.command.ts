@@ -16,17 +16,22 @@ import { openStore } from "@atlas/store";
 import { loadServerEnv } from "../../../server/src/env";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { runProcess } from "../utils/node-runtime";
+import { resolveRepoTarget } from "./repo-target";
 import { readArgvString, renderSuccess } from "./shared";
+
+interface DoctorCheck {
+	name: string;
+	layer: string;
+	status: "pass" | "warn" | "fail";
+	message: string;
+	nextAction?: string | undefined;
+}
 
 /** Runs local readiness and dependency diagnostics. */
 export async function runDoctorCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const checks: Array<{
-		name: string;
-		status: "pass" | "warn" | "fail";
-		message: string;
-	}> = [];
+	const checks: DoctorCheck[] = [];
 	const configPath = readArgvString(context.argv, "--config");
 	const resolved = await loadConfig({
 		cwd: context.cwd,
@@ -39,6 +44,7 @@ export async function runDoctorCommand(
 	try {
 		checks.push({
 			name: "config",
+			layer: "runtime-config",
 			status: "pass",
 			message: `Loaded ${resolved.source.configPath}`,
 		});
@@ -46,10 +52,17 @@ export async function runDoctorCommand(
 			db.ok
 				? {
 						name: "store",
+						layer: "db",
 						status: "pass",
 						message: `Opened ${resolved.config.corpusDbPath}`,
 					}
-				: { name: "store", status: "fail", message: db.message },
+				: {
+						name: "store",
+						layer: "db",
+						status: "fail",
+						message: db.message,
+						nextAction: "Check corpusDbPath and filesystem permissions.",
+					},
 		);
 		checks.push(serverEnvCheck(context));
 		checks.push(await cacheDirectoryCheck(resolved.config.cacheDir));
@@ -57,11 +70,24 @@ export async function runDoctorCommand(
 		const gitVersion = await checkGit();
 		checks.push({
 			name: "git",
+			layer: "local-git-cache",
 			status: gitVersion.ok ? "pass" : "fail",
 			message: gitVersion.message,
+			nextAction: gitVersion.ok
+				? undefined
+				: "Install git and ensure it is on PATH.",
 		});
 
-		const targetRepoId = readArgvString(context.argv, "--repo");
+		const rawTargetRepoId = readArgvString(context.argv, "--repo");
+		const target = rawTargetRepoId
+			? await resolveRepoTarget(context, {
+					config: resolved.config,
+					explicit: rawTargetRepoId,
+					command: "doctor",
+					nonInteractive: context.argv.includes("--non-interactive"),
+				})
+			: undefined;
+		const targetRepoId = target?.repoId;
 		const repos =
 			targetRepoId === undefined
 				? resolved.config.repos
@@ -69,8 +95,10 @@ export async function runDoctorCommand(
 		if (targetRepoId !== undefined && repos.length === 0) {
 			checks.push({
 				name: `repo:${targetRepoId}`,
+				layer: "runtime-config",
 				status: "fail",
 				message: "Repository is not configured.",
+				nextAction: "Run atlas add-repo or choose a configured repo target.",
 			});
 		}
 
@@ -118,12 +146,16 @@ export async function runDoctorCommand(
 			});
 			checks.push({
 				name: `repo:${repo.repoId}`,
+				layer: "local-git-cache",
 				status: status.initialized ? "pass" : status.exists ? "warn" : "warn",
 				message: status.initialized
 					? `Cache ready at ${status.localPath}`
 					: status.exists
 						? `Path exists but is not initialized as a git cache: ${status.localPath}`
 						: `Cache path missing: ${status.localPath}`,
+				nextAction: status.initialized
+					? undefined
+					: "Run atlas sync or atlas build to initialize cache/source state.",
 			});
 		}
 		const exitCode = checks.some((check) => check.status === "fail") ? 1 : 0;
@@ -131,10 +163,13 @@ export async function runDoctorCommand(
 			context,
 			"doctor",
 			checks,
-			checks.map(
-				(check) =>
-					`${check.status.toUpperCase()} ${check.name}: ${check.message}`,
-			),
+			[
+				"Checks runtime config, DB, local-git cache, and server readiness; does not run build.",
+				...checks.map(
+					(check) =>
+						`${check.status.toUpperCase()} [${check.layer}] ${check.name}: ${check.message}${check.nextAction ? ` Next: ${check.nextAction}` : ""}`,
+				),
+			],
 			exitCode,
 		);
 	} finally {
@@ -164,53 +199,55 @@ function tryOpenStore(
 	}
 }
 
-function serverEnvCheck(context: CliCommandContext): {
-	name: string;
-	status: "pass" | "warn" | "fail";
-	message: string;
-} {
+function serverEnvCheck(context: CliCommandContext): DoctorCheck {
 	try {
 		const env = loadServerEnv(context.env);
 		return {
 			name: "server-env",
+			layer: "server-readiness",
 			status: "pass",
 			message: `HTTP ${env.host}:${env.port}, OpenAPI ${env.enableOpenApi ? "enabled" : "disabled"}, MCP ${env.enableMcp ? "enabled" : "disabled"}.`,
 		};
 	} catch (error) {
 		return {
 			name: "server-env",
+			layer: "server-readiness",
 			status: "fail",
 			message:
 				error instanceof Error
 					? error.message
 					: "Failed to load server environment.",
+			nextAction:
+				"Fix server environment variables or disable affected runtime surface.",
 		};
 	}
 }
 
-async function cacheDirectoryCheck(cacheDir: string): Promise<{
-	name: string;
-	status: "pass" | "warn" | "fail";
-	message: string;
-}> {
+async function cacheDirectoryCheck(cacheDir: string): Promise<DoctorCheck> {
 	try {
 		const details = await stat(cacheDir);
 		return details.isDirectory()
 			? {
 					name: "cache-dir",
+					layer: "local-git-cache",
 					status: "pass",
 					message: `Cache directory ready at ${cacheDir}.`,
 				}
 			: {
 					name: "cache-dir",
+					layer: "local-git-cache",
 					status: "fail",
 					message: `Cache path exists but is not a directory: ${cacheDir}`,
+					nextAction: "Fix cacheDir path or remove non-directory path.",
 				};
 	} catch {
 		return {
 			name: "cache-dir",
+			layer: "local-git-cache",
 			status: "warn",
 			message: `Cache directory does not exist yet: ${cacheDir}`,
+			nextAction:
+				"Run atlas setup, atlas add-repo, atlas sync, or atlas build to create cache state.",
 		};
 	}
 }
@@ -233,34 +270,31 @@ async function checkGit(): Promise<{ ok: boolean; message: string }> {
 async function ghesRepoChecks(
 	repo: AtlasRepoConfig,
 	env: NodeJS.ProcessEnv,
-): Promise<
-	Array<{ name: string; status: "pass" | "warn" | "fail"; message: string }>
-> {
+): Promise<DoctorCheck[]> {
 	const github = repo.github;
 	if (repo.mode !== "ghes-api" || github === undefined) {
 		return [];
 	}
 
-	const checks: Array<{
-		name: string;
-		status: "pass" | "warn" | "fail";
-		message: string;
-	}> = [];
+	const checks: DoctorCheck[] = [];
 	const safeRepo = `${github.owner}/${github.name}`;
 	let baseUrl: string;
 	try {
 		baseUrl = normalizeBaseUrl(github.baseUrl);
 		checks.push({
 			name: `repo:${repo.repoId}:ghes-config`,
+			layer: "runtime-config",
 			status: "pass",
 			message: `GHES API source configured for ${safeRepo} at ${baseUrl}.`,
 		});
 	} catch (error) {
 		checks.push({
 			name: `repo:${repo.repoId}:ghes-config`,
+			layer: "runtime-config",
 			status: "fail",
 			message:
 				error instanceof Error ? error.message : "Invalid GHES base URL.",
+			nextAction: "Fix GHES base URL in config.",
 		});
 		return checks;
 	}
@@ -269,13 +303,16 @@ async function ghesRepoChecks(
 	if (auth === undefined) {
 		checks.push({
 			name: `repo:${repo.repoId}:ghes-auth`,
+			layer: "runtime-config",
 			status: "fail",
 			message: `No GHES token found. Set ${github.tokenEnvVar ?? "GHES_TOKEN"}, GH_ENTERPRISE_TOKEN, GH_TOKEN, GITHUB_TOKEN, or run gh auth login --hostname ${new URL(baseUrl).hostname}.`,
+			nextAction: "Provide GHES auth token or run gh auth login.",
 		});
 		return checks;
 	}
 	checks.push({
 		name: `repo:${repo.repoId}:ghes-auth`,
+		layer: "runtime-config",
 		status: "pass",
 		message:
 			auth.source === "env"
@@ -296,6 +333,7 @@ async function ghesRepoChecks(
 		});
 		checks.push({
 			name: `repo:${repo.repoId}:ghes-ref`,
+			layer: "source-cache",
 			status: typeof response.data.sha === "string" ? "pass" : "fail",
 			message:
 				typeof response.data.sha === "string"
@@ -324,18 +362,21 @@ function renderGhesFailure(
 	safeRepo: string,
 	ref: string,
 	error: unknown,
-): { name: string; status: "pass" | "warn" | "fail"; message: string } {
+): DoctorCheck {
 	if (error instanceof GhesAuthenticationError) {
 		return {
 			name: `repo:${repoId}:ghes-ref`,
+			layer: "source-cache",
 			status: "fail",
 			message: `GHES rejected authentication or repo permissions for ${safeRepo}@${ref}.`,
+			nextAction: "Check GHES token permissions and repo access.",
 		};
 	}
 	if (error instanceof GhesRequestError) {
 		const status = error.context.status;
 		return {
 			name: `repo:${repoId}:ghes-ref`,
+			layer: "source-cache",
 			status: status === undefined ? "warn" : "fail",
 			message:
 				status === undefined
@@ -345,6 +386,7 @@ function renderGhesFailure(
 	}
 	return {
 		name: `repo:${repoId}:ghes-ref`,
+		layer: "source-cache",
 		status: "warn",
 		message:
 			error instanceof Error

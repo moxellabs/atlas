@@ -62,14 +62,40 @@ bun apps/cli/src/index.ts artifact verify --fresh
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contributor validation notes and [docs/release.md](docs/release.md) for maintainer release process. Rebuild `.moxel/atlas` before artifact freshness verification when public docs or public skills change.
 
-## Quickstart: consume maintained docs artifact
+## Quickstart: choose your path
+
+Unsure what state you are in? Ask Atlas first:
+
+```bash
+bun run cli next
+```
+
+### I want to use docs from a repo
 
 ```bash
 bun run cli setup --non-interactive
-bun run cli add-repo org/repo
+bun run cli repo add org/repo
 bun run cli search "deployment rollback" --repo github.com/org/repo
 bun run cli inspect retrieval --query "deployment rollback" --repo github.com/org/repo
 ```
+
+`atlas add-repo` remains a compatibility alias for `atlas repo add`.
+
+### I maintain a repo artifact
+
+```bash
+bun run cli init
+bun run cli build --profile public
+bun run cli artifact verify --fresh
+```
+
+### I need emergency local-only indexing
+
+```bash
+bun run cli index org/repo --repo-id github.com/org/repo
+```
+
+`atlas index` is a fallback when no maintained artifact exists. It builds a local-only corpus for your machine and is not the primary publishing path.
 
 Runtime state lives under `~/.moxel/atlas` by default. Search, retrieval, MCP, and server reads use local imported corpus data.
 

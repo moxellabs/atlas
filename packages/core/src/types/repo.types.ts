@@ -25,6 +25,8 @@ export interface RepoConfig {
 				remote: string;
 				localPath: string;
 				ref: string;
+				/** Ref resolution mode. `remote` fetches origin/ref; `current-checkout` reads local HEAD. */
+				refMode?: "remote" | "current-checkout" | undefined;
 		  }
 		| undefined;
 	/** GitHub Enterprise API source configuration for `ghes-api` repos. */

@@ -10,6 +10,7 @@ import { mutateAtlasConfig } from "../runtime/dependencies";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { resolveCliPath } from "../utils/paths";
+import { readRepoTargetArg, resolveRepoTarget } from "./repo-target";
 import {
 	listRepoMetadata,
 	readArgvString,
@@ -69,24 +70,31 @@ async function runRepoList(
 async function runRepoDoctor(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const repoId = context.argv[1] ?? readArgvString(context.argv, "--repo");
-	if (!repoId)
-		throw new CliError("repo doctor requires a repoId.", {
-			code: "CLI_REPO_REQUIRED",
-			exitCode: EXIT_INPUT_ERROR,
-		});
 	const { resolved, atlasHome } = await loadRegistryContext(context);
+	const target = await resolveRepoTarget(context, {
+		config: resolved.config,
+		...readRepoTargetArg(context.argv, 1),
+		command: "repo doctor",
+		nonInteractive: context.argv.includes("--non-interactive"),
+	});
+	const repoId = target.repoId;
 	const checks: Array<{
 		name: string;
+		layer: string;
 		status: "PASS" | "WARN" | "FAIL";
 		message: string;
+		nextAction?: string | undefined;
 	}> = [];
 	const folder = repoFolderPath(atlasHome, repoId);
 	const metadataPath = repoMetadataPath(atlasHome, repoId);
 	checks.push({
 		name: "repo-folder",
+		layer: "registry",
 		status: existsSync(folder) ? "PASS" : "FAIL",
 		message: folder,
+		nextAction: existsSync(folder)
+			? undefined
+			: "Run atlas add-repo or atlas index for this repo.",
 	});
 	try {
 		const metadata = await readRepoMetadata(metadataPath);
@@ -95,47 +103,70 @@ async function runRepoDoctor(
 			repoFolderPath(atlasHome, metadata.repoId) === folder;
 		checks.push({
 			name: "repo-metadata",
+			layer: "registry",
 			status: agreement ? "PASS" : "FAIL",
 			message: metadataPath,
+			nextAction: agreement ? undefined : "Remove and re-add repo metadata.",
 		});
 	} catch (error) {
 		checks.push({
 			name: "repo-metadata",
+			layer: "registry",
 			status: "FAIL",
 			message: error instanceof Error ? error.message : metadataPath,
+			nextAction:
+				"Run atlas add-repo or atlas index to create repo registry metadata.",
 		});
 	}
 	checks.push({
 		name: "config-entry",
+		layer: "config",
 		status: resolved.config.repos.some((repo) => repo.repoId === repoId)
 			? "PASS"
 			: "WARN",
 		message: repoId,
+		nextAction: resolved.config.repos.some((repo) => repo.repoId === repoId)
+			? undefined
+			: "Run atlas add-repo to add this repo to config.",
 	});
 	let db: ReturnType<typeof openStore> | undefined;
 	try {
 		db = openStore({ path: resolved.config.corpusDbPath, migrate: true });
+		const hasStoreEntry = Boolean(new RepoRepository(db).get(repoId));
+		const hasManifestEntry = Boolean(new ManifestRepository(db).get(repoId));
 		checks.push({
 			name: "store-entry",
-			status: new RepoRepository(db).get(repoId) ? "PASS" : "WARN",
+			layer: "store",
+			status: hasStoreEntry ? "PASS" : "WARN",
 			message: repoId,
+			nextAction: hasStoreEntry
+				? undefined
+				: "Run atlas build or atlas add-repo to populate store rows.",
 		});
 		checks.push({
 			name: "manifest-entry",
-			status: new ManifestRepository(db).get(repoId) ? "PASS" : "WARN",
+			layer: "artifact-metadata",
+			status: hasManifestEntry ? "PASS" : "WARN",
 			message: repoId,
+			nextAction: hasManifestEntry
+				? undefined
+				: "Run atlas build to create/update artifact metadata.",
 		});
 	} catch (error) {
 		checks.push({
 			name: "store-entry",
+			layer: "store",
 			status: "FAIL",
 			message:
 				error instanceof Error ? error.message : "Failed to open corpus DB.",
+			nextAction: "Run atlas doctor to check runtime store configuration.",
 		});
 		checks.push({
 			name: "manifest-entry",
+			layer: "artifact-metadata",
 			status: "WARN",
 			message: "Store unavailable.",
+			nextAction: "Fix store layer first, then run atlas build.",
 		});
 	} finally {
 		db?.close();
@@ -144,8 +175,20 @@ async function runRepoDoctor(
 	return renderSuccess(
 		context,
 		"repo doctor",
-		checks,
-		checks.map((check) => `${check.status} ${check.name}: ${check.message}`),
+		{
+			repoId,
+			targetResolution: target,
+			note: "repo doctor checks config/registry/store/artifact metadata only; it does not run build.",
+			checks,
+		},
+		[
+			`Repo target: ${repoId} (${target.source})`,
+			"Checks config/registry/store/artifact metadata only; does not run build.",
+			...checks.map(
+				(check) =>
+					`${check.status} [${check.layer}] ${check.name}: ${check.message}${check.nextAction ? ` Next: ${check.nextAction}` : ""}`,
+			),
+		],
 		exitCode,
 	);
 }
@@ -153,13 +196,14 @@ async function runRepoDoctor(
 async function runRepoShow(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const repoId = context.argv[1];
-	if (!repoId)
-		throw new CliError("repo show requires a repoId.", {
-			code: "CLI_REPO_REQUIRED",
-			exitCode: EXIT_INPUT_ERROR,
-		});
 	const { resolved, atlasHome } = await loadRegistryContext(context);
+	const target = await resolveRepoTarget(context, {
+		config: resolved.config,
+		...readRepoTargetArg(context.argv, 1),
+		command: "repo show",
+		nonInteractive: context.argv.includes("--non-interactive"),
+	});
+	const repoId = target.repoId;
 	const configEntry = resolved.config.repos.find(
 		(repo) => repo.repoId === repoId,
 	);
@@ -184,6 +228,7 @@ async function runRepoShow(
 		metadataFound: metadata !== undefined,
 		config: configEntry,
 		metadata,
+		targetResolution: target,
 	};
 	return renderSuccess(context, "repo show", data, [
 		JSON.stringify(data, null, 2),

@@ -17,6 +17,7 @@ export function createBuildReport(input: {
 	reason: string;
 	currentRevision?: string | undefined;
 	artifacts?: RebuildArtifacts | undefined;
+	docsConsidered?: number | undefined;
 	persisted?: PersistBuildResult | undefined;
 	changedPaths?: string[] | undefined;
 	affectedDocPaths?: string[] | undefined;
@@ -42,7 +43,8 @@ export function createBuildReport(input: {
 		...(input.currentRevision === undefined
 			? {}
 			: { currentRevision: input.currentRevision }),
-		docsConsidered: input.artifacts?.selectedDocs.length ?? 0,
+		docsConsidered:
+			input.docsConsidered ?? input.artifacts?.selectedDocs.length ?? 0,
 		docsRebuilt,
 		docsDeleted,
 		chunksPersisted: persisted?.chunksPersisted ?? 0,

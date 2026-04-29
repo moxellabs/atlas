@@ -1,8 +1,10 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+	type AtlasConfig,
 	DEFAULT_MOXEL_ATLAS_REPOS_RELATIVE_PATH,
 	defaultGithubHostConfig,
+	loadConfig,
 	parseCanonicalRepoId,
 	resolveIdentityProfile,
 } from "@atlas/config";
@@ -16,6 +18,7 @@ import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { fileExists, runProcess } from "../utils/node-runtime";
 import { displayPath, parentDir, resolveCliPath } from "../utils/paths";
+import { resolveRepoTarget } from "./repo-target";
 import {
 	appendRepoConfig,
 	defaultCliConfig,
@@ -46,14 +49,16 @@ async function runRepoArtifactInitCommand(
 	const gitRoot =
 		(await gitOutput(context.cwd, ["rev-parse", "--show-toplevel"])) ??
 		context.cwd;
-	const repoId =
+	const targetConfig = await loadTargetConfig(context);
+	const explicitRepoId =
 		readArgvString(context.argv, "--repo-id") ?? repoIdFromParts(context);
-	if (repoId === undefined) {
-		throw new CliError(
-			"atlas init requires a Git checkout with origin or --repo-id host/owner/name.",
-			{ code: "CLI_REPO_ID_REQUIRED", exitCode: EXIT_INPUT_ERROR },
-		);
-	}
+	const target = await resolveRepoTarget(context, {
+		config: targetConfig,
+		...(explicitRepoId === undefined ? {} : { explicit: explicitRepoId }),
+		command: "init",
+		nonInteractive: context.argv.includes("--non-interactive"),
+	});
+	const repoId = target.repoId;
 	let parsed: { host: string; owner: string; name: string };
 	try {
 		parsed = parseCanonicalRepoId(repoId);
@@ -74,6 +79,7 @@ async function runRepoArtifactInitCommand(
 		])) ??
 		(await gitOutput(gitRoot, ["rev-parse", "HEAD"])) ??
 		"HEAD";
+	const refMode = parseRefMode(readArgvString(context.argv, "--ref-mode"));
 	const artifactRoot = await resolveCliArtifactRoot(context, gitRoot);
 	const migrationHint = await maybeRenderArtifactRootMigrationHint({
 		root: gitRoot,
@@ -95,6 +101,7 @@ async function runRepoArtifactInitCommand(
 		owner: parsed.owner,
 		name: parsed.name,
 		ref,
+		refMode,
 		createdAt: new Date().toISOString(),
 		artifactPath: artifactRoot.artifactRoot,
 	};
@@ -107,13 +114,27 @@ async function runRepoArtifactInitCommand(
 			...metadata,
 			artifactRoot: artifactRoot.artifactRoot,
 			metadataPath: `${artifactRoot.artifactRoot}/${REPO_METADATA_FILE}`,
+			targetResolution: target,
 		},
 		[
 			...(migrationHint === undefined ? [] : [migrationHint]),
+			`Repo target: ${repoId} (${target.source})`,
+			`Ref mode: ${refMode} (atlas build reads current checkout; remote mode requires ref on origin)`,
 			`Knowledge bundle: ${artifactRoot.artifactRoot}`,
 			"Next: atlas build",
 		],
 	);
+}
+
+function parseRefMode(
+	value: string | undefined,
+): "remote" | "current-checkout" {
+	if (value === undefined) return "current-checkout";
+	if (value === "remote" || value === "current-checkout") return value;
+	throw new CliError("Invalid --ref-mode. Use remote or current-checkout.", {
+		code: "CLI_INVALID_REF_MODE",
+		exitCode: EXIT_INPUT_ERROR,
+	});
 }
 
 function repoIdFromParts(context: CliCommandContext): string | undefined {
@@ -121,6 +142,25 @@ function repoIdFromParts(context: CliCommandContext): string | undefined {
 	const owner = readArgvString(context.argv, "--owner");
 	const name = readArgvString(context.argv, "--name");
 	return host && owner && name ? `${host}/${owner}/${name}` : undefined;
+}
+
+async function loadTargetConfig(
+	context: CliCommandContext,
+): Promise<AtlasConfig> {
+	const configPath = readArgvString(context.argv, "--config");
+	try {
+		return (
+			await loadConfig({
+				cwd: context.cwd,
+				env: context.env,
+				requireGhesAuth: false,
+				...(configPath === undefined ? {} : { configPath }),
+			})
+		).config;
+	} catch (error) {
+		if (configPath !== undefined) throw error;
+		return defaultCliConfig();
+	}
 }
 
 async function runSetupCommand(
@@ -172,10 +212,7 @@ async function runSetupCommand(
 	const cacheDir =
 		cacheDirFlag ??
 		(interactive
-			? await prompts?.input(
-					"Atlas identity runtime directory",
-					defaultRuntimeRoot,
-				)
+			? await prompts?.input("Atlas runtime directory", defaultRuntimeRoot)
 			: defaultRuntimeRoot);
 	if (!cacheDir) {
 		throw new CliError("Missing cache directory.", {
@@ -259,10 +296,10 @@ async function runSetupCommand(
 		},
 		[
 			`Config: ${displayPath(configPath, context.cwd)}`,
-			`Identity root: ${identityProfile.identityRoot}`,
+			`Artifact root: ${identityProfile.identityRoot}`,
 			`Runtime root: ${displayPath(resolveCliPath(created.config.cacheDir, context.cwd), context.cwd)}`,
 			`Cache: ${displayPath(resolveCliPath(created.config.cacheDir, context.cwd), context.cwd)}`,
-			"Next: atlas add-repo",
+			"Next: atlas repo add <repo>",
 		],
 	);
 }

@@ -242,8 +242,18 @@ export function createIndexerServices(options: CreateIndexerServicesOptions): {
 			operation: () => Promise<T>,
 		): Promise<{ result: T; diagnostics: IndexerSourceDiagnostic[] }> {
 			const events: IndexerSourceDiagnostic[] = [];
-			const result = await diagnostics.run(events, operation);
-			return { result, diagnostics: events };
+			try {
+				const result = await diagnostics.run(events, operation);
+				return { result, diagnostics: events };
+			} catch (error) {
+				if (error !== null && (typeof error === "object" || typeof error === "function")) {
+					Object.defineProperty(error, "__indexerDiagnostics", {
+						value: events,
+						configurable: true,
+					});
+				}
+				throw error;
+			}
 		},
 	};
 

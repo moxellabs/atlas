@@ -5,6 +5,7 @@ import {
 	inspectLiveTopology,
 	renderLiveTopologyLines,
 } from "../utils/live-topology";
+import { readRepoTargetArg, resolveRepoTarget } from "./repo-target";
 import {
 	inspectArtifacts,
 	inspectRetrievalPlan,
@@ -83,13 +84,13 @@ export async function runInspectCommand(
 			);
 		}
 		if (mode === "repo") {
-			const repoId = context.argv[1];
-			if (!repoId) {
-				throw new CliError("inspect repo requires <repoId>.", {
-					code: "CLI_REPO_REQUIRED",
-					exitCode: EXIT_INPUT_ERROR,
-				});
-			}
+			const target = await resolveRepoTarget(context, {
+				config: deps.config.config,
+				...readRepoTargetArg(context.argv, 1),
+				command: "inspect repo",
+				nonInteractive: context.argv.includes("--non-interactive"),
+			});
+			const repoId = target.repoId;
 			const repo = artifacts.repos.get(repoId);
 			if (repo === undefined) {
 				throw new CliError(`Unknown repository: ${repoId}.`, {
@@ -107,13 +108,13 @@ export async function runInspectCommand(
 			});
 		}
 		if (mode === "topology") {
-			const repoId = context.argv[1] ?? readArgvString(context.argv, "--repo");
-			if (!repoId) {
-				throw new CliError("inspect topology requires <repoId> or --repo.", {
-					code: "CLI_REPO_REQUIRED",
-					exitCode: EXIT_INPUT_ERROR,
-				});
-			}
+			const target = await resolveRepoTarget(context, {
+				config: deps.config.config,
+				...readRepoTargetArg(context.argv, 1),
+				command: "inspect topology",
+				nonInteractive: context.argv.includes("--non-interactive"),
+			});
+			const repoId = target.repoId;
 			if (artifacts.repos.get(repoId) === undefined) {
 				throw new CliError(`Unknown repository: ${repoId}.`, {
 					code: "CLI_REPO_NOT_FOUND",

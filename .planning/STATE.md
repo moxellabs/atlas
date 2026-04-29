@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: complete
-stopped_at: Phase 35 complete; v1.1 milestone enterprise CLI mount complete
-last_updated: "2026-04-28T15:39:45.802Z"
-last_activity: 2026-04-28
+status: completed
+stopped_at: Phase 41 complete; all phases complete
+last_updated: "2026-04-29T17:45:00.000Z"
+last_activity: 2026-04-29
 progress:
-  total_phases: 35
-  completed_phases: 35
-  total_plans: 69
-  completed_plans: 69
+  total_phases: 41
+  completed_phases: 41
+  total_plans: 82
+  completed_plans: 82
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-26)
 
 **Core value:** Local-first documentation ingestion, compilation, retrieval planning, and MCP/server access for multi-repo engineering docs.
-**Current focus:** v1.1 open-source release preparation: repository public boundary, CI, and release pipeline.
+**Current focus:** v1.1 production onboarding UAT and release gate after command UX simplification.
 
 ## Current Position
 
-Phase: 35 of 35 (embedded enterprise cli mount)
-Plan: 2 of 2
-Status: Phase 35 complete
-Last activity: 2026-04-28
+Phase: 41 of 41 (production onboarding UAT and release gate)
+Plan: 1 of 1
+Status: All phases complete
+Last activity: 2026-04-29
 
 Progress: [██████████] 100%
 
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 69 / 69 planned
+- Total plans completed: 82 / 82 planned
 - Average duration: N/A
 - Total execution time: N/A
 
@@ -79,6 +79,12 @@ Progress: [██████████] 100%
 | 33. Release Pipeline                                         | 2/2   | Complete |
 | 34. Commander and Clack CLI Migration                        | 3/3   | Complete |
 | 35. Embedded Enterprise CLI Mount                            | 2/2   | Complete |
+| 36. Production Build Diagnostics and Nested Error Surfacing  | 2/2   | Complete |
+| 37. Real-Repo Build Pipeline Repro and Root-Cause Fixes      | 2/2   | Complete |
+| 38. Local-Git Checkout Semantics and Local Branch Support    | 2/2   | Complete |
+| 39. Init, Repo State, and Command-State Clarity              | 3/3   | Complete |
+| 40. Command UX Simplification and Production Onboarding      | 3/3   | Complete |
+| 41. Production Onboarding UAT and Release Gate               | 1/1   | Complete |
 
 ## Accumulated Context
 
@@ -134,14 +140,94 @@ Decisions are logged in `.planning/PROJECT.md` Key Decisions table.
 
 - GSD subagent execution unavailable in this runtime; inline sequential planning/execution used successfully.
 - `pi-gsd-tools state begin-phase` command unavailable in this harness (`Unknown command: state`); tracking files updated manually.
+- GSD verifier subagent unavailable in this runtime; Phase 38 verification ran inline.
+- `.planning/PROJECT.md` was referenced by STATE.md but missing on disk during Phase 38 project-md evolution step; skipped PROJECT.md update.
 - Previous codebase map commit skipped because `.planning/codebase/*.md` is gitignored.
+
+### Production Feedback Recovery Planning
+
+- User production incident report `.planning/issues/user-feedback.md` analyzed on 2026-04-29. Version/global-local install confusion is explicitly ignored as a user environment issue, not an Atlas product issue.
+- Confirmed product issues: opaque `CLI_BUILD_FAILED` / `IndexerBuildError`, missing nested cause/stage/entity diagnostics, `inspect topology --live` succeeds while `build` fails, surprising `local-git` remote-ref requirement for local-only branches, confusing config/registry/store/cache state boundaries, unclear `init` target behavior, repeated full `--repo-id host/owner/name` and manual GitHub host setup requirements despite cwd/git-origin/bare repo-name context, confusing `setup`/`init`/`build`/`index` command mental model, and standalone setup surfacing wrapper-only branding/identity concerns.
+- Added Phase 36 for nested build diagnostics, Phase 37 for real build pipeline reproduction/root-cause fixes, Phase 38 for local-git current-checkout semantics, Phase 39 for init/state clarity and shared repo target inference, Phase 40 for command UX simplification, no-branding setup, and guided next-step command, and Phase 41 for production onboarding UAT/release gate.
 
 ## Session Continuity
 
 Last session: 2026-04-28
-Stopped at: Phase 30 complete; milestone ready for verification
+Stopped at: Phase 41 complete; all phases complete
 Resume file: `.planning/ROADMAP.md`
 
+### Phase 41 Execution
+
+- Phase 41 completed: added scripted production onboarding UAT in `tooling/scripts/production-uat.ts`.
+- UAT covers top-level command-order help, setup no-branding help, fresh/post-setup `atlas next`, `repo add` alias delegation, GitHub origin inference, local-only current-checkout init, live topology discovery, verbose `CLI_BUILD_FAILED` nested diagnostics, and doctor state-layer JSON.
+- Added `bun run uat:production` and CI `Production onboarding UAT` release gate.
+- Added troubleshooting release checklist and bug-report command set.
+- Verification passed: `bun run uat:production`, `bun run typecheck`, and `bun run lint`.
+- Background Phase 41 session reported success but did not write final artifacts, so final UAT implementation and completion bookkeeping were completed inline by manager.
+
+### Phase 40 Execution
+
+- Phase 40 completed: added `atlas next` to inspect setup/repo/artifact/corpus state and recommend one command with human and JSON output.
+- Top-level help now shows grouped onboarding paths and distinguishes `setup`, `repo add`, `init && build`, and fallback `index <path>`.
+- `atlas repo add <repo>` now shares implementation with legacy `atlas add-repo`.
+- Standalone setup no longer surfaces wrapper-only branding/MCP display identity prompts/options; Commander wrapper defaults remain supported.
+- Verification passed: focused CLI tests for next/status/help/repo add/add-repo/setup/branding/commander, `bun run typecheck`, and `bun run lint`.
+- Planned files missing were mapped to active equivalents: setup UX in `init.command.ts`, docs in README/ingestion-build-flow/CLI docs/configuration.
+- Top-level help now shows quick path and intent groups: Start, Use repos, Build artifacts, Search/query, and Diagnose.
+- `atlas repo add <repo>` is now the primary repo lifecycle command and delegates to existing `add-repo`; `atlas add-repo` remains a compatibility alias with stable JSON/script behavior.
+- Docs now separate consumer (`setup` → `repo add`), maintainer (`init` → `build` → `artifact verify`), and emergency local-only (`index`) flows.
+- Standalone `atlas setup` help no longer surfaces MCP display identity flags; setup prompt/output wording is functional runtime/artifact-root language, and wrapper display identity/defaults are documented as Commander wrapper code concerns.
+- Verification passed: `bun test apps/cli/src/cli.test.ts --test-name-pattern "next|status|help|repo add|add-repo|setup|branding|commander"`, `bun run typecheck`, and `bun run lint`.
+- GSD subagents were unavailable (`agents_installed: false`), so execution and verification ran inline sequentially. `pi-gsd-tools state begin-phase` remains unavailable in this harness (`Unknown command: state`). Planned docs `docs/quickstart.md`, `docs/consumer-workflow.md`, `docs/maintainer-workflow.md`, and command file `apps/cli/src/commands/setup.command.ts` do not exist; equivalent active files were updated.
+
+### Phase 39 Execution
+
+- Phase 39 completed: added shared repo target resolution for explicit flags, repo-local metadata, cwd-config matches, Git origin, unique bare names, and single-config fallbacks.
+- `atlas init`, `build`, `repo doctor`, and inspect commands can infer repo target from cwd/Git origin without requiring repeated `--repo-id host/owner/name` or manual default GitHub host setup.
+- Missing/ambiguous target errors now report checked sources and candidates; JSON uses structured `CLI_REPO_TARGET_REQUIRED` / `CLI_REPO_TARGET_AMBIGUOUS` payloads.
+- `repo doctor` and `doctor` now explain config/registry/store/cache/build layers and avoid implying build readiness when no build ran.
+- Verification passed: focused CLI tests for init/doctor/repo target/build/inspect/cwd/bare repo flows, `bun run typecheck`, and `bun run lint`.
+- GSD subagents unavailable, `pi-gsd-tools state begin-phase` unavailable, and `.planning/PROJECT.md` missing; execution/verification ran inline and project evolution skipped.
+- `atlas init` now infers GitHub.com repo IDs from cwd Git origin without requiring manual default host setup and emits `targetResolution` metadata in JSON.
+- `build`, `repo doctor`, `repo show`, `inspect repo`, and `inspect topology` use the shared resolver where they need one repo; eligible Commander args are optional so cwd inference can run.
+- `doctor` and `repo doctor` now label checked state layers (`runtime-config`, `db`, `local-git-cache`, `server-readiness`, `config`, `registry`, `store`, `artifact-metadata`) and human output clarifies these commands do not run `build`.
+- Build verbose diagnostics now render a derived layer for failing stages such as source/cache, topology, compile, and persistence.
+- Docs updated in CLI app docs, runtime surfaces, and troubleshooting for target inference, ambiguity handling, state layer boundaries, and doctor-vs-build expectations.
+- Verification passed: focused CLI target/doctor/build/inspect tests, `bun run typecheck`, and `bun run lint`.
+- GSD subagents were unavailable (`agents_installed: false`), so execution and verification ran inline sequentially. `pi-gsd-tools state begin-phase` remains unavailable in this harness (`Unknown command: state`). `.planning/PROJECT.md` is still missing, so PROJECT evolution was skipped.
+
+### Phase 38 Execution
+
+- Phase 38 completed: added explicit `git.refMode` semantics for `local-git`, with `remote` preserving managed cache fetch/detach behavior and `current-checkout` reading local checkout `HEAD` without fetch, checkout, clone, or sparse mutation.
+- Local-only checked-out branches and detached HEAD builds now work in current-checkout mode.
+- Remote-ref errors now explain Atlas tried `origin <ref>` and suggest `refMode: current-checkout` for local-only branch/current working tree use.
+- Verification passed: focused local-git current-checkout/remote-ref tests, focused CLI init/current-checkout tests, full local-git adapter tests, `bun run typecheck`, and `bun run lint`.
+- GSD verifier subagent unavailable in this runtime and `.planning/PROJECT.md` missing; verification ran inline and PROJECT evolution was skipped.
+- Repo-local `atlas init` now records `refMode: current-checkout`; `atlas build` reads current checkout `HEAD`, supporting local-only branches and detached HEAD artifact publishing.
+- Remote ref failures now include origin-ref wording, `ref`/`refMode` structured context, and recovery guidance to use `refMode: current-checkout` for local-only branches.
+- Docs updated in configuration, ingestion/build flow, and troubleshooting to explain remote mode versus current checkout mode and `HEAD` semantics.
+- Verification passed: focused current-checkout/remote-ref adapter tests, focused CLI init/local-only tests, full local-git adapter test file, `bun run typecheck`, and `bun run lint`.
+- GSD subagents were unavailable (`agents_installed: false`), `pi-gsd-tools state begin-phase` was unavailable (`Unknown command: state`), and `.planning/PROJECT.md` was missing, so execution/verification ran inline and state/project evolution was handled manually or skipped as noted.
+
+### Phase 37 Execution
+
+- Phase 37 completed: added topology-success/build-failure CLI and indexer regressions, preserving nested verbose causes and `docsConsidered` on failed builds.
+- Fixed build-stage root cause where generated/vendor directories skipped by live topology could still poison source listings/build compilation; source listings now ignore generated/vendor directories consistently.
+- Transactional failure behavior verified: post-discovery compile failures persist no docs and no manifest.
+- Verification passed: `bun test packages/indexer/src/indexer.test.ts apps/cli/src/cli.test.ts --test-name-pattern "post-discovery|build failure|topology.*build|generated and vendored|CLI_BUILD_FAILED"`, `bun test packages/source-ghes/src/ghes-source.test.ts --test-name-pattern "tree|blob|list"`, `bun run typecheck`, and `bun run lint`.
+- Fixed build/topology ignore-boundary divergence: local-git and GHES source listings now skip generated/vendor roots such as `.moxel`, `.atlas`, `node_modules`, `dist`, `coverage`, and `target` before topology classification.
+- Build failures now classify compile, chunk, and persistence boundaries more narrowly; persistence errors no longer collapse into generic build stage.
+- Troubleshooting docs now explain source/planning/compile/chunk/persistence/build stages, fields to inspect/share, and ignored-directory regression signal.
+- Verification passed: focused CLI/indexer boundary tests, source-ghes tree/blob tests, `bun run typecheck`, and `bun run lint`.
+- GSD subagents were unavailable (`agents_installed: false`) and `pi-gsd-tools state begin-phase` was unavailable (`Unknown command: state`), so execution ran inline sequentially and state/roadmap were updated manually.
+
+### Phase 36 Execution
+
+- Phase 36 completed: failed indexer build reports now preserve nested `Error.cause` chains, source diagnostics captured before terminal failure, failing stage/repo/entity/path metadata, and redacted structured diagnostic causes.
+- CLI build failures now use concise default human output with rerun guidance and verbose human/JSON output for nested cause details; non-verbose JSON recursively strips stacks while preserving messages/codes/paths.
+- Added `docs/troubleshooting.md` production triage guidance for `CLI_BUILD_FAILED`, `IndexerBuildError`, topology-vs-build boundaries, and safe share/redact fields.
+- Verification passed: `bun test packages/indexer/src/reports/build-report.test.ts packages/indexer/src/indexer.test.ts`, `bun test apps/cli/src/cli.test.ts --test-name-pattern "build.*diagnostic|CLI_BUILD_FAILED|verbose"`, `bun run typecheck`, and `bun run lint`.
+- GSD subagents were unavailable (`agents_installed: false`) and `pi-gsd-tools state begin-phase` was unavailable (`Unknown command: state`), so execution ran inline sequentially and state/roadmap were updated manually.
 
 ### Phase 35 Execution
 
