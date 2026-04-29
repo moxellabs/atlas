@@ -9,7 +9,7 @@ order: 20
 
 # Configuration
 
-Atlas setup creates `~/.moxel/atlas/config.yaml`. Atlas config is loaded by `@atlas/config` from that user-home file when created through CLI setup/add-repo, from existing `atlas.config.yaml`, `atlas.config.yml`, or `atlas.config.json` project files, from an explicit `--config`, or from `ATLAS_CONFIG`. Enterprise Commander wrappers can mount Atlas with the same supported identity/default fields; see [Enterprise CLI Mount](enterprise-cli-mount.md).
+Atlas setup creates `~/.moxel/atlas/config.yaml` for functional local runtime paths, hosts, and repo sources. Atlas config is loaded by `@atlas/config` from that user-home file when created through CLI setup/repo add, from existing `atlas.config.yaml`, `atlas.config.yml`, or `atlas.config.json` project files, from an explicit `--config`, or from `ATLAS_CONFIG`. Enterprise Commander wrappers can mount Atlas with supported default fields in wrapper code; see [Enterprise CLI Mount](enterprise-cli-mount.md).
 
 The config package is the source of truth for config schema validation, path normalization, defaults, repo source shape validation, and credential resolution. CLI and server code should call the config loaders instead of reading config files directly.
 
@@ -26,9 +26,14 @@ Paths are normalized relative to the config file when appropriate. This lets the
 
 ## Repo Source Modes
 
-`local-git` repos provide a Git remote, local cache path, and ref. `ghes-api` repos provide a GHES REST API base URL, owner, name, ref, and optional token env var.
+`local-git` repos provide a Git remote, local path, ref, and optional `refMode`. `ghes-api` repos provide a GHES REST API base URL, owner, name, ref, and optional token env var.
 
-`local-git` is for repositories that Atlas can clone or update in a local cache. `ghes-api` is for GitHub Enterprise Server repositories read through REST APIs. Credential discovery is resolved by `@atlas/config`; `@atlas/source-ghes` receives resolved auth metadata and performs API operations.
+`local-git` has two explicit checkout semantics:
+
+- `refMode: remote` (default) treats `localPath` as a managed cache. Atlas runs `git fetch origin <ref>`, detaches `FETCH_HEAD`, and requires `<ref>` to exist on `origin`.
+- `refMode: current-checkout` treats `localPath` as the source checkout. Atlas reads the current working tree `HEAD` with `git rev-parse HEAD` and does not fetch, checkout, or require the branch to exist on `origin`. Use this for local-only branches and detached HEAD builds.
+
+`ghes-api` is for GitHub Enterprise Server repositories read through REST APIs. Credential discovery is resolved by `@atlas/config`; `@atlas/source-ghes` receives resolved auth metadata and performs API operations.
 
 Repo IDs should be stable because they participate in provenance, deterministic IDs, manifest state, retrieval scopes, and MCP resource identifiers.
 
@@ -60,7 +65,7 @@ Secrets should be referenced by environment variable name rather than written in
 
 ## Mutation Rules
 
-The CLI owns config mutation workflows such as `atlas setup` and repository registration. It creates `~/.moxel/atlas`, `~/.moxel/atlas/repos`, and the config/corpus parents as needed. Server-side mutation must preserve the same local-first behavior and should use config mutation helpers rather than editing YAML or JSON ad hoc.
+The CLI owns config mutation workflows such as `atlas setup` and repository registration through `atlas repo add`. Setup creates `~/.moxel/atlas`, `~/.moxel/atlas/repos`, and the config/corpus parents as needed. Standalone setup does not ask for wrapper namespace, MCP display identity, or visual branding fields; those belong in embedded Commander wrapper code. Server-side mutation must preserve the same local-first behavior and should use config mutation helpers rather than editing YAML or JSON ad hoc.
 
 Config changes should remain compatible with the schema and with both source adapters. When adding a config field, update schema validation, defaults, docs, CLI/server usage, and tests together.
 
@@ -92,7 +97,7 @@ Shorthand repo inputs search hosts by priority then name. In non-interactive amb
 
 ## Remote artifact fetch and adoption templates
 
-Configured host web/API URLs are used to read `.moxel/atlas` artifact files during explicit `atlas add-repo`. Private repos should use least-privilege read tokens. Templates do not require additional write scopes.
+Configured host web/API URLs are used to read `.moxel/atlas` artifact files during explicit `atlas repo add` / `atlas add-repo`. Private repos should use least-privilege read tokens. Templates do not require additional write scopes.
 
 Adoption templates do not call issue/PR APIs and do not use configured API URLs for remote writes. Atlas adoption templates are copyable text only. Maintainers control branch names, commit messages, hooks, PR templates, and permissions. Atlas does not branch, commit, push, create issues, or create PRs.
 
@@ -119,9 +124,9 @@ Troubleshooting:
 - Weak docs warning: improve docs or use `document-codebase` before indexing/building.
 - Repo removal: `atlas repo remove github.mycorp.com/platform/docs --yes` removes local repo state and corpus rows.
 
-## Identity root behavior
+## Artifact and runtime root behavior
 
-Default identity uses `.moxel/atlas` in maintainer checkouts and `~/.moxel/atlas` at runtime. Custom identity example: `--atlas-identity-root .acme/knowledge`, `ATLAS_IDENTITY_ROOT=.acme/knowledge`, or config `identity.root: ".acme/knowledge"`. `.acme` is umbrella/team/vendor equivalent to `moxel`; `knowledge` is brand/product/MCP equivalent to `atlas`. MCP identity uses `--atlas-mcp-name acme-knowledge`, `ATLAS_MCP_NAME=acme-knowledge`, and config `identity.mcp.name`, `identity.mcp.title`, `identity.mcp.resourcePrefix`. Precedence is CLI > environment > config > default; explicit cache/corpus config overrides derived runtime paths.
+Default artifact/runtime roots use `.moxel/atlas` in maintainer checkouts and `~/.moxel/atlas` at runtime. Alternate roots are advanced configuration for embedded or enterprise wrappers and existing runtime integrations; normal standalone onboarding should not require them. MCP display identity and resource prefixes are wrapper/server concerns, not `atlas setup` prompts. Precedence is CLI > environment > config > default; explicit cache/corpus config overrides derived runtime paths.
 
 Maintainer committed artifact path is identity root directly: `<repo>/.moxel/atlas/` or `<repo>/.acme/knowledge/`. Consumer imported mirrors preserve identity root directly: `~/.moxel/atlas/repos/<host>/<owner>/<name>/.moxel/atlas/` or `~/.acme/knowledge/repos/<host>/<owner>/<name>/.acme/knowledge/`. Files live directly inside identity root: `manifest.json`, `corpus.db`, `docs.index.json`, `checksums.json`, and `atlas.repo.json` when applicable. Legacy nested artifact mirror layouts are not used for fetched/copied mirrors. Custom identity roots do not read, copy, migrate, delete, or fallback to `.moxel/atlas` or `~/.moxel/atlas`.
 
@@ -164,7 +169,7 @@ Built-in defaults classify `README.md`, `docs/**`, and `skills/**` as public con
 
 ## Static Site And Metadata Quickstart
 
-Default identity root uses `.moxel/atlas` in a maintainer checkout and `~/.moxel/atlas` in a consumer runtime:
+Default artifact/runtime roots use `.moxel/atlas` in a maintainer checkout and `~/.moxel/atlas` in a consumer runtime:
 
 ```bash
 atlas setup
@@ -172,16 +177,11 @@ atlas init
 atlas build --profile public
 ```
 
-Custom identity root uses the public knobs `--atlas-identity-root`, `ATLAS_IDENTITY_ROOT`, and `identity.root`:
+Consumer onboarding uses maintained artifacts first:
 
 ```bash
-atlas setup --atlas-identity-root .acme/knowledge
-ATLAS_IDENTITY_ROOT=.acme/knowledge atlas add-repo org/repo
+atlas next
+atlas repo add org/repo
 ```
 
-```yaml
-identity:
-  root: .acme/knowledge
-```
-
-Runtime state then derives under `~/.acme/knowledge`. Public docs and artifacts use document metadata fields `profile`, `audience`, `purpose`, and `visibility` to decide what belongs in a public artifact.
+Public docs and artifacts use document metadata fields `profile`, `audience`, `purpose`, and `visibility` to decide what belongs in a public artifact. Use Enterprise CLI Mount docs for wrapper-provided alternate roots or display identity defaults.

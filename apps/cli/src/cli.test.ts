@@ -30,10 +30,66 @@ import {
 } from "./commander";
 import { runMcpCommandWithDependencies } from "./commands/mcp.command";
 import { runServeCommandWithDependencies } from "./commands/serve.command";
+import { buildFailureLines } from "./commands/shared";
 import { runCli } from "./index";
 import type { CliCommandContext } from "./runtime/types";
+import { CliError, toFailureResult } from "./utils/errors";
 
 describe("atlas cli", () => {
+	test("CLI_BUILD_FAILED diagnostics keep stacks verbose-only and render cause chain", () => {
+		const report = {
+			repoId: "github.mycorp.com/platform/docs",
+			strategy: "full",
+			docsRebuilt: 0,
+			docsDeleted: 0,
+			diagnostics: [
+				{
+					severity: "error",
+					stage: "compile",
+					path: "packages/auth/docs/api.md",
+					message: "Failed to rebuild doc packages/auth/docs/api.md.",
+					code: "IndexerBuildError",
+					cause: {
+						name: "IndexerBuildError",
+						message: "Failed to rebuild docs.",
+						stack: "IndexerBuildError: redacted stack",
+						context: {
+							operation: "rebuildDocs",
+							repoId: "github.mycorp.com/platform/docs",
+							entity: "packages/auth/docs/api.md",
+						},
+						cause: {
+							name: "CompilerError",
+							message: "Nested compiler failure",
+							stack: "CompilerError: redacted stack",
+						},
+					},
+				},
+			],
+		};
+		const error = new CliError("build failed", {
+			code: "CLI_BUILD_FAILED",
+			exitCode: 1,
+			details: report,
+		});
+
+		expect(
+			JSON.stringify(toFailureResult("build", error, false)),
+		).not.toContain("stack");
+		expect(JSON.stringify(toFailureResult("build", error, true))).toContain(
+			"CompilerError: redacted stack",
+		);
+		expect(buildFailureLines(report, false)).toContain(
+			"Run again with --verbose --json to see nested cause details.",
+		);
+		expect(buildFailureLines(report, true).join("\n")).toContain(
+			"CompilerError: Nested compiler failure",
+		);
+		expect(buildFailureLines(report, true).join("\n")).toContain(
+			"path: packages/auth/docs/api.md",
+		);
+	});
+
 	test("mounted Commander API validates namespace and returns parent", () => {
 		const program = new Command();
 		program.name("userCli");
@@ -129,6 +185,148 @@ describe("atlas cli", () => {
 		).toBe(false);
 	});
 
+	test("next recommends setup, repo add, and build from detected state", async () => {
+		const noSetup = await runWithCapture(["next", "--cwd", rootDir, "--json"], {
+			HOME: join(rootDir, "home-next-empty"),
+		});
+		expect(noSetup.exitCode).toBe(0);
+		expect(JSON.parse(noSetup.stdout).data).toMatchObject({
+			recommendedCommand: "atlas setup",
+			state: { configFound: false },
+		});
+
+		const home = join(rootDir, "home-next");
+		const setup = await runWithCapture(
+			["setup", "--cwd", rootDir, "--cache-dir", cacheDir, "--non-interactive"],
+			{ HOME: home },
+		);
+		expect(setup.exitCode).toBe(0);
+		const nextConfig = join(home, ".moxel", "atlas", "config.yaml");
+		const emptySetup = await runWithCapture(
+			["next", "--cwd", rootDir, "--config", nextConfig, "--json"],
+			{ HOME: home },
+		);
+		expect(JSON.parse(emptySetup.stdout).data).toMatchObject({
+			recommendedCommand: "atlas repo add <repo>",
+			state: { configFound: true, repoCount: 0 },
+		});
+
+		const checkout = join(rootDir, "next-checkout");
+		await mkdir(checkout, { recursive: true });
+		await git(checkout, ["init", "-b", "main"]);
+		await git(checkout, ["config", "user.email", "atlas@example.test"]);
+		await git(checkout, ["config", "user.name", "ATLAS Test"]);
+		await git(checkout, [
+			"remote",
+			"add",
+			"origin",
+			"git@github.com:moxellabs/atlas.git",
+		]);
+		await writeFile(join(checkout, "README.md"), "# Atlas\n");
+		await git(checkout, ["add", "."]);
+		await git(checkout, ["commit", "-m", "initial"]);
+		await runWithCapture(
+			["init", "--cwd", checkout, "--config", nextConfig, "--non-interactive"],
+			{ HOME: home },
+		);
+		const buildNext = await runWithCapture(
+			["next", "--cwd", checkout, "--config", nextConfig, "--json"],
+			{ HOME: home },
+		);
+		expect(JSON.parse(buildNext.stdout).data).toMatchObject({
+			recommendedCommand: "atlas build",
+			state: { repoMetadataFound: true, artifactFound: false },
+		});
+	});
+
+	test("help explains command order and setup hides wrapper-only identity knobs", async () => {
+		const help = await runWithCapture(["--help"]);
+		expect(help.stdout).toContain(
+			"atlas setup                 one-time local runtime setup",
+		);
+		expect(help.stdout).toContain(
+			"atlas repo add <repo>       use an existing repo artifact",
+		);
+		expect(help.stdout).toContain(
+			"atlas init && atlas build   publish/update artifact from a checkout",
+		);
+		expect(help.stdout).toContain(
+			"atlas index <path>          fallback local-only index",
+		);
+		expect(help.stdout).toContain("Start: setup, next");
+
+		const setupHelp = await runWithCapture(["setup", "--help"]);
+		const lower = setupHelp.stdout.toLowerCase();
+		for (const forbidden of [
+			"branding",
+			"logo",
+			"color",
+			"productname",
+			"namespace",
+			"mcp title",
+			"resource prefix",
+			"--atlas-mcp-name",
+			"--atlas-mcp-title",
+		]) {
+			expect(lower).not.toContain(forbidden);
+		}
+	});
+
+	test("repo add alias preserves add-repo JSON result shape", async () => {
+		const home = join(rootDir, "home-repo-add-alias");
+		await runWithCapture(
+			["setup", "--cwd", rootDir, "--cache-dir", cacheDir, "--non-interactive"],
+			{ HOME: home },
+		);
+		const cfg = join(home, ".moxel", "atlas", "config.yaml");
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async () =>
+			new Response("not found", { status: 404 })) as unknown as typeof fetch;
+		try {
+			const topLevel = await runWithCapture(
+				[
+					"add-repo",
+					"moxellabs/atlas",
+					"--cwd",
+					rootDir,
+					"--config",
+					cfg,
+					"--cache-dir",
+					join(rootDir, "alias-top"),
+					"--non-interactive",
+					"--json",
+				],
+				{ HOME: home },
+			);
+			const nested = await runWithCapture(
+				[
+					"repo",
+					"add",
+					"moxellabs/atlas",
+					"--cwd",
+					rootDir,
+					"--config",
+					cfg,
+					"--cache-dir",
+					join(rootDir, "alias-nested"),
+					"--non-interactive",
+					"--json",
+				],
+				{ HOME: home },
+			);
+			expect(topLevel.exitCode).toBe(0);
+			expect(nested.exitCode).toBe(0);
+			expect(Object.keys(JSON.parse(nested.stdout).data).sort()).toEqual(
+				Object.keys(JSON.parse(topLevel.stdout).data).sort(),
+			);
+			expect(JSON.parse(nested.stdout).data.repoId).toBe(
+				"github.com/moxellabs/atlas",
+			);
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
 	test("shorthand repo input uses configured default host before public GitHub", async () => {
 		const home = join(rootDir, "home-default-host");
 		await runWithCapture(
@@ -181,6 +379,139 @@ describe("atlas cli", () => {
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
+	});
+
+	test("repo target inference supports cwd, git origin, bare names, and ambiguity", async () => {
+		const initRepo = join(rootDir, "github-origin");
+		await mkdir(initRepo, { recursive: true });
+		await git(initRepo, ["init", "-b", "main"]);
+		await git(initRepo, ["config", "user.email", "atlas@example.test"]);
+		await git(initRepo, ["config", "user.name", "ATLAS Test"]);
+		await git(initRepo, [
+			"remote",
+			"add",
+			"origin",
+			"git@github.com:moxellabs/atlas.git",
+		]);
+		await writeFile(join(initRepo, "README.md"), "# Atlas\n");
+		await git(initRepo, ["add", "."]);
+		await git(initRepo, ["commit", "-m", "initial"]);
+
+		const inferredInit = await runWithCapture([
+			"init",
+			"--cwd",
+			initRepo,
+			"--json",
+		]);
+		expect(inferredInit.exitCode).toBe(0);
+		expect(JSON.parse(inferredInit.stdout).data.targetResolution).toMatchObject(
+			{
+				repoId: "github.com/moxellabs/atlas",
+				source: "git-origin",
+			},
+		);
+
+		await runWithCapture([
+			"setup",
+			"--cwd",
+			rootDir,
+			"--non-interactive",
+			"--cache-dir",
+			cacheDir,
+		]);
+		await runWithCapture([
+			"add-repo",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+			"--cache-dir",
+			cacheDir,
+			"--non-interactive",
+			"--repo-id",
+			"github.com/platform/docs",
+			"--mode",
+			"local-git",
+			"--remote",
+			`file://${originPath}`,
+			"--local-path",
+			originPath,
+			"--ref",
+			"main",
+			"--template",
+			"mixed-monorepo",
+		]);
+
+		const cwdDoctor = await runWithCapture([
+			"repo",
+			"doctor",
+			"--cwd",
+			originPath,
+			"--config",
+			configPath,
+			"--json",
+		]);
+		expect(cwdDoctor.exitCode).toBe(0);
+		expect(JSON.parse(cwdDoctor.stdout).data.targetResolution.source).toBe(
+			"cwd-config",
+		);
+		expect(JSON.parse(cwdDoctor.stdout).data.checks[0].layer).toBe("registry");
+
+		const bareShow = await runWithCapture([
+			"repo",
+			"show",
+			"docs",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+			"--json",
+		]);
+		expect(bareShow.exitCode).toBe(0);
+		expect(JSON.parse(bareShow.stdout).data.targetResolution).toMatchObject({
+			repoId: "github.com/platform/docs",
+			source: "bare-name",
+		});
+
+		await runWithCapture([
+			"add-repo",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+			"--cache-dir",
+			cacheDir,
+			"--non-interactive",
+			"--repo-id",
+			"github.com/other/docs",
+			"--mode",
+			"local-git",
+			"--remote",
+			`file://${originPath}`,
+			"--local-path",
+			originPath,
+			"--ref",
+			"main",
+			"--template",
+			"mixed-monorepo",
+		]);
+		const ambiguous = await runWithCapture([
+			"repo",
+			"doctor",
+			"docs",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+			"--json",
+		]);
+		expect(ambiguous.exitCode).toBe(2);
+		const ambiguity = JSON.parse(ambiguous.stdout);
+		expect(ambiguity.error.code).toBe("CLI_REPO_TARGET_AMBIGUOUS");
+		expect(ambiguity.error.details.candidates).toEqual([
+			"github.com/other/docs",
+			"github.com/platform/docs",
+		]);
 	});
 
 	test("setup bootstraps a YAML config and add-repo preserves it", async () => {
@@ -916,6 +1247,185 @@ describe("atlas cli", () => {
 		expect(await exists(join(liveRoot, ".moxel", "atlas", "corpus.db"))).toBe(
 			false,
 		);
+	});
+
+	test("inspect topology --live succeeds while build reports post-discovery compile failure", async () => {
+		await writeFile(
+			join(originPath, "docs", "broken.md"),
+			"---\ntitle: Broken\n# Missing closing frontmatter\n",
+		);
+		await git(originPath, ["add", "."]);
+		await git(originPath, ["commit", "-m", "add broken doc"]);
+
+		const topology = await runWithCapture([
+			"inspect",
+			"topology",
+			"--cwd",
+			originPath,
+			"--live",
+			"--json",
+		]);
+		expect(topology.exitCode).toBe(0);
+		expect(JSON.parse(topology.stdout)).toMatchObject({
+			ok: true,
+			data: { source: "live" },
+		});
+
+		await runWithCapture([
+			"init",
+			"--cwd",
+			rootDir,
+			"--non-interactive",
+			"--cache-dir",
+			cacheDir,
+		]);
+		await runWithCapture([
+			"add-repo",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+			"--cache-dir",
+			cacheDir,
+			"--non-interactive",
+			"--repo-id",
+			"github.mycorp.com/platform/docs",
+			"--mode",
+			"local-git",
+			"--remote",
+			`file://${originPath}`,
+			"--local-path",
+			localPath,
+			"--ref",
+			"main",
+			"--template",
+			"mixed-monorepo",
+		]);
+
+		const build = await runWithCapture([
+			"build",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+			"--repo",
+			"github.mycorp.com/platform/docs",
+			"--json",
+			"--verbose",
+		]);
+		expect(build.exitCode).toBe(1);
+		const payload = JSON.parse(build.stdout);
+		expect(payload).toMatchObject({
+			ok: false,
+			command: "build",
+			error: {
+				code: "CLI_BUILD_FAILED",
+				details: {
+					repoId: "github.mycorp.com/platform/docs",
+					docsConsidered: 4,
+					diagnostics: expect.arrayContaining([
+						expect.objectContaining({
+							stage: "compile",
+							path: "docs/broken.md",
+							cause: expect.objectContaining({
+								cause: expect.objectContaining({
+									message: expect.stringContaining(
+										"Frontmatter opening marker",
+									),
+								}),
+							}),
+						}),
+					]),
+				},
+			},
+		});
+	});
+
+	test("build ignores generated and vendored docs that live topology also skips", async () => {
+		await mkdir(join(originPath, "node_modules", "bad-package"), {
+			recursive: true,
+		});
+		await mkdir(join(originPath, ".moxel", "atlas"), { recursive: true });
+		await writeFile(
+			join(originPath, "node_modules", "bad-package", "SKILL.md"),
+			"---\ndescription: broken\n# Missing closing frontmatter\n",
+		);
+		await writeFile(
+			join(originPath, ".moxel", "atlas", "SKILL.md"),
+			"---\ndescription: generated broken\n# Missing closing frontmatter\n",
+		);
+		await git(originPath, ["add", "."]);
+		await git(originPath, ["commit", "-m", "add ignored generated docs"]);
+
+		const topology = await runWithCapture([
+			"inspect",
+			"topology",
+			"--cwd",
+			originPath,
+			"--live",
+			"--json",
+		]);
+		expect(topology.exitCode).toBe(0);
+		const topologyPayload = JSON.parse(topology.stdout);
+		const livePaths = (
+			topologyPayload.data.docs as Array<{ path: string }>
+		).map((doc) => doc.path);
+		expect(livePaths).not.toEqual(
+			expect.arrayContaining([
+				"node_modules/bad-package/SKILL.md",
+				".moxel/atlas/SKILL.md",
+			]),
+		);
+
+		await runWithCapture([
+			"init",
+			"--cwd",
+			rootDir,
+			"--non-interactive",
+			"--cache-dir",
+			cacheDir,
+		]);
+		await runWithCapture([
+			"add-repo",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+			"--cache-dir",
+			cacheDir,
+			"--non-interactive",
+			"--repo-id",
+			"github.mycorp.com/platform/docs",
+			"--mode",
+			"local-git",
+			"--remote",
+			`file://${originPath}`,
+			"--local-path",
+			localPath,
+			"--ref",
+			"main",
+			"--template",
+			"mixed-monorepo",
+		]);
+		const build = await runWithCapture([
+			"build",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+			"--repo",
+			"github.mycorp.com/platform/docs",
+			"--json",
+		]);
+		expect(build.exitCode, build.stderr).toBe(0);
+		expect(JSON.parse(build.stdout)).toMatchObject({
+			ok: true,
+			command: "build",
+			data: {
+				docsConsidered: 3,
+				docsRebuilt: 3,
+			},
+		});
 	});
 
 	test("inspect topology --live uses matching config rules when config exists", async () => {
@@ -1737,7 +2247,7 @@ repos:
 
 		expect(result.exitCode).toBe(0);
 		expect(result.stdout).toContain("Usage: atlas repo doctor");
-		expect(result.stdout).toContain("<repo>");
+		expect(result.stdout).toContain("[repo]");
 	});
 
 	test("interactive missing artifact never falls back to legacy numbered prompt", async () => {

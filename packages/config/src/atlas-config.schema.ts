@@ -230,10 +230,13 @@ export const atlasDocsConfigSchema = z
 	})
 	.default({ metadata: { rules: [], profiles: {} } });
 
+export const atlasGitRefModeSchema = z.enum(["remote", "current-checkout"]);
+
 export const atlasGitRepoSourceConfigSchema = z.object({
 	remote: nonEmptyTrimmedString,
 	localPath: nonEmptyTrimmedString,
 	ref: nonEmptyTrimmedString,
+	refMode: atlasGitRefModeSchema.default("remote"),
 });
 
 export const atlasGhesRepoSourceConfigSchema = z.object({

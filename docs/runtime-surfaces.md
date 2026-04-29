@@ -38,6 +38,8 @@ atlas build
 git add .moxel/atlas
 ```
 
+Repo target inference is shared across repo-targeting commands. Explicit `--repo` / `--repo-id host/owner/name` still wins, but Atlas also checks repo-local metadata, configured local checkout paths, Git origin, unique bare repo names, and single configured repos. GitHub.com origins work with the built-in default host; GHES origins still require `atlas hosts add <host>`.
+
 `atlas setup` is user-home consumer setup. `atlas init` is repo-local maintainer setup. Repo-local `atlas build` writes `.moxel/atlas/manifest.json`, `.moxel/atlas/corpus.db`, `.moxel/atlas/checksums.json`, and `.moxel/atlas/docs.index.json`. Maintainers control branch names, commit messages, hooks, PR templates, staging, commit, and push. Atlas gives commit hints only; Atlas does not stage, commit, branch, or push.
 
 ### MCP Adoption Evaluation
@@ -91,7 +93,7 @@ bun run release:check
 
 ## Repo management commands
 
-`atlas repo list` reads folder registry metadata from `~/.moxel/atlas/repos/<host>/<owner>/<name>/repo.json`. `atlas repo doctor github.mycorp.com/platform/docs` validates local metadata/config/store consistency without network calls. `atlas repo remove github.mycorp.com/platform/docs --yes` removes registry folder state and imported corpus rows for that canonical repo ID.
+`atlas repo list` reads folder registry metadata from `~/.moxel/atlas/repos/<host>/<owner>/<name>/repo.json`. `atlas repo doctor` validates local metadata/config/store consistency without network calls and can infer the current repo from cwd, repo metadata, config, Git origin, or a unique bare name such as `atlas repo doctor docs`. Passing the full canonical ID remains the disambiguation path: `atlas repo doctor github.mycorp.com/platform/docs`. `repo doctor` labels config, registry, store, and artifact metadata layers and explicitly does not run `build`. `atlas repo remove github.mycorp.com/platform/docs --yes` removes registry folder state and imported corpus rows for that canonical repo ID.
 
 ## Host management and repo resolver
 

@@ -13,6 +13,7 @@ import { runInspectCommand } from "./commands/inspect.command";
 import { runInstallSkillCommand } from "./commands/install-skill.command";
 import { runListCommand } from "./commands/list.command";
 import { runMcpCommand } from "./commands/mcp.command";
+import { runNextCommand } from "./commands/next.command";
 import { runPruneCommand } from "./commands/prune.command";
 import { runRepoCommand } from "./commands/repo.command";
 import { runSearchCommand } from "./commands/search.command";
@@ -159,6 +160,15 @@ export function registerAtlasCommands(
 	addCommand(
 		program,
 		runtime,
+		"next",
+		"Recommend the next Atlas command for this state",
+		[],
+		runNextCommand,
+		globalOptions,
+	);
+	addCommand(
+		program,
+		runtime,
 		"adoption-template",
 		"Generate copyable maintainer request text",
 		["[repo]"],
@@ -223,7 +233,7 @@ export function registerAtlasCommands(
 	for (const spec of [
 		{ name: "manifest", args: [], options: globalOptions },
 		{ name: "freshness", args: ["[repo]"], options: globalOptions },
-		{ name: "repo", args: ["<repo>"], options: globalOptions },
+		{ name: "repo", args: ["[repo]"], options: globalOptions },
 		{ name: "topology", args: ["[repo]"], options: inspectTopologyOptions },
 		{ name: "retrieval", args: [], options: inspectRetrievalOptions },
 		{ name: "doc", args: ["<doc>"], options: globalOptions },
@@ -345,18 +355,50 @@ export function registerAtlasCommands(
 		.description("Manage added repositories")
 		.action(() => repo.outputHelp());
 	for (const spec of [
-		{ name: "list", args: [], options: globalOptions },
-		{ name: "doctor", args: ["<repo>"], options: globalOptions },
-		{ name: "remove", args: ["<repo>"], options: repoRemoveOptions },
-		{ name: "show", args: ["<repo>"], options: globalOptions },
+		{
+			name: "add",
+			args: ["[repo]"],
+			options: addRepoOptions,
+			runner: (context: CliCommandContext) =>
+				runAddRepoCommand({ ...context, argv: context.argv.slice(1) }),
+			description: "Add a repo's published Atlas docs",
+		},
+		{
+			name: "list",
+			args: [],
+			options: globalOptions,
+			runner: runRepoCommand,
+			description: "List added repositories",
+		},
+		{
+			name: "doctor",
+			args: ["[repo]"],
+			options: globalOptions,
+			runner: runRepoCommand,
+			description: "Check one repository",
+		},
+		{
+			name: "remove",
+			args: ["<repo>"],
+			options: repoRemoveOptions,
+			runner: runRepoCommand,
+			description: "Remove one repository",
+		},
+		{
+			name: "show",
+			args: ["[repo]"],
+			options: globalOptions,
+			runner: runRepoCommand,
+			description: "Show one repository",
+		},
 	] as const) {
 		addSubcommand(
 			repo,
 			runtime,
 			spec.name,
-			`Repo ${spec.name}`,
+			spec.description,
 			spec.args,
-			runRepoCommand,
+			spec.runner,
 			spec.options,
 		);
 	}
@@ -425,7 +467,25 @@ export function createAtlasBaseCommand(
 			"--atlas-mcp-title <title>",
 			"Use explicit MCP server display title",
 		)
-		.addHelpText("beforeAll", options.helpPrefix);
+		.addHelpText("beforeAll", options.helpPrefix)
+		.addHelpText(
+			"afterAll",
+			`
+Quick path:
+  atlas setup                 one-time local runtime setup
+  atlas repo add <repo>       use an existing repo artifact
+  atlas init && atlas build   publish/update artifact from a checkout
+  atlas index <path>          fallback local-only index, not primary onboarding
+  atlas next                  inspect state and recommend the next command
+
+Command groups:
+  Start: setup, next
+  Use repos: repo add, add-repo, repo list, repo show, sync
+  Build artifacts: init, build, artifact verify, artifact inspect
+  Search/query: search, list, serve, mcp
+  Diagnose: doctor, repo doctor, inspect, clean, prune
+`,
+		);
 }
 
 function addCommand(
@@ -690,8 +750,11 @@ const checkOption: OptionSpec = {
 	flags: "--check",
 	description: "Check without mutating or fail on detected changes",
 };
+const setupGlobalOptions: OptionSpec[] = globalOptions.filter(
+	(option) => !option.flags.startsWith("--atlas-mcp-"),
+);
 const setupOptions: OptionSpec[] = [
-	...globalOptions,
+	...setupGlobalOptions,
 	...promptOptions,
 	forceOption,
 	{ flags: "--cache-dir <path>", description: "Runtime cache directory" },
@@ -705,6 +768,11 @@ const setupOptions: OptionSpec[] = [
 	},
 	{ flags: "--priority <number>", description: "Host priority" },
 	{ flags: "--ref <ref>", description: "Git ref" },
+	{
+		flags: "--ref-mode <mode>",
+		description:
+			"local-git ref mode: remote (requires origin ref) or current-checkout",
+	},
 ];
 const addRepoOptions: OptionSpec[] = [
 	...setupOptions,

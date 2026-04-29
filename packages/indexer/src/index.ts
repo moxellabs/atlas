@@ -11,6 +11,7 @@ export {
 	IndexerIncrementalBuildError,
 	IndexerPersistenceError,
 	IndexerSyncError,
+	serializeIndexerDiagnosticCause,
 } from "./errors/indexer-errors";
 export { collectAffectedDocs } from "./incremental/collect-affected-docs";
 export { planIncrementalBuild } from "./incremental/plan-incremental-build";
@@ -49,6 +50,7 @@ export type {
 	IncrementalBuildPlan,
 	IndexerChunkingPolicy,
 	IndexerDiagnostic,
+	IndexerDiagnosticCause,
 	IndexerService,
 	OperationRecovery,
 	OperationTimings,

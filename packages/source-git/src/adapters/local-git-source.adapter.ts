@@ -1,5 +1,5 @@
 import { access, opendir, readFile } from "node:fs/promises";
-import { join, relative, resolve, sep } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type {
 	FileEntry,
 	RepoConfig,
@@ -16,6 +16,28 @@ import {
 import type { SourceGitDiagnosticSink } from "../diagnostics";
 import { diffPaths } from "../diff/diff-paths";
 import { GitReadFileError } from "../git/git-errors";
+
+const IGNORED_DIRECTORIES = new Set([
+	".moxel",
+	".atlas",
+	".cache",
+	".git",
+	".hg",
+	".next",
+	".nuxt",
+	".svn",
+	".turbo",
+	".venv",
+	".vite",
+	"coverage",
+	"dist",
+	"htmlcov",
+	"lcov-report",
+	"node_modules",
+	"out",
+	"target",
+	"venv",
+]);
 
 /** Options for the local Git source adapter. */
 export interface LocalGitSourceAdapterOptions extends RepoCacheServiceOptions {
@@ -140,7 +162,7 @@ async function walkDirectory(
 ): Promise<void> {
 	const directory = await opendir(directoryPath);
 	for await (const entry of directory) {
-		if (entry.name === ".git") {
+		if (entry.isDirectory() && IGNORED_DIRECTORIES.has(entry.name)) {
 			continue;
 		}
 
@@ -184,7 +206,7 @@ function resolveRepoPath(
 	if (
 		relativePath.startsWith("..") ||
 		relativePath === "" ||
-		resolve(relativePath) === absolutePath
+		isAbsolute(relativePath)
 	) {
 		throw new GitReadFileError({
 			repoId,

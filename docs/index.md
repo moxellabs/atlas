@@ -22,6 +22,7 @@ This directory contains active architecture and operations documentation. Histor
 - `self-indexing.md`: how to use Atlas as its own test corpus.
 - `configuration.md`: repo config, topology rules, source modes, and local paths.
 - `security.md`: local-first boundaries and credential handling.
+- `troubleshooting.md`: production failure triage, including `CLI_BUILD_FAILED` build diagnostics.
 
 ## Documentation Layers
 
@@ -50,6 +51,7 @@ Active public docs are docs-site source content. Historical/internal docs are no
 - [Retrieval And Context Planning](retrieval-and-context.md) for search, filters, and local corpus behavior.
 - [Runtime Surfaces](runtime-surfaces.md) for CLI, HTTP, OpenAPI, MCP, and skills.
 - [Local-First Security](security.md) for credential and no-upload boundaries.
+- [Troubleshooting](troubleshooting.md) for `CLI_BUILD_FAILED`, `IndexerBuildError`, and nested build diagnostic triage.
 
 ## Contributors
 

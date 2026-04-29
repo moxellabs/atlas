@@ -51,6 +51,16 @@ export interface OperationTimings {
 	durationMs: number;
 }
 
+/** Redacted, serializable cause chain attached to build diagnostics. */
+export interface IndexerDiagnosticCause {
+	name: string;
+	message: string;
+	code?: string | undefined;
+	stack?: string | undefined;
+	context?: Record<string, unknown> | undefined;
+	cause?: IndexerDiagnosticCause | undefined;
+}
+
 /** Structured warning or error attached to sync/build reports. */
 export interface IndexerDiagnostic {
 	severity: "warning" | "error";
@@ -59,6 +69,7 @@ export interface IndexerDiagnostic {
 	code?: string | undefined;
 	path?: string | undefined;
 	details?: Record<string, string | number | boolean | undefined> | undefined;
+	cause?: IndexerDiagnosticCause | undefined;
 }
 
 /** Recovery state attached to sync/build reports after an operation completes or fails. */

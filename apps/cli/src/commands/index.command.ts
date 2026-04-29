@@ -98,7 +98,7 @@ export async function runIndexCommand(
 	const repo: AtlasRepoConfig = {
 		repoId,
 		mode: "local-git",
-		git: { remote, localPath: checkoutPath, ref },
+		git: { remote, localPath: checkoutPath, ref, refMode: "remote" },
 		workspace: {
 			packageGlobs: ["packages/*"],
 			packageManifestFiles: ["package.json"],

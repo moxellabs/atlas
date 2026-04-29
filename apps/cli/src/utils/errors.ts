@@ -118,20 +118,37 @@ function formatZodError(error: {
 export function toFailureResult(
 	command: string,
 	error: unknown,
-	_verbose = false,
+	verbose = false,
 ): CliCommandFailure {
-	void _verbose;
 	const cliError = toCliError(error);
+	const details = verbose
+		? cliError.details
+		: omitStackFields(cliError.details);
 	return {
 		ok: false,
 		command,
 		error: {
 			code: cliError.code,
 			message: cliError.message,
-			...(cliError.details !== undefined ? { details: cliError.details } : {}),
+			...(details !== undefined ? { details } : {}),
 		},
 		exitCode: cliError.exitCode,
 	};
+}
+
+function omitStackFields(value: unknown): unknown {
+	if (Array.isArray(value)) {
+		return value.map((entry) => omitStackFields(entry));
+	}
+	if (value !== null && typeof value === "object") {
+		const output: Record<string, unknown> = {};
+		for (const [key, entry] of Object.entries(value)) {
+			if (key === "stack") continue;
+			output[key] = omitStackFields(entry);
+		}
+		return output;
+	}
+	return value;
 }
 
 /** Determines whether a batch report should be treated as a partial failure. */

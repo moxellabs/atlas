@@ -37,7 +37,7 @@ Failed rebuilds must not replace the last good corpus. Recovery status and diagn
 
 ## Repo Artifact Format
 
-Maintainers can run `atlas init` and `atlas build` inside a normal Git checkout to produce a committed repo-local artifact at `.moxel/atlas/`.
+Maintainers can run `atlas init` and `atlas build` inside a normal Git checkout to produce a committed repo-local artifact at `.moxel/atlas/`. `atlas init` records `refMode: current-checkout` by default, so `atlas build` reads the current checkout `HEAD` and does not require the active branch or detached commit to exist on `origin`.
 
 Phase 14 artifact files are exact:
 
@@ -59,6 +59,8 @@ atlas build
 atlas artifact verify
 git add .moxel/atlas
 ```
+
+Use `atlas init --ref-mode remote --ref <branch>` only when published artifacts must be built from a ref that is resolvable on `origin`. Remote mode is not the same as reading the current working tree: it runs `git fetch origin <ref>` and checks out `FETCH_HEAD` in a managed cache. `--ref HEAD` with current-checkout mode means the current checkout HEAD, including detached HEAD; `--ref HEAD` with remote mode still requires remote ref resolution.
 
 Maintainers control branch names, commit messages, hooks, PR templates, staging, commit, and push. Maintainers control branch names, commit messages, hooks, PR templates, and permissions. Atlas does not branch, commit, push, create issues, or create PRs.
 
@@ -132,18 +134,20 @@ Partial failures should surface as recovery metadata and diagnostics rather than
 
 ## Consumer repo consumption workflow
 
+When unsure, start with `atlas next`; it inspects setup, repo metadata, registry state, and corpus contents, then recommends one command.
+
 ```bash
 atlas setup
-atlas add-repo platform/docs
+atlas repo add platform/docs
 atlas search "deployment rollback" --repo github.mycorp.com/platform/docs
 atlas inspect retrieval --query "deployment rollback" --repo github.mycorp.com/platform/docs
 atlas mcp
 atlas repo remove github.mycorp.com/platform/docs --yes
 ```
 
-`atlas setup` creates `~/.moxel/atlas/config.yaml` and runtime directories. `atlas add-repo` lazy-creates setup if missing. Remote `atlas add-repo` fetches committed `.moxel/atlas` artifacts through the configured GitHub/GHES API without cloning the full repo. Local checkout artifacts are preferred when present.
+`atlas setup` creates `~/.moxel/atlas/config.yaml` and runtime directories. `atlas repo add` lazy-creates setup if missing; `atlas add-repo` remains a compatibility alias with the same JSON/script behavior. Remote repo onboarding fetches committed `.moxel/atlas` artifacts through the configured GitHub/GHES API without cloning the full repo. Local checkout artifacts are preferred when present.
 
-Stale artifacts print `Artifact is stale; importing anyway.` and are still imported. Missing artifact choices are `clone and index locally only`, `skip`, `show maintainer instructions`, and `generate issue/PR instructions`. Use `atlas index` for the local-only fallback; it writes to the user-home global corpus and never writes `.moxel/atlas` into the managed checkout. Runtime search/retrieval/MCP/server read `~/.moxel/atlas/corpus.db` and do not fetch remote source at query time.
+Stale artifacts print `Artifact is stale; importing anyway.` and are still imported. Missing artifact choices are `clone and index locally only`, `skip`, `show maintainer instructions`, and `generate issue/PR instructions`. Use `atlas index` for the local-only fallback only; it writes to the user-home global corpus and never writes `.moxel/atlas` into the managed checkout. Runtime search/retrieval/MCP/server read `~/.moxel/atlas/corpus.db` and do not fetch remote source at query time.
 
 ## Maintainer artifact publishing workflow
 
@@ -163,7 +167,7 @@ Maintainers own docs quality. Improve weak docs before `atlas build`; the `docum
 
 ## Artifact-only add-repo fetch
 
-`atlas add-repo org/repo` downloads committed `.moxel/atlas` artifact files via GitHub/GHES API into `~/.moxel/atlas/repos/<host>/<owner>/<name>/.moxel/atlas/` without cloning full repositories when artifacts exist. Files fetched are exactly `manifest.json`, `corpus.db`, `docs.index.json`, and `checksums.json`.
+`atlas repo add org/repo` downloads committed `.moxel/atlas` artifact files via GitHub/GHES API into `~/.moxel/atlas/repos/<host>/<owner>/<name>/.moxel/atlas/` without cloning full repositories when artifacts exist. `atlas add-repo org/repo` is the compatibility alias. Files fetched are exactly `manifest.json`, `corpus.db`, `docs.index.json`, and `checksums.json`.
 
 Validation order is manifest schema and identity, checksums, then safety scanner. Errors include `CLI_ARTIFACT_NOT_FOUND`, `CLI_ARTIFACT_FETCH_FAILED`, `CLI_ARTIFACT_SCHEMA_INVALID`, `CLI_ARTIFACT_ID_MISMATCH`, and `CLI_ARTIFACT_CHECKSUM_INVALID`. Tokens come from environment variables only and are not persisted.
 
@@ -179,9 +183,9 @@ Runtime search/retrieval/MCP reads the global corpus and does not fetch remote s
 
 ## Missing artifact fallback
 
-When `atlas add-repo` cannot fetch published Atlas docs, Atlas prints `This repo doesn't publish an Atlas knowledge bundle yet.` and shows next-step commands: build a local index, ask maintainers to publish Atlas docs, draft issue/PR text, or rerun with `-i` for an interactive chooser. Default mode is non-interactive and skips the repo unless `--local-only`, `--skip-missing-artifact`, `--maintainer-instructions`, `--issue-pr-instructions`, or `-i` is provided.
+When `atlas repo add` cannot fetch published Atlas docs, Atlas prints `This repo doesn't publish an Atlas knowledge bundle yet.` and shows next-step commands: build a local-only index, ask maintainers to publish Atlas docs, draft issue/PR text, or rerun with `-i` for an interactive chooser. Default mode is non-interactive and skips the repo unless `--local-only`, `--skip-missing-artifact`, `--maintainer-instructions`, `--issue-pr-instructions`, or `-i` is provided.
 
-Consumers can run `atlas add-repo org/repo --local-only` to get an exact `atlas index org/repo --repo-id <host/owner/name> --ref <ref>` handoff. Maintainer instructions mention `atlas init`, `atlas build`, and `git add .moxel/atlas`.
+Consumers can run `atlas repo add org/repo --local-only` to get an exact `atlas index org/repo --repo-id <host/owner/name> --ref <ref>` handoff. Maintainer instructions mention `atlas init`, `atlas build`, and `git add .moxel/atlas`.
 
 Atlas does not branch, commit, push, create issues, or create PRs.
 
@@ -217,9 +221,9 @@ After maintainers add `.moxel/atlas`, they can manually rerun `atlas build` when
 
 README-only or weak-doc repositories warn before indexing. Consider running the document-codebase skill before indexing. Use `--force` to continue in automation after reviewing weak docs. Local-only indexing never writes .moxel/atlas into the managed checkout.
 
-## Identity root behavior
+## Artifact and runtime root behavior
 
-Default identity uses `.moxel/atlas` in maintainer checkouts and `~/.moxel/atlas` at runtime. Custom identity example: `--atlas-identity-root .acme/knowledge`, `ATLAS_IDENTITY_ROOT=.acme/knowledge`, or config `identity.root: ".acme/knowledge"`. `.acme` is umbrella/team/vendor equivalent to `moxel`; `knowledge` is brand/product/MCP equivalent to `atlas`. MCP identity uses `--atlas-mcp-name acme-knowledge`, `ATLAS_MCP_NAME=acme-knowledge`, and config `identity.mcp.name`, `identity.mcp.title`, `identity.mcp.resourcePrefix`. Precedence is CLI > environment > config > default; explicit cache/corpus config overrides derived runtime paths.
+Default artifact/runtime roots use `.moxel/atlas` in maintainer checkouts and `~/.moxel/atlas` at runtime. Advanced embedded or enterprise wrappers can supply alternate roots through supported wrapper/default mechanisms; see [Enterprise CLI Mount](enterprise-cli-mount.md). Standalone `atlas setup` stays focused on functional runtime paths, hosts, and credentials, not wrapper display identity. Precedence is CLI > environment > config > default; explicit cache/corpus config overrides derived runtime paths.
 
 Maintainer committed artifact path is identity root directly: `<repo>/.moxel/atlas/` or `<repo>/.acme/knowledge/`. Consumer imported mirrors preserve identity root directly: `~/.moxel/atlas/repos/<host>/<owner>/<name>/.moxel/atlas/` or `~/.acme/knowledge/repos/<host>/<owner>/<name>/.acme/knowledge/`. Files live directly inside identity root: `manifest.json`, `corpus.db`, `docs.index.json`, `checksums.json`, and `atlas.repo.json` when applicable. Legacy nested artifact mirror layouts are not used for fetched/copied mirrors. Custom identity roots do not read, copy, migrate, delete, or fallback to `.moxel/atlas` or `~/.moxel/atlas`.
 

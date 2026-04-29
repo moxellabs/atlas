@@ -560,6 +560,88 @@ describe("indexer integration", () => {
 		);
 	});
 
+	test("reports post-discovery compile failures with selected docs and no partial persistence", async () => {
+		await writeFile(
+			join(originPath, "docs", "broken.md"),
+			"---\ntitle: Broken\n# Missing closing frontmatter\n",
+		);
+		await git(originPath, ["add", "."]);
+		await git(originPath, ["commit", "-m", "add broken frontmatter doc"]);
+		const { service, deps } = createIndexerServices({
+			config: createResolvedConfig(originPath, localPath),
+			db: store,
+		});
+
+		const failed = await service.buildRepo(repoId);
+
+		expect(failed).toMatchObject({
+			repoId,
+			manifestUpdated: false,
+			docsConsidered: 5,
+			docsRebuilt: 0,
+			recovery: {
+				previousCorpusPreserved: true,
+				nextAction:
+					"Fix the build failure and rerun atlas build for this repo.",
+			},
+		});
+		expect(failed.diagnostics).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					severity: "error",
+					stage: "compile",
+					path: "docs/broken.md",
+					cause: expect.objectContaining({
+						message: expect.stringContaining("docs/broken.md"),
+						cause: expect.objectContaining({
+							message: expect.stringContaining("Frontmatter opening marker"),
+						}),
+					}),
+				}),
+			]),
+		);
+		expect(deps.store.docs.listByRepo(repoId)).toEqual([]);
+		expect(deps.store.manifests.get(repoId)).toBeUndefined();
+	});
+
+	test("ignores generated and vendored docs during local-git builds", async () => {
+		await mkdir(join(originPath, "node_modules", "bad-package"), {
+			recursive: true,
+		});
+		await mkdir(join(originPath, ".moxel", "atlas"), { recursive: true });
+		await writeFile(
+			join(originPath, "node_modules", "bad-package", "SKILL.md"),
+			"---\ndescription: broken\n# Missing closing frontmatter\n",
+		);
+		await writeFile(
+			join(originPath, ".moxel", "atlas", "SKILL.md"),
+			"---\ndescription: generated broken\n# Missing closing frontmatter\n",
+		);
+		await git(originPath, ["add", "."]);
+		await git(originPath, ["commit", "-m", "add generated ignored docs"]);
+		const { service, deps } = createIndexerServices({
+			config: createResolvedConfig(originPath, localPath),
+			db: store,
+		});
+
+		const report = await service.buildRepo(repoId);
+
+		expect(report).toMatchObject({
+			repoId,
+			manifestUpdated: true,
+			docsConsidered: 4,
+			docsRebuilt: 4,
+		});
+		expect(
+			deps.store.docs.listByRepo(repoId).map((doc) => doc.path),
+		).not.toEqual(
+			expect.arrayContaining([
+				"node_modules/bad-package/SKILL.md",
+				".moxel/atlas/SKILL.md",
+			]),
+		);
+	});
+
 	test("preserves old corpus and reports recovery state when a rebuild fails", async () => {
 		const first = createIndexerServices({
 			config: createResolvedConfig(originPath, localPath, {
@@ -590,13 +672,23 @@ describe("indexer integration", () => {
 		expect(failed).toMatchObject({
 			repoId: "atlas-ghes",
 			manifestUpdated: false,
-			diagnostics: [expect.objectContaining({ severity: "error" })],
 			recovery: {
 				previousCorpusPreserved: true,
 				nextAction:
 					"Fix the build failure and rerun atlas build for this repo.",
 			},
 		});
+		expect(failed.diagnostics).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					severity: "error",
+					path: "packages/auth/docs/api.md",
+					cause: expect.objectContaining({
+						message: expect.stringContaining("packages/auth/docs/api.md"),
+					}),
+				}),
+			]),
+		);
 		expect(second.deps.store.manifests.get("atlas-ghes")).toEqual(
 			manifestBefore,
 		);
@@ -867,6 +959,7 @@ function createResolvedConfig(
 						remote: `file://${originRepoPath}`,
 						localPath: localRepoPath,
 						ref: "main",
+						refMode: "remote",
 					},
 					workspace: {
 						packageGlobs: ["packages/*"],

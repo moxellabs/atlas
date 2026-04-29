@@ -25,6 +25,8 @@ jobs:
         run: bun test
       - name: Distribution smoke
         run: bun run smoke:distribution
+      - name: Production onboarding UAT
+        run: bun run uat:production
       - name: Release readiness dry run
         run: bun tooling/scripts/verify.ts
       - name: Public artifact verification

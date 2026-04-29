@@ -1188,6 +1188,7 @@ function createResolvedConfig(
 						remote: "file:///tmp/atlas",
 						localPath: "/tmp/atlas",
 						ref: "main",
+						refMode: "remote",
 					},
 					workspace: {
 						packageGlobs: ["packages/*"],
