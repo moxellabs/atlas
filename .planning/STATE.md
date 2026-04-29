@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: completed
-stopped_at: Phase 41 complete; all phases complete
-last_updated: "2026-04-29T17:45:00.000Z"
+stopped_at: Phase 42 complete; all phases complete
+last_updated: "2026-04-29T21:55:00.000Z"
 last_activity: 2026-04-29
 progress:
-  total_phases: 41
-  completed_phases: 41
-  total_plans: 82
-  completed_plans: 82
+  total_phases: 42
+  completed_phases: 42
+  total_plans: 85
+  completed_plans: 85
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-26)
 
 **Core value:** Local-first documentation ingestion, compilation, retrieval planning, and MCP/server access for multi-repo engineering docs.
-**Current focus:** v1.1 production onboarding UAT and release gate after command UX simplification.
+**Current focus:** Phase 42 complete; v1.1 milestone phases complete after post-release bug hunt remediation.
 
 ## Current Position
 
-Phase: 41 of 41 (production onboarding UAT and release gate)
-Plan: 1 of 1
-Status: All phases complete
+Phase: 42 of 42 (post-release bug hunt remediation)
+Plan: 3 of 3
+Status: Complete
 Last activity: 2026-04-29
 
 Progress: [██████████] 100%
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 82 / 82 planned
+- Total plans completed: 85 / 85 planned
 - Average duration: N/A
 - Total execution time: N/A
 
@@ -85,10 +85,13 @@ Progress: [██████████] 100%
 | 39. Init, Repo State, and Command-State Clarity              | 3/3   | Complete |
 | 40. Command UX Simplification and Production Onboarding      | 3/3   | Complete |
 | 41. Production Onboarding UAT and Release Gate               | 1/1   | Complete |
+| 42. Post-release Bug Hunt Remediation                        | 3/3   | Complete |
 
 ## Accumulated Context
 
 ### Roadmap Evolution
+
+- Phase 42 completed: Post-release bug hunt remediation fixed CLI env propagation, mounted MCP resource prefix, MCP barrel exports, repo remove target resolution, current-checkout sparse diagnostics, direct section deletion FTS cleanup, and store package dependency boundary. Verification passed: typecheck, lint, bun test, production UAT.
 
 - Phase 21 completed: White-label artifact resolver with shared resolver and repo-local command integration.
 - Phase 22 completed: White-label runtime storage with identity runtime derivation and add-repo/runtime command wiring.

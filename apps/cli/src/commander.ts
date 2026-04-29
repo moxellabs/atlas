@@ -83,7 +83,7 @@ function mountDefaults(
 		defaults.ATLAS_MCP_TITLE = config.mcp.title.trim();
 	}
 	if (config.mcp?.resourcePrefix !== undefined) {
-		validateMcpIdentifier(
+		defaults.ATLAS_MCP_RESOURCE_PREFIX = validateMcpIdentifier(
 			config.mcp.resourcePrefix,
 			"identity.mcp.resourcePrefix",
 		);

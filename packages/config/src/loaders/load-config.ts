@@ -300,6 +300,7 @@ const mergeWithDefaults = (rawConfig: unknown, env: AtlasEnv): unknown => {
 		mcp: {
 			envMcpName: env.ATLAS_MCP_NAME,
 			envMcpTitle: env.ATLAS_MCP_TITLE,
+			cliMcpResourcePrefix: env.ATLAS_MCP_RESOURCE_PREFIX,
 		},
 	});
 	const fileCacheDir =

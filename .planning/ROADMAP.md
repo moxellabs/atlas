@@ -52,6 +52,7 @@ Atlas v1.0 hardening is complete. The next milestone shifts Atlas from contribut
 - [x] **Phase 39: Init, Repo State, and Command-State Clarity** - Infer repo targets from cwd, Git origin, repo metadata, and bare repo names; avoid manual default GitHub host setup; explain config/registry/store/cache layers in diagnostics. (completed 2026-04-29)
 - [x] **Phase 40: Command UX Simplification and Production Onboarding** - Simplify `setup`/`init`/`build`/`index` mental model with guided next-step UX, clearer aliases, and no standalone setup branding prompts. (completed 2026-04-29)
 - [x] **Phase 41: Production Onboarding UAT and Release Gate** - Add scripted production-like UAT to prevent regressions before release. (completed 2026-04-29)
+- [x] **Phase 42: Post-release Bug Hunt Remediation** - Fix prioritized bugs found after v0.1.3 across CLI runtime/env handling, mounted MCP identity/exports, repo removal, source checkout diagnostics, and store consistency. (completed 2026-04-29)
 
 ## Phase Details
 
@@ -149,7 +150,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in dependency order: 1 → 2 and 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37 → 38 → 39 → 40 → 41
+Phases execute in dependency order: 1 → 2 and 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37 → 38 → 39 → 40 → 41 → 42
 
 | Phase                                                        | Plans Complete | Status   | Completed  |
 | ------------------------------------------------------------ | -------------- | -------- | ---------- |
@@ -192,8 +193,9 @@ Phases execute in dependency order: 1 → 2 and 3 → 4 → 5 → 6 → 7 → 8 
 | 37. Real-Repo Build Pipeline Repro and Root-Cause Fixes      | 2/2            | Complete | 2026-04-29 |
 | 38. Local-Git Checkout Semantics and Local Branch Support    | 2/2            | Complete | 2026-04-29 |
 | 39. Init, Repo State, and Command-State Clarity              | 3/3            | Complete | 2026-04-29 |
-| 40. Command UX Simplification and Production Onboarding      | 3/3 | Complete    | 2026-04-29 |
+| 40. Command UX Simplification and Production Onboarding      | 3/3            | Complete | 2026-04-29 |
 | 41. Production Onboarding UAT and Release Gate               | 1/1            | Complete | 2026-04-29 |
+| 42. Post-release Bug Hunt Remediation                        | 3/3            | Complete | 2026-04-29 |
 
 ### Phase 6: Retrieval and Context Quality
 
@@ -899,3 +901,16 @@ Plans:
 Plans:
 
 - [x] 41-01: Add production onboarding UAT scenarios.
+
+### Phase 42: Post-release bug hunt remediation
+
+**Goal:** Fix prioritized bugs found by the post-v0.1.3 parallel bug hunt across CLI runtime/env handling, mounted MCP identity/exports, repo removal target resolution, source checkout diagnostics, and store consistency footguns.
+**Requirements:** BUG-HUNT-CLI, BUG-HUNT-MCP, BUG-HUNT-STORE-SOURCE
+**Depends on:** Phase 41
+**Plans:** 3/3 plans complete
+
+Plans:
+
+- [x] 42-01: Fix CLI runtime and repo command regressions.
+- [x] 42-02: Repair mounted MCP identity and public MCP exports.
+- [x] 42-03: Harden source checkout diagnostics and store consistency footguns.

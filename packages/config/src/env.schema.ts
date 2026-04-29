@@ -26,6 +26,10 @@ export const atlasEnvSchema = z.object({
 		emptyStringToUndefined,
 		z.string().trim().min(1).optional(),
 	),
+	ATLAS_MCP_RESOURCE_PREFIX: z.preprocess(
+		emptyStringToUndefined,
+		z.string().trim().min(1).optional(),
+	),
 	ATLAS_LOG_LEVEL: z.preprocess(
 		emptyStringToUndefined,
 		logLevelSchema.optional(),
@@ -54,6 +58,7 @@ export const normalizeEnvInput = (
 	ATLAS_IDENTITY_ROOT: env.ATLAS_IDENTITY_ROOT,
 	ATLAS_MCP_NAME: env.ATLAS_MCP_NAME,
 	ATLAS_MCP_TITLE: env.ATLAS_MCP_TITLE,
+	ATLAS_MCP_RESOURCE_PREFIX: env.ATLAS_MCP_RESOURCE_PREFIX,
 	ATLAS_LOG_LEVEL: env.ATLAS_LOG_LEVEL,
 	ATLAS_CA_CERT_PATH: env.ATLAS_CA_CERT_PATH,
 	GHES_TOKEN: env.GHES_TOKEN,

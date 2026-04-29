@@ -547,10 +547,7 @@ async function emitCommandResult(
 	runner: Runner,
 ): Promise<void> {
 	const opts = command.optsWithGlobals<Record<string, unknown>>();
-	const positionals = [
-		...(values.filter((value) => typeof value === "string") as string[]),
-		...command.args,
-	];
+	const positionals = collectCommandPositionals(values, command.args);
 	const context = buildContext(runtime, positionals, opts);
 	const consoleIo = new CliConsole(
 		context.output,
@@ -568,6 +565,22 @@ async function emitCommandResult(
 	}
 }
 
+export function collectCommandPositionals(
+	values: readonly unknown[],
+	commandArgs: readonly string[],
+): string[] {
+	const actionPositionals = values.filter(
+		(value): value is string => typeof value === "string",
+	);
+	const duplicatePrefix = actionPositionals.every(
+		(value, index) => commandArgs[index] === value,
+	);
+	const excessArgs = duplicatePrefix
+		? commandArgs.slice(actionPositionals.length)
+		: [];
+	return [...actionPositionals, ...excessArgs];
+}
+
 function buildContext(
 	runtime: Runtime,
 	positionals: readonly string[],
@@ -578,6 +591,7 @@ function buildContext(
 		stringOpt(opts.atlasIdentityRoot) ?? defaults.ATLAS_IDENTITY_ROOT;
 	const mcpName = stringOpt(opts.atlasMcpName) ?? defaults.ATLAS_MCP_NAME;
 	const mcpTitle = stringOpt(opts.atlasMcpTitle) ?? defaults.ATLAS_MCP_TITLE;
+	const mcpResourcePrefix = defaults.ATLAS_MCP_RESOURCE_PREFIX;
 	const configPath = firstStringOpt(opts.config) ?? defaults.ATLAS_CONFIG;
 	const commandArgv = [...positionals, ...optionsToArgv(opts)];
 	return {
@@ -598,6 +612,7 @@ function buildContext(
 		identityRoot,
 		mcpName,
 		mcpTitle,
+		mcpResourcePrefix,
 		stdin: runtime.stdin,
 		stdout: runtime.stdout,
 		stderr: runtime.stderr,
@@ -621,6 +636,9 @@ function buildContext(
 				: { ATLAS_IDENTITY_ROOT: identityRoot }),
 			...(mcpName === undefined ? {} : { ATLAS_MCP_NAME: mcpName }),
 			...(mcpTitle === undefined ? {} : { ATLAS_MCP_TITLE: mcpTitle }),
+			...(mcpResourcePrefix === undefined
+				? {}
+				: { ATLAS_MCP_RESOURCE_PREFIX: mcpResourcePrefix }),
 		},
 	};
 }

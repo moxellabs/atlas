@@ -66,6 +66,7 @@ export async function runMcpCommandWithDependencies(
 					mcp: {
 						cliMcpName: context.mcpName,
 						cliMcpTitle: context.mcpTitle,
+						cliMcpResourcePrefix: context.mcpResourcePrefix,
 						envMcpName: deps.config.env.ATLAS_MCP_NAME,
 						envMcpTitle: deps.config.env.ATLAS_MCP_TITLE,
 					},
@@ -74,6 +75,9 @@ export async function runMcpCommandWithDependencies(
 					mcp: {
 						cliMcpName: context.mcpName,
 						cliMcpTitle: context.mcpTitle,
+						cliMcpResourcePrefix:
+							context.mcpResourcePrefix ??
+							context.env.ATLAS_MCP_RESOURCE_PREFIX,
 						envMcpName: context.env.ATLAS_MCP_NAME,
 						envMcpTitle: context.env.ATLAS_MCP_TITLE,
 					},

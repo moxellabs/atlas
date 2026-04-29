@@ -27,6 +27,7 @@ export interface CliCommandContext {
 	identityRoot?: string | undefined;
 	mcpName?: string | undefined;
 	mcpTitle?: string | undefined;
+	mcpResourcePrefix?: string | undefined;
 	stdin: NodeJS.ReadStream;
 	stdout: NodeJS.WriteStream;
 	stderr: NodeJS.WriteStream;

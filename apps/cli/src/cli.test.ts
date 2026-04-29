@@ -31,7 +31,7 @@ import {
 import { runMcpCommandWithDependencies } from "./commands/mcp.command";
 import { runServeCommandWithDependencies } from "./commands/serve.command";
 import { buildFailureLines } from "./commands/shared";
-import { runCli } from "./index";
+import { collectCommandPositionals, runCli } from "./index";
 import type { CliCommandContext } from "./runtime/types";
 import { CliError, toFailureResult } from "./utils/errors";
 
@@ -126,6 +126,18 @@ describe("atlas cli", () => {
 				mcp: { resourcePrefix: "Acme" },
 			}),
 		).toThrow("identity.mcp.resourcePrefix must be a lower-kebab identifier");
+	});
+
+	test("Commander positionals are not duplicated and excess args stay visible", () => {
+		expect(collectCommandPositionals(["docs"], ["docs"])).toEqual(["docs"]);
+		expect(collectCommandPositionals(["docs"], ["docs", "extra"])).toEqual([
+			"docs",
+			"extra",
+		]);
+		expect(collectCommandPositionals(["show", "docs"], ["docs"])).toEqual([
+			"show",
+			"docs",
+		]);
 	});
 
 	test("unsupported mount fields are rejected by AtlasMountConfig typing", () => {
@@ -548,6 +560,41 @@ describe("atlas cli", () => {
 			source: "bare-name",
 		});
 
+		const bareRemoveDryRun = await runWithCapture([
+			"repo",
+			"remove",
+			"docs",
+			"--dry-run",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+			"--json",
+		]);
+		expect(bareRemoveDryRun.exitCode).toBe(0);
+		expect(
+			JSON.parse(bareRemoveDryRun.stdout).data.targetResolution,
+		).toMatchObject({
+			repoId: "github.com/platform/docs",
+			source: "bare-name",
+		});
+
+		const unknownRemove = await runWithCapture([
+			"repo",
+			"remove",
+			"missing",
+			"--dry-run",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+			"--json",
+		]);
+		expect(unknownRemove.exitCode).toBe(2);
+		expect(JSON.parse(unknownRemove.stdout).error.code).toBe(
+			"CLI_REPO_TARGET_NOT_FOUND",
+		);
+
 		await runWithCapture([
 			"add-repo",
 			"--cwd",
@@ -587,6 +634,39 @@ describe("atlas cli", () => {
 			"github.com/other/docs",
 			"github.com/platform/docs",
 		]);
+
+		const ambiguousRemove = await runWithCapture([
+			"repo",
+			"remove",
+			"docs",
+			"--dry-run",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+			"--json",
+		]);
+		expect(ambiguousRemove.exitCode).toBe(2);
+		expect(JSON.parse(ambiguousRemove.stdout).error.code).toBe(
+			"CLI_REPO_TARGET_AMBIGUOUS",
+		);
+
+		const canonicalRemove = await runWithCapture([
+			"repo",
+			"remove",
+			"github.com/platform/docs",
+			"--yes",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+			"--json",
+		]);
+		expect(canonicalRemove.exitCode).toBe(0);
+		expect(JSON.parse(canonicalRemove.stdout).data).toMatchObject({
+			repoId: "github.com/platform/docs",
+			removedConfigEntry: true,
+		});
 	});
 
 	test("setup bootstraps a YAML config and add-repo preserves it", async () => {
@@ -1977,6 +2057,39 @@ repos:
 		}
 	});
 
+	test("serve discovers setup config from runtime HOME without --config", async () => {
+		const home = join(rootDir, "serve-home");
+		const setup = await runWithCapture(
+			[
+				"setup",
+				"--cwd",
+				rootDir,
+				"--cache-dir",
+				join(rootDir, "serve-cache"),
+				"--non-interactive",
+			],
+			{ HOME: home },
+		);
+		expect(setup.exitCode).toBe(0);
+
+		const serve = await runWithCapture(
+			[
+				"serve",
+				"--cwd",
+				rootDir,
+				"--host",
+				"127.0.0.1",
+				"--port",
+				"48765",
+				"--json",
+			],
+			{ HOME: home },
+		);
+
+		expect(serve.exitCode).toBe(0);
+		expect(JSON.parse(serve.stdout).data.dbPath).toContain("serve-cache");
+	});
+
 	test("serve reports startup metadata, open result, and closes CLI dependencies", async () => {
 		const context = createCommandContext([
 			"serve",
@@ -2113,7 +2226,7 @@ repos:
 		expect(stderrText).toBe("");
 	});
 
-	test("mcp identity passes atlas-mcp-name into server without stdio noise", async () => {
+	test("mcp identity passes mounted identity into server without stdio noise", async () => {
 		const stdout = new PassThrough();
 		const stderr = new PassThrough();
 		let receivedIdentity: unknown;
@@ -2124,6 +2237,7 @@ repos:
 			output: { json: false, verbose: false, quiet: false },
 			mcpName: "acme-knowledge",
 			mcpTitle: "Acme Knowledge MCP",
+			mcpResourcePrefix: "acme",
 			identityRoot: ".acme/knowledge",
 			stdin: new PassThrough() as unknown as NodeJS.ReadStream,
 			stdout: stdout as unknown as NodeJS.WriteStream,
@@ -2164,7 +2278,7 @@ repos:
 		expect(receivedIdentity).toMatchObject({
 			name: "acme-knowledge",
 			title: "Acme Knowledge MCP",
-			resourcePrefix: "atlas",
+			resourcePrefix: "acme",
 		});
 	});
 

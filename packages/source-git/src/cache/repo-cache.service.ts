@@ -21,7 +21,7 @@ import {
 	isGitRepoPath,
 } from "./partial-clone";
 import type { SparseCheckoutResult } from "./sparse-checkout";
-import { applySparseCheckout } from "./sparse-checkout";
+import { applySparseCheckout, inspectSparseCheckout } from "./sparse-checkout";
 
 /** Structured lifecycle event emitted by cache operations. */
 export type RepoCacheDiagnosticEvent = SourceGitDiagnosticEvent;
@@ -110,11 +110,31 @@ export class RepoCacheService {
 					refMode: "current-checkout",
 				}),
 			);
-			const sparseCheckout = { enabled: false, patterns: [] };
-			this.#record(
-				diagnostics,
-				event("sparse_checkout_disabled", repo.repoId, git.localPath),
-			);
+			const sparseCheckout = await inspectSparseCheckout({
+				repoId: repo.repoId,
+				localPath: git.localPath,
+				timeoutMs: this.#options.gitTimeoutMs,
+			});
+			if (sparseCheckout.enabled) {
+				this.#record(
+					diagnostics,
+					event(
+						"current_checkout_sparse_detected",
+						repo.repoId,
+						git.localPath,
+						{
+							patternCount: sparseCheckout.patterns.length,
+							message:
+								"current-checkout mode uses the user's sparse working tree; builds only include materialized files.",
+						},
+					),
+				);
+			} else {
+				this.#record(
+					diagnostics,
+					event("sparse_checkout_disabled", repo.repoId, git.localPath),
+				);
+			}
 			return {
 				status: await this.getStatus(repo),
 				cloned: false,
