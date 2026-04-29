@@ -34,6 +34,7 @@ export class AtlasStoreClient implements StoreDatabase {
 	readonly path: string;
 	private readonly db: SqliteDatabase;
 	private readonly runtime: SqliteRuntime;
+	private transactionDepth = 0;
 
 	constructor(path: string) {
 		this.path = path;
@@ -82,7 +83,11 @@ export class AtlasStoreClient implements StoreDatabase {
 	}
 
 	transaction<T>(operation: () => T): T {
+		if (this.transactionDepth > 0) {
+			return operation();
+		}
 		try {
+			this.transactionDepth++;
 			if (this.runtime === "bun" && this.db.transaction !== undefined) {
 				return this.db.transaction(operation)();
 			}
@@ -101,6 +106,8 @@ export class AtlasStoreClient implements StoreDatabase {
 				entity: "database",
 				cause: error,
 			});
+		} finally {
+			this.transactionDepth--;
 		}
 	}
 

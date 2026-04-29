@@ -185,6 +185,25 @@ describe("atlas cli", () => {
 		).toBe(false);
 	});
 
+	test("setup config is discovered by later commands without --config", async () => {
+		const home = join(rootDir, "home-config-discovery");
+		const setup = await runWithCapture(
+			["setup", "--cwd", rootDir, "--cache-dir", cacheDir, "--non-interactive"],
+			{ HOME: home },
+		);
+		expect(setup.exitCode).toBe(0);
+
+		const next = await runWithCapture(["next", "--cwd", rootDir, "--json"], {
+			HOME: home,
+		});
+		expect(next.exitCode).toBe(0);
+		expect(JSON.parse(next.stdout).data.state).toMatchObject({
+			configFound: true,
+			configPath: join(home, ".moxel", "atlas", "config.yaml"),
+			repoCount: 0,
+		});
+	});
+
 	test("next recommends setup, repo add, and build from detected state", async () => {
 		const noSetup = await runWithCapture(["next", "--cwd", rootDir, "--json"], {
 			HOME: join(rootDir, "home-next-empty"),
@@ -379,6 +398,62 @@ describe("atlas cli", () => {
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
+	});
+
+	test("init auto-configures detected enterprise host from git origin", async () => {
+		const home = join(rootDir, "home-enterprise-init");
+		const cfg = join(rootDir, "enterprise-init.config.yaml");
+		const setup = await runWithCapture(
+			[
+				"setup",
+				"--cwd",
+				rootDir,
+				"--config",
+				cfg,
+				"--cache-dir",
+				cacheDir,
+				"--non-interactive",
+			],
+			{ HOME: home },
+		);
+		expect(setup.exitCode).toBe(0);
+
+		const enterpriseRepo = join(rootDir, "enterprise-origin");
+		await mkdir(enterpriseRepo, { recursive: true });
+		await git(enterpriseRepo, ["init", "-b", "main"]);
+		await git(enterpriseRepo, ["config", "user.email", "atlas@example.test"]);
+		await git(enterpriseRepo, ["config", "user.name", "ATLAS Test"]);
+		await git(enterpriseRepo, [
+			"remote",
+			"add",
+			"origin",
+			"git@github.mycorp.com:platform/docs.git",
+		]);
+		await writeFile(join(enterpriseRepo, "README.md"), "# Enterprise docs\n");
+		await git(enterpriseRepo, ["add", "."]);
+		await git(enterpriseRepo, ["commit", "-m", "initial"]);
+
+		const initialized = await runWithCapture(
+			[
+				"init",
+				"--cwd",
+				enterpriseRepo,
+				"--config",
+				cfg,
+				"--non-interactive",
+				"--json",
+			],
+			{ HOME: home },
+		);
+		expect(initialized.exitCode).toBe(0);
+		expect(JSON.parse(initialized.stdout).data).toMatchObject({
+			repoId: "github.mycorp.com/platform/docs",
+			targetResolution: {
+				source: "git-origin",
+				hostStatus: "configured",
+			},
+		});
+		expect(await readFile(cfg, "utf8")).toContain("name: github.mycorp.com");
 	});
 
 	test("repo target inference supports cwd, git origin, bare names, and ambiguity", async () => {

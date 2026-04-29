@@ -9,6 +9,7 @@ import { type AtlasConfig, atlasConfigSchema } from "../atlas-config.schema";
 import {
 	buildDefaultConfig,
 	buildDefaultCorpusDbPath,
+	DEFAULT_MOXEL_ATLAS_CONFIG_RELATIVE_PATH,
 	defaultHttpServerConfig,
 } from "../defaults/default-config";
 import type { AtlasEnv } from "../env.schema";
@@ -154,6 +155,7 @@ const resolveConfigPath = async (
 	cwd: string,
 	explicitConfigPath: string | undefined,
 	envConfigPath: string | undefined,
+	rawEnv: NodeJS.ProcessEnv,
 ): Promise<{
 	configPath: string;
 	loadedFrom: "env" | "explicit" | "discovered";
@@ -188,9 +190,25 @@ const resolveConfigPath = async (
 		};
 	}
 
-	const candidates = CONFIG_FILE_NAMES.map((fileName) =>
-		resolve(baseDir, fileName),
-	);
+	const identityProfile = resolveIdentityProfile({
+		envIdentityRoot: rawEnv.ATLAS_IDENTITY_ROOT,
+	});
+	const defaultRuntimeConfigPath =
+		rawEnv.HOME === undefined
+			? undefined
+			: join(
+					rawEnv.HOME,
+					identityProfile.runtimeRoot.startsWith("~/")
+						? identityProfile.runtimeRoot.slice(2)
+						: identityProfile.runtimeRoot,
+					DEFAULT_MOXEL_ATLAS_CONFIG_RELATIVE_PATH,
+				);
+	const candidates = [
+		...CONFIG_FILE_NAMES.map((fileName) => resolve(baseDir, fileName)),
+		...(defaultRuntimeConfigPath === undefined
+			? []
+			: [defaultRuntimeConfigPath]),
+	];
 
 	for (const candidate of candidates) {
 		if (await fileExists(candidate)) {
@@ -260,17 +278,25 @@ const mergeWithDefaults = (rawConfig: unknown, env: AtlasEnv): unknown => {
 			rawIdentity === undefined
 				? undefined
 				: {
-					...(typeof rawIdentity.root === "string" ? { root: rawIdentity.root } : {}),
-					...(isRecord(rawIdentity.mcp)
-						? {
-							mcp: {
-								...(typeof rawIdentity.mcp.name === "string" ? { name: rawIdentity.mcp.name } : {}),
-								...(typeof rawIdentity.mcp.title === "string" ? { title: rawIdentity.mcp.title } : {}),
-								...(typeof rawIdentity.mcp.resourcePrefix === "string" ? { resourcePrefix: rawIdentity.mcp.resourcePrefix } : {}),
-							},
-						}
-						: {}),
-				},
+						...(typeof rawIdentity.root === "string"
+							? { root: rawIdentity.root }
+							: {}),
+						...(isRecord(rawIdentity.mcp)
+							? {
+									mcp: {
+										...(typeof rawIdentity.mcp.name === "string"
+											? { name: rawIdentity.mcp.name }
+											: {}),
+										...(typeof rawIdentity.mcp.title === "string"
+											? { title: rawIdentity.mcp.title }
+											: {}),
+										...(typeof rawIdentity.mcp.resourcePrefix === "string"
+											? { resourcePrefix: rawIdentity.mcp.resourcePrefix }
+											: {}),
+									},
+								}
+							: {}),
+					},
 		mcp: {
 			envMcpName: env.ATLAS_MCP_NAME,
 			envMcpTitle: env.ATLAS_MCP_TITLE,
@@ -461,6 +487,7 @@ export const loadConfig = async (
 		cwd,
 		options.configPath,
 		env.ATLAS_CONFIG,
+		rawEnv,
 	);
 	const rawConfig = await readRawConfigFile(source.configPath);
 	const configDir = dirname(source.configPath);

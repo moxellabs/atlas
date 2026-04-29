@@ -112,6 +112,23 @@ describe("store integration", () => {
 		expect(repos.get(canonicalRepoId)).toBeUndefined();
 	});
 
+	test("repository batch writes can run inside an outer transaction in node sqlite runtime", () => {
+		const nodeRuntimeStore = store as unknown as { runtime: "bun" | "node" };
+		nodeRuntimeStore.runtime = "node";
+		const canonicalRepoId = "github.mycorp.com/platform/docs";
+		new RepoRepository(store).upsert({
+			repoId: canonicalRepoId,
+			mode: "local-git",
+			revision: "rev_1",
+		});
+
+		expect(() => {
+			store.transaction(() => {
+				new PackageRepository(store).replaceForRepo(canonicalRepoId, []);
+			});
+		}).not.toThrow();
+	});
+
 	test("repairs unreleased v1 dev stores with missing baseline tables", async () => {
 		const rootPath = await mkdtemp(
 			join(tmpdir(), "atlas-store-hard-cut-test-"),
