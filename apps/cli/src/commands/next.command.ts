@@ -133,7 +133,7 @@ export async function probeNextStepState(
 	);
 	return {
 		configFound,
-		configPath,
+		configPath: loadedConfig?.source.configPath ?? configPath,
 		runtimeRoot,
 		repoCount,
 		registryCount,

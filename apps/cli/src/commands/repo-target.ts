@@ -278,11 +278,15 @@ async function repoIdFromGitOrigin(
 	const status = hostStatusFor(parsed.host, config);
 	if (status === "unknown") {
 		throw new CliError(
-			`Git origin host ${parsed.host} is not configured. GitHub.com works by default; for GHES run atlas hosts add ${parsed.host}.`,
+			`Git origin host ${parsed.host} is not configured. GitHub.com works by default; for GHES run atlas hosts add ${parsed.host} --web-url https://${parsed.host} --api-url https://${parsed.host}/api/v3 --protocol ssh.`,
 			{
 				code: "CLI_REPO_HOST_UNKNOWN",
 				exitCode: EXIT_INPUT_ERROR,
-				details: { host: parsed.host, checked: ["git origin"] },
+				details: {
+					host: parsed.host,
+					repoId: `${parsed.host}/${parsed.owner}/${parsed.name}`,
+					checked: ["git origin"],
+				},
 			},
 		);
 	}

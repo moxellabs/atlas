@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
 	type AtlasConfig,
+	type AtlasHostConfig,
 	DEFAULT_MOXEL_ATLAS_REPOS_RELATIVE_PATH,
 	defaultGithubHostConfig,
 	loadConfig,
@@ -49,15 +50,43 @@ async function runRepoArtifactInitCommand(
 	const gitRoot =
 		(await gitOutput(context.cwd, ["rev-parse", "--show-toplevel"])) ??
 		context.cwd;
-	const targetConfig = await loadTargetConfig(context);
+	let targetConfig = await loadTargetConfig(context);
 	const explicitRepoId =
 		readArgvString(context.argv, "--repo-id") ?? repoIdFromParts(context);
-	const target = await resolveRepoTarget(context, {
-		config: targetConfig,
+	let target = await resolveRepoTargetForInit(context, targetConfig.config, {
 		...(explicitRepoId === undefined ? {} : { explicit: explicitRepoId }),
 		command: "init",
 		nonInteractive: context.argv.includes("--non-interactive"),
 	});
+	if (target.hostStatus === "unknown" && target.source === "git-origin") {
+		if (targetConfig.configPath === undefined) {
+			const host = parseCanonicalRepoId(target.repoId).host;
+			throw new CliError(
+				`Git origin host ${host} is not configured. Run atlas setup first, or add it explicitly with atlas hosts add ${host} --web-url https://${host} --api-url https://${host}/api/v3 --protocol ssh.`,
+				{
+					code: "CLI_REPO_HOST_UNKNOWN",
+					exitCode: EXIT_INPUT_ERROR,
+					details: { host, repoId: target.repoId },
+				},
+			);
+		}
+		const host = parseCanonicalRepoId(target.repoId).host;
+		const written = await mutateAtlasConfig(
+			{
+				cwd: context.cwd,
+				env: context.env,
+				configPath: targetConfig.configPath,
+			},
+			(config) => ({
+				...config,
+				hosts: config.hosts.some((entry) => entry.name === host)
+					? config.hosts
+					: [...config.hosts, defaultEnterpriseHostConfig(host)],
+			}),
+		);
+		targetConfig = { config: written.config, configPath: written.configPath };
+		target = { ...target, hostStatus: "configured" };
+	}
 	const repoId = target.repoId;
 	let parsed: { host: string; owner: string; name: string };
 	try {
@@ -144,23 +173,63 @@ function repoIdFromParts(context: CliCommandContext): string | undefined {
 	return host && owner && name ? `${host}/${owner}/${name}` : undefined;
 }
 
-async function loadTargetConfig(
-	context: CliCommandContext,
-): Promise<AtlasConfig> {
+async function loadTargetConfig(context: CliCommandContext): Promise<{
+	config: AtlasConfig;
+	configPath?: string | undefined;
+}> {
 	const configPath = readArgvString(context.argv, "--config");
 	try {
-		return (
-			await loadConfig({
-				cwd: context.cwd,
-				env: context.env,
-				requireGhesAuth: false,
-				...(configPath === undefined ? {} : { configPath }),
-			})
-		).config;
+		const loaded = await loadConfig({
+			cwd: context.cwd,
+			env: context.env,
+			requireGhesAuth: false,
+			...(configPath === undefined ? {} : { configPath }),
+		});
+		return { config: loaded.config, configPath: loaded.source.configPath };
 	} catch (error) {
 		if (configPath !== undefined) throw error;
-		return defaultCliConfig();
+		return { config: defaultCliConfig() };
 	}
+}
+
+async function resolveRepoTargetForInit(
+	context: CliCommandContext,
+	config: AtlasConfig,
+	options: {
+		explicit?: string | undefined;
+		command: string;
+		nonInteractive: boolean;
+	},
+) {
+	try {
+		return await resolveRepoTarget(context, { config, ...options });
+	} catch (error) {
+		if (
+			!(error instanceof CliError) ||
+			error.code !== "CLI_REPO_HOST_UNKNOWN"
+		) {
+			throw error;
+		}
+		const details = error.details as { repoId?: unknown } | undefined;
+		if (typeof details?.repoId !== "string") throw error;
+		return {
+			repoId: details.repoId,
+			source: "git-origin" as const,
+			reason: "parsed remote.origin.url",
+			hostStatus: "unknown" as const,
+		};
+	}
+}
+
+function defaultEnterpriseHostConfig(host: string): AtlasHostConfig {
+	return {
+		name: host,
+		webUrl: `https://${host}`,
+		apiUrl: `https://${host}/api/v3`,
+		protocol: "ssh",
+		priority: 100,
+		default: false,
+	};
 }
 
 async function runSetupCommand(
