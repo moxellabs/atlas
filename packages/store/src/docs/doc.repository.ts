@@ -6,12 +6,17 @@ import {
 } from "@atlas/core";
 
 import { StoreRepositoryError } from "../errors";
-import { decodeJsonArray, encodeJson } from "../json";
+import { encodeJson } from "../json";
 import {
 	deleteFtsEntriesForDocument,
 	reindexDocumentText,
 } from "../search/fts";
 import type { DocumentRecord, StoreDatabase } from "../types";
+import {
+	type DocumentRow,
+	documentRowSelect,
+	mapDocumentRow,
+} from "./document-row";
 
 /** Persists and queries canonical document records and their scope rows. */
 export class DocRepository {
@@ -64,15 +69,14 @@ export class DocRepository {
 	get(docId: string): DocumentRecord | undefined {
 		return this.withRepositoryErrors("getDocument", () => {
 			const row = this.db.get<DocumentRow>(
-				`SELECT doc_id, repo_id, path, source_version, kind, authority, title, content_hash,
-                package_id, module_id, skill_id, description, audience_json, purpose_json, visibility, order_value, profile, tags_json
+				`SELECT ${documentRowSelect()}
          FROM documents
          WHERE doc_id = $docId`,
 				{ $docId: docId },
 			);
 			return row === undefined
 				? undefined
-				: mapDocumentRow(row, listScopes(this.db, docId));
+				: mapDocumentRow(row, listScopes(this.db, docId), "document");
 		});
 	}
 
@@ -81,14 +85,15 @@ export class DocRepository {
 		return this.withRepositoryErrors("listDocumentsByRepo", () =>
 			this.db
 				.all<DocumentRow>(
-					`SELECT doc_id, repo_id, path, source_version, kind, authority, title, content_hash,
-                  package_id, module_id, skill_id, description, audience_json, purpose_json, visibility, order_value, profile, tags_json
+					`SELECT ${documentRowSelect()}
            FROM documents
            WHERE repo_id = $repoId
            ORDER BY path`,
 					{ $repoId: repoId },
 				)
-				.map((row) => mapDocumentRow(row, listScopes(this.db, row.doc_id))),
+				.map((row) =>
+					mapDocumentRow(row, listScopes(this.db, row.doc_id), "document"),
+				),
 		);
 	}
 
@@ -100,14 +105,15 @@ export class DocRepository {
 		return this.withRepositoryErrors("listDocumentsByKind", () =>
 			this.db
 				.all<DocumentRow>(
-					`SELECT doc_id, repo_id, path, source_version, kind, authority, title, content_hash,
-                  package_id, module_id, skill_id, description, audience_json, purpose_json, visibility, order_value, profile, tags_json
+					`SELECT ${documentRowSelect()}
            FROM documents
            WHERE repo_id = $repoId AND kind = $kind
            ORDER BY path`,
 					{ $repoId: repoId, $kind: kind },
 				)
-				.map((row) => mapDocumentRow(row, listScopes(this.db, row.doc_id))),
+				.map((row) =>
+					mapDocumentRow(row, listScopes(this.db, row.doc_id), "document"),
+				),
 		);
 	}
 
@@ -116,14 +122,15 @@ export class DocRepository {
 		return this.withRepositoryErrors("listDocumentsByModule", () =>
 			this.db
 				.all<DocumentRow>(
-					`SELECT doc_id, repo_id, path, source_version, kind, authority, title, content_hash,
-                  package_id, module_id, skill_id, description, audience_json, purpose_json, visibility, order_value, profile, tags_json
+					`SELECT ${documentRowSelect()}
            FROM documents
            WHERE module_id = $moduleId
            ORDER BY path`,
 					{ $moduleId: moduleId },
 				)
-				.map((row) => mapDocumentRow(row, listScopes(this.db, row.doc_id))),
+				.map((row) =>
+					mapDocumentRow(row, listScopes(this.db, row.doc_id), "document"),
+				),
 		);
 	}
 
@@ -150,27 +157,6 @@ export class DocRepository {
 			});
 		}
 	}
-}
-
-interface DocumentRow {
-	doc_id: string;
-	repo_id: string;
-	path: string;
-	source_version: string;
-	kind: CanonicalDocument["kind"];
-	authority: CanonicalDocument["authority"];
-	title: string | null;
-	content_hash: string;
-	package_id: string | null;
-	module_id: string | null;
-	skill_id: string | null;
-	description: string | null;
-	audience_json: string;
-	purpose_json: string;
-	visibility: DocumentRecord["visibility"];
-	order_value: number | null;
-	profile: string | null;
-	tags_json: string;
 }
 
 interface ScopeRow {
@@ -269,36 +255,6 @@ function listScopes(db: StoreDatabase, docId: string): DocScope[] {
 			{ $docId: docId },
 		)
 		.map(mapScopeRow);
-}
-
-function mapDocumentRow(row: DocumentRow, scopes: DocScope[]): DocumentRecord {
-	return {
-		docId: row.doc_id,
-		repoId: row.repo_id,
-		path: row.path,
-		sourceVersion: row.source_version,
-		kind: row.kind,
-		authority: row.authority,
-		...(row.title === null ? {} : { title: row.title }),
-		contentHash: row.content_hash,
-		...(row.package_id === null ? {} : { packageId: row.package_id }),
-		...(row.module_id === null ? {} : { moduleId: row.module_id }),
-		...(row.skill_id === null ? {} : { skillId: row.skill_id }),
-		...(row.description === null ? {} : { description: row.description }),
-		audience: decodeJsonArray<DocumentRecord["audience"][number]>(
-			row.audience_json,
-			"document.audience_json",
-		),
-		purpose: decodeJsonArray<DocumentRecord["purpose"][number]>(
-			row.purpose_json,
-			"document.purpose_json",
-		),
-		visibility: row.visibility,
-		...(row.order_value === null ? {} : { order: row.order_value }),
-		...(row.profile === null ? {} : { profile: row.profile }),
-		tags: decodeJsonArray<string>(row.tags_json, "document.tags_json"),
-		scopes,
-	};
 }
 
 function mapScopeRow(row: ScopeRow): DocScope {

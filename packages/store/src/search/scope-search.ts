@@ -1,5 +1,9 @@
 import { StoreSearchError } from "../errors";
-import { decodeJsonArray } from "../json";
+import {
+	type DocumentRow,
+	documentRowSelect,
+	mapDocumentRow,
+} from "../docs/document-row";
 import type {
 	DocumentRecord,
 	ScopeSearchOptions,
@@ -39,9 +43,8 @@ export function scopeSearch(
 
 	try {
 		return db
-			.all<ScopeDocumentRow>(
-				`SELECT DISTINCT d.doc_id, d.repo_id, d.path, d.source_version, d.kind, d.authority, d.title,
-                d.content_hash, d.package_id, d.module_id, d.skill_id, d.description, d.audience_json, d.purpose_json, d.visibility, d.order_value, d.profile, d.tags_json
+			.all<DocumentRow>(
+				`SELECT DISTINCT ${documentRowSelect("d.")}
          FROM documents d
          JOIN document_scopes ds ON ds.doc_id = d.doc_id
          WHERE ${filters.join(" AND ")}
@@ -49,7 +52,7 @@ export function scopeSearch(
          LIMIT $limit`,
 				params,
 			)
-			.map(mapScopeDocumentRow);
+			.map((row) => mapDocumentRow(row, []));
 	} catch (error) {
 		throw new StoreSearchError("Scope search failed.", {
 			operation: "scopeSearch",
@@ -57,55 +60,4 @@ export function scopeSearch(
 			cause: error,
 		});
 	}
-}
-
-interface ScopeDocumentRow {
-	doc_id: string;
-	repo_id: string;
-	path: string;
-	source_version: string;
-	kind: DocumentRecord["kind"];
-	authority: DocumentRecord["authority"];
-	title: string | null;
-	content_hash: string;
-	package_id: string | null;
-	module_id: string | null;
-	skill_id: string | null;
-	description: string | null;
-	audience_json: string;
-	purpose_json: string;
-	visibility: DocumentRecord["visibility"];
-	order_value: number | null;
-	profile: string | null;
-	tags_json: string;
-}
-
-function mapScopeDocumentRow(row: ScopeDocumentRow): DocumentRecord {
-	return {
-		docId: row.doc_id,
-		repoId: row.repo_id,
-		path: row.path,
-		sourceVersion: row.source_version,
-		kind: row.kind,
-		authority: row.authority,
-		...(row.title === null ? {} : { title: row.title }),
-		contentHash: row.content_hash,
-		...(row.package_id === null ? {} : { packageId: row.package_id }),
-		...(row.module_id === null ? {} : { moduleId: row.module_id }),
-		...(row.skill_id === null ? {} : { skillId: row.skill_id }),
-		...(row.description === null ? {} : { description: row.description }),
-		audience: decodeJsonArray<DocumentRecord["audience"][number]>(
-			row.audience_json,
-			"documents.audience_json",
-		),
-		purpose: decodeJsonArray<DocumentRecord["purpose"][number]>(
-			row.purpose_json,
-			"documents.purpose_json",
-		),
-		visibility: row.visibility,
-		...(row.order_value === null ? {} : { order: row.order_value }),
-		...(row.profile === null ? {} : { profile: row.profile }),
-		tags: decodeJsonArray<string>(row.tags_json, "documents.tags_json"),
-		scopes: [],
-	};
 }
