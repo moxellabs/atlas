@@ -1,5 +1,6 @@
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { RepoCacheService } from "@atlas/source-git";
 import {
   AtlasConfigNotFoundError,
   buildDefaultConfig,
@@ -154,8 +155,24 @@ export async function findLocalCheckoutArtifact(
   artifactRoot: string,
 ): Promise<string | undefined> {
   if (!resolved?.localPath) return undefined;
-  const artifactDir = join(resolved.localPath, artifactRoot);
+  return findCompleteArtifactDir(resolved.localPath, artifactRoot);
+}
+
+async function findCompleteArtifactDir(
+  localPath: string,
+  artifactRoot: string,
+): Promise<string | undefined> {
+  const artifactDir = join(localPath, artifactRoot);
   return (await completeArtifactDir(artifactDir)) ? artifactDir : undefined;
+}
+
+async function findGitFetchedArtifact(
+  repo: Parameters<typeof resolveGhesToken>[0],
+  artifactRoot: string,
+): Promise<string | undefined> {
+  if (repo.mode !== "local-git" || !repo.git) return undefined;
+  await new RepoCacheService().updateCache(repo as never);
+  return findCompleteArtifactDir(repo.git.localPath, artifactRoot);
 }
 
 export async function copyLocalArtifactToRepoStorage(
@@ -277,8 +294,7 @@ export async function runAddRepoCommand(
     (readArgvString(context.argv, "--mode") as
       | "local-git"
       | "ghes-api"
-      | undefined) ??
-    (resolved && resolved.kind !== "local-path" ? "ghes-api" : "local-git");
+      | undefined) ?? "local-git";
   const remote =
     readArgvString(context.argv, "--remote") ??
     resolved?.remote ??
@@ -347,32 +363,41 @@ export async function runAddRepoCommand(
     artifactSource = "local-artifact";
     await copyLocalArtifactToRepoStorage(localArtifact, artifactDir);
   } else {
-    const apiUrl = resolved.host.apiUrl;
-    const token = await resolveRepoApiToken(repo, context);
-    const fetched = await fetchRemoteArtifact({
-      apiUrl,
-      owner: resolved.owner,
-      name: resolved.name,
-      ref,
-      repoId: repo.repoId,
-      artifactDir,
-      artifactRoot: identityArtifact.artifactRoot,
-      token,
-    });
-    if (!fetched.ok && fetched.code === "CLI_ARTIFACT_NOT_FOUND") {
-      return renderMissingArtifactResult(context, {
-        repoId: repo.repoId,
-        repoInput: positional ?? repo.repoId,
-        ref,
-        host: resolved.host.name,
+    const gitArtifact = await findGitFetchedArtifact(
+      repo,
+      identityArtifact.artifactRoot,
+    ).catch(() => undefined);
+    if (gitArtifact) {
+      artifactSource = "local-artifact";
+      await copyLocalArtifactToRepoStorage(gitArtifact, artifactDir);
+    } else {
+      const apiUrl = resolved.host.apiUrl;
+      const token = await resolveRepoApiToken(repo, context);
+      const fetched = await fetchRemoteArtifact({
+        apiUrl,
         owner: resolved.owner,
         name: resolved.name,
-        nonInteractive: context.argv.includes("--non-interactive"),
-        json: context.output.json,
-        selectedAction: await selectedMissingArtifactAction(context),
+        ref,
+        repoId: repo.repoId,
+        artifactDir,
+        artifactRoot: identityArtifact.artifactRoot,
+        token,
       });
+      if (!fetched.ok && fetched.code === "CLI_ARTIFACT_NOT_FOUND") {
+        return renderMissingArtifactResult(context, {
+          repoId: repo.repoId,
+          repoInput: positional ?? repo.repoId,
+          ref,
+          host: resolved.host.name,
+          owner: resolved.owner,
+          name: resolved.name,
+          nonInteractive: context.argv.includes("--non-interactive"),
+          json: context.output.json,
+          selectedAction: await selectedMissingArtifactAction(context),
+        });
+      }
+      if (!fetched.ok) throw artifactValidationError(fetched.diagnostics);
     }
-    if (!fetched.ok) throw artifactValidationError(fetched.diagnostics);
   }
   const validation = await validateFetchedArtifact(artifactDir, {
     repoId: repo.repoId,

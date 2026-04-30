@@ -413,6 +413,67 @@ describe("atlas cli", () => {
     }
   });
 
+  test("add-repo imports published artifact through git before API auth", async () => {
+    const home = join(rootDir, "home-add-repo-git-first");
+    const cfg = join(rootDir, "git-first.config.yaml");
+    await runWithCapture(
+      [
+        "setup",
+        "--cwd",
+        rootDir,
+        "--config",
+        cfg,
+        "--cache-dir",
+        cacheDir,
+        "--non-interactive",
+      ],
+      { HOME: home },
+    );
+    const gitFirstRepo = join(rootDir, "git-first-origin");
+    await createOriginRepo(gitFirstRepo);
+    await createCliArtifactFixture(gitFirstRepo, "git-first-revision");
+    await git(gitFirstRepo, ["add", ".moxel/atlas"]);
+    await git(gitFirstRepo, ["commit", "-m", "publish atlas artifact"]);
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      throw new Error("API should not be used when git can read the artifact");
+    }) as unknown as typeof fetch;
+    try {
+      const result = await runWithCapture(
+        [
+          "add-repo",
+          "moxellabs/atlas",
+          "--cwd",
+          rootDir,
+          "--config",
+          cfg,
+          "--cache-dir",
+          cacheDir,
+          "--remote",
+          gitFirstRepo,
+          "--non-interactive",
+          "--json",
+        ],
+        {
+          HOME: home,
+          GH_TOKEN: "",
+          GITHUB_TOKEN: "",
+          GHES_TOKEN: "",
+          GH_ENTERPRISE_TOKEN: "",
+        },
+      );
+      expect(result.exitCode).toBe(0);
+      const data = JSON.parse(result.stdout).data;
+      expect(data.artifactFound).toBe(true);
+      expect(data.artifactSource).toBe("local-artifact");
+      expect(data.repo.mode).toBe("local-git");
+      expect(data.importStatus).toBe("imported");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("init auto-configures detected enterprise host from git origin", async () => {
     const home = join(rootDir, "home-enterprise-init");
     const cfg = join(rootDir, "enterprise-init.config.yaml");
