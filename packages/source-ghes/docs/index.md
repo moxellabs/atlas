@@ -35,7 +35,7 @@ order: 260
 
 Credential discovery belongs to `@atlas/config`. This package accepts resolved auth metadata and performs GHES API operations only.
 
-`atlas add-repo` may read committed `.moxel/atlas` files (`manifest.json`, `corpus.db`, `checksums.json`, and `docs.index.json`) through GHES APIs. Adoption templates do not call issue/PR APIs and templates do not require additional write scopes. Enterprise admins own repository permissions, protected branches, required reviews, issue templates, PR templates, and hook policy.
+`atlas repo add` may read committed `.moxel/atlas` files (`manifest.json`, `corpus.db`, `checksums.json`, and `docs.index.json`) through GHES APIs. Adoption templates do not call issue/PR APIs and templates do not require additional write scopes. Enterprise admins own repository permissions, protected branches, required reviews, issue templates, PR templates, and hook policy.
 
 Maintainers control branch names, commit messages, hooks, PR templates, and permissions. Atlas does not branch, commit, push, create issues, or create PRs.
 

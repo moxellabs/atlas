@@ -17,19 +17,21 @@ The CLI owns local workflows: creating config, registering repos, syncing source
 
 ```text
 atlas setup
-atlas init (compatibility alias for setup)
+atlas next
+atlas init
 atlas repo add
+atlas repo list/show/doctor/remove
+atlas hosts
 atlas sync
 atlas build
+atlas index
+atlas search
+atlas artifact verify/inspect
+atlas inspect
 atlas serve
 atlas mcp
-atlas inspect
-atlas install-skill
-atlas list
-atlas clean
-atlas prune
+atlas adoption-template
 atlas doctor
-atlas eval
 ```
 
 ## Common Usage
@@ -40,34 +42,21 @@ Set up user-home Atlas state:
 bun run cli setup --non-interactive
 ```
 
-Add a local Git repo:
+Import a maintained public artifact:
 
 ```bash
-bun run cli add-repo \
-  --non-interactive \
-  --repo-id github.com/moxellabs/atlas \
-  --mode local-git \
-  --remote file:///path/to/repo \
-  --local-path ~/.moxel/atlas/checkouts/github.com/moxellabs/atlas \
-  --ref main \
-  --template mixed-monorepo
+bun run cli repo add moxellabs/atlas
 ```
 
-Add a GHES repo. ATLAS can reuse GitHub CLI credentials or token env vars:
+Import a GHES repo artifact. Atlas can reuse GitHub CLI credentials or token env vars:
 
 ```bash
 gh auth login --hostname ghe.example.com
-
-bun run cli add-repo \
-  --non-interactive \
-  --repo-id github.mycorp.com/platform/docs \
-  --mode ghes-api \
-  --base-url https://ghe.example.com/api/v3 \
-  --owner platform \
-  --name docs \
-  --ref main \
-  --template mixed-monorepo
+bun run cli hosts add ghe.example.com --web-url https://ghe.example.com --api-url https://ghe.example.com/api/v3 --default
+bun run cli repo add platform/docs --host ghe.example.com
 ```
+
+`atlas add-repo` remains a hidden compatibility alias for `atlas repo add`.
 
 Sync/build:
 

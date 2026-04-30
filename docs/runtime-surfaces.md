@@ -27,7 +27,7 @@ Atlas exposes the same local corpus through a CLI, an embeddable Commander comma
 - `mcp` starts a stdio MCP session backed by local store/retrieval services.
 - `eval` runs deterministic retrieval evaluation scenarios and MCP adoption call/no-call scenarios.
 
-The CLI supports human output, JSON output, stable exit codes, and non-interactive operation for tests. Enterprise Commander CLIs can mount the full Atlas command tree with `@moxellabs/atlas/commander`; see [Enterprise CLI Mount](enterprise-cli-mount.md). `apps/cli/package.json` declares the local Bun binary entrypoint as `bin.atlas = ./src/index.ts`; Phase 10 distribution smoke validation executes that entrypoint with `--help`.
+The CLI supports human output, JSON output, stable exit codes, and non-interactive operation for tests. Enterprise Commander CLIs can mount the full Atlas command tree with `@moxellabs/atlas/commander`; see [Enterprise CLI Mount](enterprise-cli-mount.md). `apps/cli/package.json` declares the local Bun binary entrypoint as `bin.atlas = ./src/index.ts`; Distribution smoke validation executes that entrypoint with `--help`.
 
 Maintainer artifact flow:
 
@@ -99,7 +99,7 @@ bun run release:check
 
 CLI surface includes `atlas hosts list`, `atlas hosts add`, `atlas hosts set-default`, and `atlas hosts prioritize`. `atlas repo add` accepts shorthand, SSH URLs, HTTPS URLs, and local paths such as `.` and normalizes them to `host/owner/name`.
 
-## Add-repo artifact acquisition
+## Repo add artifact acquisition
 
 `atlas repo add` uses artifact-only acquisition for remote GitHub/GHES repos. It stores `manifest.json`, `corpus.db`, `docs.index.json`, and `checksums.json` at `~/.moxel/atlas/repos/<host>/<owner>/<name>/.moxel/atlas/` and does not clone source repositories when artifacts exist.
 
@@ -120,7 +120,7 @@ Unscoped search and retrieval can return results from multiple imported repos. R
 
 After import, queries do not need artifact files and do not fetch remote source at query time. `atlas repo remove github.mycorp.com/platform/docs` removes imported results for that repo from CLI, retrieval, MCP, and server runtime surfaces while preserving other repos.
 
-## Add-repo artifact acquisition fallback
+## Repo add artifact acquisition fallback
 
 If remote artifact acquisition finds no `.moxel/atlas`, `atlas repo add` offers clone and index locally only, skip repo, maintainer instructions, or issue/PR instructions. JSON output includes stable next action values and never writes repo config or repo metadata for skip/instruction choices.
 
@@ -128,7 +128,7 @@ Atlas does not branch, commit, push, create issues, or create PRs.
 
 Missing-artifact adoption output is CLI-only text generation, not runtime retrieval mutation. It shares the adoption permission boundaries documented in [`docs/security.md`](./security.md#adoption-permission-boundaries): Atlas adoption templates are copyable text only, remote artifact fetches are read-only, and templates do not require write scopes.
 
-Phase 19 adds `atlas artifact verify`, `atlas artifact verify --fresh`, and `atlas artifact inspect` for artifact validation and CI freshness checks.
+`atlas artifact verify`, `atlas artifact verify --fresh`, and `atlas artifact inspect` support artifact validation and CI freshness checks.
 
 `atlas index` stores its managed checkout at `~/.moxel/atlas/repos/<host>/<owner>/<name>/checkout`, imports into global corpus, and avoids writing repo-local artifacts. Weak docs print `Consider running the document-codebase skill before indexing.` as a warning handoff, not automatic execution.
 

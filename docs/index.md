@@ -34,7 +34,7 @@ Atlas documentation is intentionally arranged to match Atlas topology rules:
 
 This layout gives retrieval meaningful repo, package, and module scopes instead of a flat Markdown corpus.
 
-## Phase 20 workflow guides
+## Workflow guides
 
 - [Consumer repo consumption workflow](ingestion-build-flow.md#consumer-repo-consumption-workflow)
 - [Maintainer artifact publishing workflow](ingestion-build-flow.md#maintainer-artifact-publishing-workflow)

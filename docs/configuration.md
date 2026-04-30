@@ -97,7 +97,7 @@ Shorthand repo inputs search hosts by priority then name. In non-interactive amb
 
 ## Remote artifact fetch and adoption templates
 
-Configured host web/API URLs are used to read `.moxel/atlas` artifact files during explicit `atlas repo add` / `atlas repo add`. Private repos should use least-privilege read tokens. Templates do not require additional write scopes.
+Configured host web/API URLs are used to read `.moxel/atlas` artifact files during explicit `atlas repo add`. Private repos should use least-privilege read tokens. Templates do not require additional write scopes.
 
 Adoption templates do not call issue/PR APIs and do not use configured API URLs for remote writes. Atlas adoption templates are copyable text only. Maintainers control branch names, commit messages, hooks, PR templates, and permissions. Atlas does not branch, commit, push, create issues, or create PRs.
 

@@ -37,7 +37,7 @@ Result:
 
 ```sh
 userCli acme setup
-userCli acme add-repo
+userCli acme repo add
 userCli acme search "auth middleware"
 userCli acme mcp
 userCli acme serve
