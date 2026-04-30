@@ -17,6 +17,7 @@
 		"release:check": "bun tooling/scripts/release.ts --dry-run",
 		"smoke:distribution": "bun tooling/scripts/distribution-smoke.ts",
 		"uat:production": "bun tooling/scripts/production-uat.ts",
+		"eval:mcp": "bun tooling/scripts/mcp-retrieval-eval.ts",
 		"typecheck": "bunx tsc --noEmit",
 		"test": "bun test",
 		"lint": "eslint .",
