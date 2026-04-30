@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { loadConfig } from "@atlas/config";
 import {
+	countRepoCorpusRows,
 	deleteRepoCorpus,
 	ManifestRepository,
 	openStore,
@@ -260,15 +261,23 @@ async function runRepoRemove(
 	let removedStoreRows = false;
 	let deletedCorpusCounts = {};
 	let removedConfigEntry = false;
-	if (!dryRun) {
-		removedFolder = await removeRepoFolder(atlasHome, repoId);
-		const db = openStore({ path: resolved.config.corpusDbPath, migrate: true });
+	if (dryRun && !existsSync(resolved.config.corpusDbPath)) {
+		deletedCorpusCounts = emptyRepoCorpusCounts();
+	} else {
+		const db = openStore({ path: resolved.config.corpusDbPath, migrate: !dryRun });
 		try {
-			deletedCorpusCounts = deleteRepoCorpus(db, repoId).deleted;
-			removedStoreRows = true;
+			if (dryRun) {
+				deletedCorpusCounts = countRepoCorpusRows(db, repoId);
+			} else {
+				removedFolder = await removeRepoFolder(atlasHome, repoId);
+				deletedCorpusCounts = deleteRepoCorpus(db, repoId).deleted;
+				removedStoreRows = true;
+			}
 		} finally {
 			db.close();
 		}
+	}
+	if (!dryRun) {
 		const mutated = await mutateAtlasConfig(
 			{
 				cwd: context.cwd,
@@ -300,4 +309,19 @@ async function runRepoRemove(
 			: `Corpus rows deleted: ${JSON.stringify(deletedCorpusCounts)}`,
 		JSON.stringify(result, null, 2),
 	]);
+}
+
+function emptyRepoCorpusCounts(): ReturnType<typeof countRepoCorpusRows> {
+	return {
+		repos: 0,
+		packages: 0,
+		modules: 0,
+		documents: 0,
+		sections: 0,
+		chunks: 0,
+		summaries: 0,
+		skills: 0,
+		manifests: 0,
+		ftsRows: 0,
+	};
 }
