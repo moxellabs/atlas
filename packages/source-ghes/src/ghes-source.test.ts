@@ -136,6 +136,35 @@ describe("source-ghes", () => {
 		]);
 	});
 
+	test("caches commit and tree lookups across repeated file operations", async () => {
+		const requestCounts = new Map<string, number>();
+		const fetch = buildMockFetch();
+		const countingFetch: GhesFetch = async (input, init) => {
+			const url = new URL(String(input));
+			requestCounts.set(url.pathname, (requestCounts.get(url.pathname) ?? 0) + 1);
+			return fetch(input, init);
+		};
+		const adapter = new GhesSourceAdapter({
+			auth: { kind: "token", token: "test-token" },
+			fetch: countingFetch,
+		});
+
+		await expect(adapter.listFiles(repo)).resolves.toHaveLength(3);
+		await expect(adapter.readFile(repo, "docs/index.md")).resolves.toEqual({
+			path: "docs/index.md",
+			content: "# Index\n",
+		});
+		await expect(adapter.listFiles(repo)).resolves.toHaveLength(3);
+		await expect(adapter.readFile(repo, "docs/index.md")).resolves.toEqual({
+			path: "docs/index.md",
+			content: "# Index\n",
+		});
+
+		expect(requestCounts.get("/api/v3/repos/moxellabs/atlas/commits/main")).toBe(1);
+		expect(requestCounts.get("/api/v3/repos/moxellabs/atlas/git/trees/tree-sha")).toBe(1);
+		expect(requestCounts.get("/api/v3/repos/moxellabs/atlas/git/blobs/blob-sha")).toBe(2);
+	});
+
 	test("rejects truncated tree responses instead of returning partial file lists", async () => {
 		const adapter = new GhesSourceAdapter({
 			auth: { kind: "token", token: "test-token" },

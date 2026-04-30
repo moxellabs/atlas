@@ -1,8 +1,8 @@
 import type { FileEntry, RepoConfig, RepoRevision, RepoSourceAdapter, SourceChange, SourceFile } from "@atlas/core";
 
 import { readBlobText } from "../api/blobs";
-import { compareCommits, resolveCommit } from "../api/commits";
-import { findTreeBlob, readRepositoryTree, treeToFileEntries } from "../api/trees";
+import { compareCommits, resolveCommit, type GhesCommitResponse } from "../api/commits";
+import { findTreeBlob, readRepositoryTree, treeToFileEntries, type GhesTreeResponse } from "../api/trees";
 import type { GhesAuthConfig } from "../client/auth";
 import { GhesClient, type GhesFetch } from "../client/ghes-client";
 import {
@@ -37,6 +37,8 @@ export class GhesSourceAdapter implements RepoSourceAdapter {
   readonly #authByRepoId: Record<string, GhesAuthConfig>;
   readonly #fetch: GhesFetch | undefined;
   readonly #onDiagnostic: GhesSourceDiagnosticSink | undefined;
+  readonly #commitCache = new Map<string, Promise<GhesCommitResponse>>();
+  readonly #treeCache = new Map<string, Promise<GhesTreeResponse>>();
 
   constructor(options: GhesSourceAdapterOptions = {}) {
     this.#auth = options.auth;
@@ -47,14 +49,7 @@ export class GhesSourceAdapter implements RepoSourceAdapter {
 
   async getRevision(repo: RepoConfig): Promise<RepoRevision> {
     const github = requireGhesRepo(repo);
-    const client = this.#clientFor(repo);
-    const commit = await resolveCommit({
-      client,
-      repoId: repo.repoId,
-      owner: github.owner,
-      repoName: github.name,
-      ref: github.ref
-    });
+    const commit = await this.#resolveCommit(repo);
     this.#onDiagnostic?.({
       type: "revision_resolved",
       repoId: repo.repoId,
@@ -68,23 +63,7 @@ export class GhesSourceAdapter implements RepoSourceAdapter {
   }
 
   async listFiles(repo: RepoConfig): Promise<FileEntry[]> {
-    const github = requireGhesRepo(repo);
-    const client = this.#clientFor(repo);
-    const commit = await resolveCommit({
-      client,
-      repoId: repo.repoId,
-      owner: github.owner,
-      repoName: github.name,
-      ref: github.ref
-    });
-    const tree = await readRepositoryTree({
-      client,
-      repoId: repo.repoId,
-      owner: github.owner,
-      repoName: github.name,
-      treeSha: commit.commit.tree.sha,
-      recursive: true
-    });
+    const tree = await this.#readRepositoryTree(repo);
     const files = treeToFileEntries(tree);
     this.#onDiagnostic?.({
       type: "tree_listed",
@@ -98,21 +77,7 @@ export class GhesSourceAdapter implements RepoSourceAdapter {
     const github = requireGhesRepo(repo);
     const normalizedPath = normalizeRelativePath(path);
     const client = this.#clientFor(repo);
-    const commit = await resolveCommit({
-      client,
-      repoId: repo.repoId,
-      owner: github.owner,
-      repoName: github.name,
-      ref: github.ref
-    });
-    const tree = await readRepositoryTree({
-      client,
-      repoId: repo.repoId,
-      owner: github.owner,
-      repoName: github.name,
-      treeSha: commit.commit.tree.sha,
-      recursive: true
-    });
+    const tree = await this.#readRepositoryTree(repo);
     const blob = findTreeBlob(tree, normalizedPath);
     if (!blob) {
       throw new GhesBlobReadError({
@@ -180,6 +145,42 @@ export class GhesSourceAdapter implements RepoSourceAdapter {
       ...(this.#fetch === undefined ? {} : { fetch: this.#fetch })
     });
   }
+
+  async #resolveCommit(repo: RepoConfig): Promise<GhesCommitResponse> {
+    const github = requireGhesRepo(repo);
+    const cacheKey = cacheKeyFor(repo);
+    let commit = this.#commitCache.get(cacheKey);
+    if (!commit) {
+      commit = resolveCommit({
+        client: this.#clientFor(repo),
+        repoId: repo.repoId,
+        owner: github.owner,
+        repoName: github.name,
+        ref: github.ref
+      });
+      this.#commitCache.set(cacheKey, commit);
+    }
+    return commit;
+  }
+
+  async #readRepositoryTree(repo: RepoConfig): Promise<GhesTreeResponse> {
+    const github = requireGhesRepo(repo);
+    const commit = await this.#resolveCommit(repo);
+    const cacheKey = `${cacheKeyFor(repo)}\0${commit.commit.tree.sha}`;
+    let tree = this.#treeCache.get(cacheKey);
+    if (!tree) {
+      tree = readRepositoryTree({
+        client: this.#clientFor(repo),
+        repoId: repo.repoId,
+        owner: github.owner,
+        repoName: github.name,
+        treeSha: commit.commit.tree.sha,
+        recursive: true
+      });
+      this.#treeCache.set(cacheKey, tree);
+    }
+    return tree;
+  }
 }
 
 export function requireGhesRepo(repo: RepoConfig): NonNullable<RepoConfig["github"]> {
@@ -202,4 +203,9 @@ function normalizeRelativePath(path: string): string {
     });
   }
   return normalizedPath;
+}
+
+function cacheKeyFor(repo: RepoConfig): string {
+  const github = requireGhesRepo(repo);
+  return [repo.repoId, github.baseUrl, github.owner, github.name, github.ref].join("\0");
 }
