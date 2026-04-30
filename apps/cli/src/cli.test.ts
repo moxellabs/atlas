@@ -580,6 +580,25 @@ describe("atlas cli", () => {
 			source: "bare-name",
 		});
 
+		const bareShowHuman = await runWithCapture([
+			"repo",
+			"show",
+			"docs",
+			"--cwd",
+			rootDir,
+			"--config",
+			configPath,
+		]);
+		expect(bareShowHuman.exitCode).toBe(0);
+		expect(bareShowHuman.stdout).toContain("Repo: github.com/platform/docs");
+		expect(bareShowHuman.stdout).toContain("Configured: yes");
+		expect(bareShowHuman.stdout).toContain("Metadata found: yes");
+		expect(bareShowHuman.stdout).toContain("Mode: local-git");
+		expect(bareShowHuman.stdout).toContain(`Source: file://${originPath}`);
+		expect(bareShowHuman.stdout).toContain("Config entry: local-git");
+		expect(bareShowHuman.stdout).toContain("Full details: rerun with --json.");
+		expect(bareShowHuman.stdout).not.toContain('"targetResolution"');
+
 		const bareRemoveDryRun = await runWithCapture([
 			"repo",
 			"remove",

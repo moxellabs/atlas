@@ -231,9 +231,63 @@ async function runRepoShow(
 		metadata,
 		targetResolution: target,
 	};
-	return renderSuccess(context, "repo show", data, [
-		JSON.stringify(data, null, 2),
-	]);
+	return renderSuccess(context, "repo show", data, renderRepoShowLines(data));
+}
+
+function renderRepoShowLines(data: {
+	repoId: string;
+	repoFolder: string;
+	metadataPath: string;
+	configured: boolean;
+	metadataFound: boolean;
+	config: Awaited<ReturnType<typeof loadConfig>>["config"]["repos"][number] | undefined;
+	metadata: Awaited<ReturnType<typeof readRepoMetadata>> | undefined;
+	targetResolution: Awaited<ReturnType<typeof resolveRepoTarget>>;
+}): string[] {
+	const source = data.metadata?.source;
+	const config = data.config;
+	const mode = source?.mode ?? config?.mode;
+	const lines = [
+		`Repo: ${data.repoId}`,
+		`Configured: ${data.configured ? "yes" : "no"}`,
+		`Metadata found: ${data.metadataFound ? "yes" : "no"}`,
+	];
+	if (mode !== undefined) lines.push(`Mode: ${mode}`);
+	if (source !== undefined) {
+		if (source.mode === "local-git") {
+			if (source.remote) lines.push(`Source: ${source.remote}`);
+			if (source.localPath) lines.push(`Local path: ${source.localPath}`);
+			if (source.ref) lines.push(`Ref: ${source.ref}`);
+		} else {
+			if (source.baseUrl) lines.push(`Source: ${source.baseUrl}`);
+			if (source.ref) lines.push(`Ref: ${source.ref}`);
+		}
+	} else if (config?.mode === "local-git") {
+		if (config.git?.remote) lines.push(`Source: ${config.git.remote}`);
+		if (config.git?.localPath) lines.push(`Local path: ${config.git.localPath}`);
+		if (config.git?.ref) lines.push(`Ref: ${config.git.ref}`);
+	} else if (config?.mode === "ghes-api") {
+		if (config.github?.baseUrl) lines.push(`Source: ${config.github.baseUrl}`);
+		if (config.github?.ref) lines.push(`Ref: ${config.github.ref}`);
+	}
+	lines.push(`Repo folder: ${data.repoFolder}`);
+	lines.push(`Metadata path: ${data.metadataPath}`);
+	lines.push(`Target: ${data.targetResolution.source}`);
+	if (config !== undefined) {
+		const packageGlobCount = config.workspace.packageGlobs.length;
+		lines.push(
+			`Config entry: ${config.mode}, ${packageGlobCount} package glob${packageGlobCount === 1 ? "" : "s"}`,
+		);
+	} else {
+		lines.push("Config entry: missing");
+	}
+	if (!data.configured) lines.push("Next: Run atlas add-repo to add this repo to config.");
+	if (!data.metadataFound)
+		lines.push(
+			"Next: Run atlas add-repo or atlas index to create repo registry metadata.",
+		);
+	lines.push("Full details: rerun with --json.");
+	return lines;
 }
 
 async function runRepoRemove(
