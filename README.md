@@ -29,10 +29,12 @@ Engineering docs often live across many repos, private hosts, and local checkout
 
 ## Requirements
 
-- Node.js 24+ for installed npm package runtime (`atlas` binary runs as a Node bundle)
+- Node.js 24+ for the installed npm package runtime (`atlas` binary runs as a Node bundle)
 - Bun 1.3+ for source checkout development, build, and test workflows
 - Git for local checkout workflows
 - GitHub CLI or token env var only when explicit GHES/GitHub artifact fetch is needed
+
+Atlas uses Bun in this repository for development, builds, tests, and source-run commands such as `bun run cli`. The published `@moxellabs/atlas` package is a Node 24+ runtime bundle. Its `better-sqlite3` dependency is intentional for Node runtime compatibility; do not casually replace it with `bun:sqlite` unless the project deliberately plans a Bun-only package/runtime migration.
 
 ## Install / run
 
