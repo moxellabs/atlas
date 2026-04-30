@@ -18,7 +18,6 @@
     "smoke:distribution": "bun tooling/scripts/distribution-smoke.ts",
     "uat:production": "bun tooling/scripts/production-uat.ts",
     "eval:mcp": "bun tooling/scripts/mcp-retrieval-eval.ts",
-    "postinstall": "node ./scripts/postinstall.cjs",
     "typecheck": "bunx tsc --noEmit",
     "test": "bun test",
     "lint": "eslint .",
@@ -74,7 +73,6 @@
   "files": [
     "bin",
     "dist",
-    "scripts/postinstall.cjs",
     "README.md",
     "LICENSE",
     "NOTICE",
