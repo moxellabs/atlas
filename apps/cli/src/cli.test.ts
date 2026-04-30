@@ -529,6 +529,19 @@ describe("atlas cli", () => {
 			"mixed-monorepo",
 		]);
 
+		const corpusDbPath = (await loadConfig({ cwd: rootDir, configPath })).config
+			.corpusDbPath;
+		const seededDb = openStore({ path: corpusDbPath, migrate: true });
+		try {
+			new RepoRepository(seededDb).upsert({
+				repoId: "github.com/platform/docs",
+				mode: "local-git",
+				revision: "dry-run-test",
+			});
+		} finally {
+			seededDb.close();
+		}
+
 		const cwdDoctor = await runWithCapture([
 			"repo",
 			"doctor",
@@ -578,6 +591,24 @@ describe("atlas cli", () => {
 			repoId: "github.com/platform/docs",
 			source: "bare-name",
 		});
+		expect(JSON.parse(bareRemoveDryRun.stdout).data).toMatchObject({
+			deletedCorpusCounts: {
+				repos: 1,
+				manifests: 0,
+			},
+			removedConfigEntry: false,
+			removedFolder: false,
+			removedStoreRows: false,
+			dryRun: true,
+		});
+		const dryRunDb = openStore({ path: corpusDbPath });
+		try {
+			expect(dryRunDb.path).toBe(corpusDbPath);
+			expect(new RepoRepository(dryRunDb).get("github.com/platform/docs"))
+				.toBeTruthy();
+		} finally {
+			dryRunDb.close();
+		}
 
 		const unknownRemove = await runWithCapture([
 			"repo",
