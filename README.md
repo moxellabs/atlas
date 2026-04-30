@@ -7,6 +7,8 @@ visibility: public
 order: 1
 ---
 
+![Atlas README header](docs/assets/atlas-readme-header.png)
+
 # Atlas
 
 Atlas is a local-first documentation compiler, retrieval planner, and MCP/server runtime for multi-repo engineering docs.
