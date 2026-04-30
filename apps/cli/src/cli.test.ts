@@ -104,6 +104,28 @@ describe("atlas cli", () => {
     );
   });
 
+  test("mounted Commander API does not leak Atlas identity in help", () => {
+    const command = createAtlasCommand({
+      namespace: "knowledge",
+      identityRoot: ".acme/knowledge",
+      mcp: {
+        name: "acme-mcp",
+        title: "Acme Local Knowledge MCP",
+        resourcePrefix: "acme",
+      },
+      defaults: { config: "./acme-knowledge.yaml" },
+    });
+
+    const rootHelp = command.helpInformation();
+    const subcommandHelp = command.commands
+      .map((subcommand) => subcommand.helpInformation())
+      .join("\n");
+    const allHelp = `${rootHelp}\n${subcommandHelp}`;
+
+    expect(rootHelp).toContain("Usage: knowledge");
+    expect(allHelp).not.toMatch(/\bAtlas\b|\batlas\b|--atlas-/);
+  });
+
   test("mount defaults validate supported identity fields only", () => {
     const command = createAtlasCommand({
       namespace: "acme",
