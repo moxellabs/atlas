@@ -30,7 +30,7 @@ Apps should delegate work to package services instead of embedding source acquis
 
 Atlas has three user-facing runtime surfaces over the same local corpus:
 
-- The CLI runs operator workflows such as `init`, `add-repo`, `sync`, `build`, `list`, `inspect`, `serve`, `mcp`, `install-skill`, `clean`, `prune`, `doctor`, and `eval`.
+- The CLI runs operator workflows such as `init`, `repo add`, `sync`, `build`, `list`, `inspect`, `serve`, `mcp`, `install-skill`, `clean`, `prune`, `doctor`, and `eval`.
 - The HTTP server composes Elysia routes, OpenAPI, build/sync services, retrieval services, and an MCP bridge for local clients.
 - The MCP package exposes tools, resources, prompts, and transports that agents can call without knowing store or retrieval internals.
 

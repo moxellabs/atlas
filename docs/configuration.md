@@ -97,7 +97,7 @@ Shorthand repo inputs search hosts by priority then name. In non-interactive amb
 
 ## Remote artifact fetch and adoption templates
 
-Configured host web/API URLs are used to read `.moxel/atlas` artifact files during explicit `atlas repo add` / `atlas add-repo`. Private repos should use least-privilege read tokens. Templates do not require additional write scopes.
+Configured host web/API URLs are used to read `.moxel/atlas` artifact files during explicit `atlas repo add` / `atlas repo add`. Private repos should use least-privilege read tokens. Templates do not require additional write scopes.
 
 Adoption templates do not call issue/PR APIs and do not use configured API URLs for remote writes. Atlas adoption templates are copyable text only. Maintainers control branch names, commit messages, hooks, PR templates, and permissions. Atlas does not branch, commit, push, create issues, or create PRs.
 
@@ -108,9 +108,9 @@ gh auth login --hostname github.mycorp.com
 atlas hosts add github.mycorp.com --web-url https://github.mycorp.com --api-url https://github.mycorp.com/api/v3 --protocol ssh --priority 10 --default
 atlas hosts set-default github.mycorp.com
 atlas hosts prioritize github.mycorp.com --priority 10
-atlas add-repo platform/docs --host github.mycorp.com
-atlas add-repo git@github.mycorp.com:platform/docs.git
-atlas add-repo https://github.mycorp.com/platform/docs.git
+atlas repo add platform/docs --host github.mycorp.com
+atlas repo add git@github.mycorp.com:platform/docs.git
+atlas repo add https://github.mycorp.com/platform/docs.git
 ```
 
 Configured host priority decides shorthand lookup order. Use `--host <host>` or a full SSH/HTTPS URL when shorthand is ambiguous. GHES hosts require a web URL and API URL such as `https://github.mycorp.com/api/v3`. Use least-privilege read tokens or `gh auth login --hostname github.mycorp.com`; Atlas needs read access to `.moxel/atlas` artifact files, not write scopes. SSH and HTTPS inputs normalize to the same canonical repo ID shape `host/owner/name`.

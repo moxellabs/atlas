@@ -31,12 +31,13 @@ export function createAtlasCommand(config: AtlasMountConfig): Command {
 		env: process.env,
 		cwdFallback: process.cwd(),
 	};
+	const defaults = mountDefaults(config);
 	return createAtlasProgram(runtime, {
 		name: validateNamespace(config.namespace),
 		description:
 			"Mounted Atlas command tree for local-first documentation ingestion, retrieval, and MCP/server access.",
-		helpPrefix: `${config.namespace} <command>\nRuntime defaults: ~/.moxel/atlas\n`,
-		mountDefaults: mountDefaults(config),
+		helpPrefix: `${config.namespace} <command>\nRuntime defaults: ${defaults.ATLAS_IDENTITY_ROOT ?? defaults.ATLAS_CACHE_DIR ?? "configured by host CLI"}\n`,
+		mountDefaults: defaults,
 	});
 }
 

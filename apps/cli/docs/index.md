@@ -29,14 +29,14 @@ Dependency construction belongs in the runtime layer. Command modules should req
 
 ## Commands
 
-The CLI currently supports `setup`, `next`, `init`, `repo add`, `add-repo`, `adoption-template`, `sync`, `build`, `serve`, `mcp`, `inspect`, `install-skill`, `list`, `clean`, `prune`, `doctor`, and `eval`.
+The CLI currently supports `setup`, `next`, `init`, `repo add`, `adoption-template`, `sync`, `build`, `index`, `hosts`, `search`, `artifact`, `serve`, `mcp`, `inspect`, `install-skill`, `list`, `clean`, `prune`, `doctor`, and `eval`.
 
-`setup` creates user-home `~/.moxel/atlas` config and runtime directories. `next` inspects current setup/repo/corpus state and recommends one command. `repo add` imports an existing repo artifact for consumers; `add-repo` remains the compatibility alias. `init` initializes repo-local `.moxel/atlas` artifact files for maintainers. `build` publishes/updates the artifact. `index` is the local-only fallback for repos that do not publish artifacts. `init`, `build`, `repo doctor`, `repo show`, and store-backed inspect commands share repo target inference: explicit flags win, then repo metadata/cwd/config/Git origin/bare-name sources can avoid repeated full IDs.
+`setup` creates user-home `~/.moxel/atlas` config and runtime directories. `next` inspects current setup/repo/corpus state and recommends one command. `repo add` imports an existing repo artifact for consumers; legacy `add-repo` remains the compatibility alias. `init` initializes repo-local `.moxel/atlas` artifact files for maintainers. `build` publishes/updates the artifact. `index` is the local-only fallback for repos that do not publish artifacts. `init`, `build`, `repo doctor`, `repo show`, and store-backed inspect commands share repo target inference: explicit flags win, then repo metadata/cwd/config/Git origin/bare-name sources can avoid repeated full IDs.
 
 Command groups:
 
 - Start: `setup`, `next`.
-- Use repos: `repo add`, `add-repo`, `repo list`, `repo show`, `sync`.
+- Use repos: `repo add`, `repo list`, `repo show`, `sync`.
 - Build artifacts: `init`, `build`, `artifact verify`, `artifact inspect`.
 - Search/query: `search`, `list`, `serve`, `mcp`.
 - Diagnose: `doctor`, `repo doctor`, `inspect`, `clean`, `prune`.
@@ -48,8 +48,8 @@ Command groups:
 Generate copyable maintainer request text only:
 
 ```bash
-atlas add-repo org/repo --maintainer-instructions
-atlas add-repo org/repo --issue-pr-instructions
+atlas repo add org/repo --maintainer-instructions
+atlas repo add org/repo --issue-pr-instructions
 atlas adoption-template org/repo --repo-id github.com/org/repo
 atlas adoption-template org/repo --repo-id github.com/org/repo --json
 atlas adoption-template org/repo --repo-id github.com/org/repo --issue-only
@@ -89,7 +89,7 @@ bun --cwd apps/cli run typecheck
 bun test apps/cli
 ```
 
-Command UX coverage: `setup`, `next`, `repo add`, `add-repo`, `hosts`, `index`, `repo remove`, `search`, `inspect retrieval`, `mcp`, and `artifact` expose consumer, maintainer, and enterprise workflows. `search` and `mcp` use the local imported corpus; `index` is local-only fallback.
+Command UX coverage: `setup`, `next`, `repo add`, `hosts`, `index`, `repo remove`, `search`, `inspect retrieval`, `mcp`, and `artifact` expose consumer, maintainer, and enterprise workflows. `search` and `mcp` use the local imported corpus; `index` is local-only fallback.
 
 ## Search metadata filters
 

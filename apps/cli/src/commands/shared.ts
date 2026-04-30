@@ -99,6 +99,23 @@ export async function resolveCliArtifactRoot(
 	}
 }
 
+export async function readRepoLocalArtifactMetadata(
+	context: CliCommandContext,
+	root: string,
+): Promise<{ repoId: string; path: string } | undefined> {
+	const artifactRoot = await resolveCliArtifactRoot(context, root);
+	const path = join(artifactRoot.artifactDir, "atlas.repo.json");
+	try {
+		const raw = JSON.parse(await readFile(path, "utf8")) as {
+			repoId?: unknown;
+		};
+		if (typeof raw.repoId === "string") return { repoId: raw.repoId, path };
+		return undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 export async function maybeRenderArtifactRootMigrationHint(input: {
 	root: string;
 	artifactRoot: string;

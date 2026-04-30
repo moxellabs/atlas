@@ -35,7 +35,9 @@ Stable semver tags like `v1.2.3` publish with npm dist-tag `latest`. Prerelease 
 
 ## Automation
 
-The release workflow runs only from `v*` tags or manual `workflow_dispatch`. It validates, packs, smoke-tests installed tarball, publishes with `npm publish --access public`, generates `release-sha256.txt`, and creates the GitHub release with the tarball and checksums.
+The release workflow runs only from `v*` tags or manual `workflow_dispatch`. Manual dispatch checks out the requested tag, verifies `HEAD` equals that tag commit, validates `package.json` version against the tag, packs, smoke-tests installed tarball, publishes with `npm publish --access public`, generates `release-sha256.txt`, and creates the GitHub release with the tarball and checksums.
+
+Release validation rejects npm tarballs that include `docs/**`, `.moxel/**`, `.planning/**`, `.github/**`, `tooling/**`, or source test internals. Full docs are distributed through committed repo artifacts, not the npm package payload.
 
 The workflow does not run from pull requests, does not request npm provenance, and does not use GitHub environment protection.
 

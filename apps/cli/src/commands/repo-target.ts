@@ -1,5 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import {
 	type AtlasConfig,
 	defaultGithubHostConfig,
@@ -9,7 +8,7 @@ import { canPrompt, createPrompts } from "../io/prompts";
 import type { CliCommandContext } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { runProcess } from "../utils/node-runtime";
-import { readArgvString } from "./shared";
+import { readArgvString, readRepoLocalArtifactMetadata } from "./shared";
 
 export type RepoTargetSource =
 	| "explicit"
@@ -80,7 +79,7 @@ export async function resolveRepoTarget(
 		return resolveInputTarget(context, options, options.positional);
 	}
 
-	const metadata = await readRepoArtifactMetadataFromCwd(context.cwd);
+	const metadata = await readRepoArtifactMetadataFromCwd(context);
 	if (metadata !== undefined) {
 		return canonicalOrThrow(
 			metadata.repoId,
@@ -220,19 +219,17 @@ function hostStatusFor(
 }
 
 async function readRepoArtifactMetadataFromCwd(
-	cwd: string,
+	context: CliCommandContext,
 ): Promise<{ repoId: string; path: string } | undefined> {
-	const roots = new Set<string>([cwd]);
-	const gitRoot = await gitOutput(cwd, ["rev-parse", "--show-toplevel"]);
+	const roots = new Set<string>([context.cwd]);
+	const gitRoot = await gitOutput(context.cwd, [
+		"rev-parse",
+		"--show-toplevel",
+	]);
 	if (gitRoot !== undefined) roots.add(gitRoot);
 	for (const root of roots) {
-		const path = join(root, ".moxel", "atlas", "atlas.repo.json");
-		try {
-			const raw = JSON.parse(await readFile(path, "utf8")) as {
-				repoId?: unknown;
-			};
-			if (typeof raw.repoId === "string") return { repoId: raw.repoId, path };
-		} catch {}
+		const metadata = await readRepoLocalArtifactMetadata(context, root);
+		if (metadata !== undefined) return metadata;
 	}
 	return undefined;
 }

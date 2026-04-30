@@ -52,7 +52,8 @@ Atlas v1.0 hardening is complete. The next milestone shifts Atlas from contribut
 - [x] **Phase 39: Init, Repo State, and Command-State Clarity** - Infer repo targets from cwd, Git origin, repo metadata, and bare repo names; avoid manual default GitHub host setup; explain config/registry/store/cache layers in diagnostics. (completed 2026-04-29)
 - [x] **Phase 40: Command UX Simplification and Production Onboarding** - Simplify `setup`/`init`/`build`/`index` mental model with guided next-step UX, clearer aliases, and no standalone setup branding prompts. (completed 2026-04-29)
 - [x] **Phase 41: Production Onboarding UAT and Release Gate** - Add scripted production-like UAT to prevent regressions before release. (completed 2026-04-29)
-- [x] **Phase 42: Post-release Bug Hunt Remediation** - Fix prioritized bugs found after v0.1.3 across CLI runtime/env handling, mounted MCP identity/exports, repo removal, source checkout diagnostics, and store consistency. (completed 2026-04-29)
+- [x] **Phase 42: Post-release Bug Hunt Remediation** - Fix prioritized bugs found after v0.1.3 across CLI runtime/env handling, mounted MCP identity/exports, repo removal, source checkout diagnostics, and store consistency.
+- [x] **Phase 43: Public Package and UX Surface Hardening** - Stop shipping raw docs/artifacts in npm, fix public artifact leaks, add HTTP metadata filters, finish MCP env identity propagation, harden custom identity-root lookup, release tag safety, and clean up public CLI/docs/runtime UX. Completed 2026-04-30.
 
 ## Phase Details
 
@@ -150,7 +151,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in dependency order: 1 → 2 and 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37 → 38 → 39 → 40 → 41 → 42
+Phases execute in dependency order: 1 → 2 and 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37 → 38 → 39 → 40 → 41 → 42 → 43
 
 | Phase                                                        | Plans Complete | Status   | Completed  |
 | ------------------------------------------------------------ | -------------- | -------- | ---------- |
@@ -196,6 +197,7 @@ Phases execute in dependency order: 1 → 2 and 3 → 4 → 5 → 6 → 7 → 8 
 | 40. Command UX Simplification and Production Onboarding      | 3/3            | Complete | 2026-04-29 |
 | 41. Production Onboarding UAT and Release Gate               | 1/1            | Complete | 2026-04-29 |
 | 42. Post-release Bug Hunt Remediation                        | 3/3            | Complete | 2026-04-29 |
+| 43. Public Package and UX Surface Hardening                  | 5/5            | Complete | 2026-04-30 |
 
 ### Phase 6: Retrieval and Context Quality
 
@@ -914,3 +916,18 @@ Plans:
 - [x] 42-01: Fix CLI runtime and repo command regressions.
 - [x] 42-02: Repair mounted MCP identity and public MCP exports.
 - [x] 42-03: Harden source checkout diagnostics and store consistency footguns.
+
+### Phase 43: Public package and UX surface hardening
+
+**Goal:** Stop shipping raw docs/artifacts in npm, fix public artifact leaks, add HTTP metadata filters, finish MCP resource-prefix env propagation, harden custom identity-root metadata lookup, make manual releases tag-safe, and clean up public CLI/docs/runtime UX drift.
+**Requirements:** PACKAGE-HYGIENE, PUBLIC-ARTIFACT-FILTERING, API-FILTERS-MCP-IDENTITY, IDENTITY-ROOT-RELEASE-SAFETY, CLI-DOCS-UX-RUNTIME-CONTRACT
+**Depends on:** Phase 42
+**Plans:** 5/5 plans complete
+
+Plans:
+
+- [x] 43-01: Remove raw docs and self-artifact from npm package.
+- [x] 43-02: Fix public artifact filtering and metadata leaks.
+- [x] 43-03: Add HTTP metadata filters and MCP resource prefix env propagation.
+- [x] 43-04: Unify identity-root metadata lookup and harden release tag safety.
+- [x] 43-05: Clean up CLI help docs and runtime contract.

@@ -4,7 +4,7 @@ The commands module owns concrete CLI workflows. Each command receives a `CliCom
 
 ## Responsibilities
 
-- Config workflows: `init` and `add-repo`.
+- Config workflows: `init` and `repo add`.
 - Source and corpus workflows: `sync`, `build`, `clean`, and `prune`.
 - Inspection workflows: `list`, `inspect`, and `doctor`.
 - Runtime and quality workflows: `serve`, `mcp`, and `eval`.

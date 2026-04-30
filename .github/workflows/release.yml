@@ -26,6 +26,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.11
@@ -39,6 +40,12 @@ jobs:
           TAG="${{ github.event.inputs.tag || github.ref_name }}"
           if [[ -z "$TAG" ]]; then
             echo "Release tag missing" >&2
+            exit 1
+          fi
+          TAG_COMMIT=$(git rev-list -n1 "$TAG")
+          HEAD_COMMIT=$(git rev-parse HEAD)
+          if [[ "$HEAD_COMMIT" != "$TAG_COMMIT" ]]; then
+            echo "Checked out $HEAD_COMMIT but $TAG points to $TAG_COMMIT" >&2
             exit 1
           fi
           bun tooling/scripts/release.ts --channel --tag="$TAG" | tee release-channel.env
@@ -71,6 +78,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ needs.validate.outputs.tag }}
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.11

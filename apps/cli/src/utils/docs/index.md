@@ -7,7 +7,7 @@ The CLI utils module contains small shared helpers used by commands and runtime 
 - CLI error types and exit-code mapping.
 - Path helpers.
 - Browser URL opening helper for `serve`.
-- Built-in topology templates used by `init` and `add-repo`.
+- Built-in topology templates used by `init` and `repo add`.
 
 ## Topology Templates
 

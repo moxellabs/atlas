@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: completed
-stopped_at: Phase 42 complete; all phases complete
-last_updated: "2026-04-29T21:55:00.000Z"
-last_activity: 2026-04-29
+status: active
+stopped_at: null
+last_updated: "2026-04-30T15:05:00.000Z"
+last_activity: 2026-04-30
 progress:
-  total_phases: 42
-  completed_phases: 42
-  total_plans: 85
-  completed_plans: 85
+  total_phases: 43
+  completed_phases: 43
+  total_plans: 90
+  completed_plans: 90
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-26)
 
 **Core value:** Local-first documentation ingestion, compilation, retrieval planning, and MCP/server access for multi-repo engineering docs.
-**Current focus:** Phase 42 complete; v1.1 milestone phases complete after post-release bug hunt remediation.
+**Current focus:** Phase 43 complete; v1.1 roadmap fully complete.
 
 ## Current Position
 
-Phase: 42 of 42 (post-release bug hunt remediation)
-Plan: 3 of 3
+Phase: 43 of 43 (public package and UX surface hardening)
+Plan: 5 of 5
 Status: Complete
-Last activity: 2026-04-29
+Last activity: 2026-04-30
 
 Progress: [██████████] 100%
 
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 85 / 85 planned
+- Total plans completed: 90 / 90 planned
 - Average duration: N/A
 - Total execution time: N/A
 
@@ -86,10 +86,13 @@ Progress: [██████████] 100%
 | 40. Command UX Simplification and Production Onboarding      | 3/3   | Complete |
 | 41. Production Onboarding UAT and Release Gate               | 1/1   | Complete |
 | 42. Post-release Bug Hunt Remediation                        | 3/3   | Complete |
+| 43. Public Package and UX Surface Hardening                  | 5/5   | Complete |
 
 ## Accumulated Context
 
 ### Roadmap Evolution
+
+- Phase 43 completed: npm tarball now excludes raw docs and self-artifact, public artifact guard blocks PRD/archive/planning leaks, HTTP search/context accept metadata filters, MCP resource-prefix env propagation is wired through CLI/server, custom identity-root repo metadata lookup is shared, manual releases check out and validate tags, and public CLI/docs/runtime UX drift is cleaned up.
 
 - Phase 42 completed: Post-release bug hunt remediation fixed CLI env propagation, mounted MCP resource prefix, MCP barrel exports, repo remove target resolution, current-checkout sparse diagnostics, direct section deletion FTS cleanup, and store package dependency boundary. Verification passed: typecheck, lint, bun test, production UAT.
 

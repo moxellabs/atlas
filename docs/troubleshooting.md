@@ -110,7 +110,7 @@ This gate uses only temporary local fixtures and no external network. It blocks 
 - Top-level help shows command order: `setup`, `repo add`, `init && build`, fallback `index <path>`, and `next`.
 - `atlas setup --help` does not surface wrapper-only branding, namespace, logo/color, MCP title, or resource-prefix setup knobs.
 - `atlas next --json` recommends `atlas setup` before runtime config exists and `atlas repo add <repo>` after setup.
-- `atlas repo add <local-checkout>` delegates to the same implementation as `add-repo` and infers `github.com/owner/name` from Git origin without manual GitHub host setup.
+- `atlas repo add <local-checkout>` delegates to the same implementation as `repo add` and infers `github.com/owner/name` from Git origin without manual GitHub host setup.
 - `atlas init --ref-mode current-checkout` works from a local-only branch and records current-checkout semantics.
 - `inspect topology --live --json` succeeds in the local-only checkout and discovers docs.
 - A production-shaped build failure returns `CLI_BUILD_FAILED` with `diagnostics[].path` and nested `diagnostics[].cause` in `--json --verbose` output.

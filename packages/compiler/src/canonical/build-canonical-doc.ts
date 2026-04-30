@@ -225,6 +225,13 @@ function resolveDocumentMetadata(
 }
 
 function defaultMetadataFor(path: string): DocumentMetadata {
+	if (matchesGlob(path, "docs/prd/**"))
+		return {
+			visibility: "internal",
+			audience: ["internal"],
+			purpose: ["planning"],
+			tags: [],
+		};
 	if (matchesGlob(path, "docs/archive/**"))
 		return {
 			visibility: "internal",

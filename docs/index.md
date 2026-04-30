@@ -47,7 +47,7 @@ Active public docs are docs-site source content. Historical/internal docs are no
 ## Consumers
 
 - [Configuration](configuration.md) for identity root, runtime paths, hosts, profiles, `audience`, `purpose`, and `visibility` metadata.
-- [Ingestion And Build Flow](ingestion-build-flow.md) for `atlas setup`, `atlas add-repo org/repo`, local-only fallback, and public artifact adoption.
+- [Ingestion And Build Flow](ingestion-build-flow.md) for `atlas setup`, `atlas repo add org/repo`, local-only fallback, and public artifact adoption.
 - [Retrieval And Context Planning](retrieval-and-context.md) for search, filters, and local corpus behavior.
 - [Runtime Surfaces](runtime-surfaces.md) for CLI, HTTP, OpenAPI, MCP, and skills.
 - [Local-First Security](security.md) for credential and no-upload boundaries.

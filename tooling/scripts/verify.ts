@@ -12,6 +12,10 @@ async function run(label: string, command: Promise<unknown>): Promise<void> {
 await run("typecheck", $`bun run typecheck`);
 await run("lint", $`bun run lint`);
 await run("test", $`bun test`);
+await run(
+	"public artifact guard",
+	$`bun tooling/scripts/public-artifact-guard.ts`,
+);
 
 if (releaseReady) {
 	await run(

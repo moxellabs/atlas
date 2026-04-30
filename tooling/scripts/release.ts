@@ -42,6 +42,17 @@ export function resolveReleaseChannel(releaseTag: string): ReleaseChannel {
 	);
 }
 
+async function assertCheckoutMatchesTag(releaseTag: string): Promise<void> {
+	if (process.env.GITHUB_ACTIONS !== "true") return;
+	const tagCommit = (await $`git rev-list -n1 ${releaseTag}`.text()).trim();
+	const headCommit = (await $`git rev-parse HEAD`.text()).trim();
+	if (headCommit !== tagCommit) {
+		throw new Error(
+			`release checkout mismatch: HEAD is ${headCommit}, ${releaseTag} is ${tagCommit}`,
+		);
+	}
+}
+
 async function assertPackageVersion(version: string): Promise<void> {
 	const pkg = await Bun.file("package.json").json();
 	if (pkg.name !== "@moxellabs/atlas") {
@@ -68,6 +79,7 @@ if (!dryRun && !channelOnly) {
 
 if (tag) {
 	const channel = resolveReleaseChannel(tag);
+	await assertCheckoutMatchesTag(tag);
 	await assertPackageVersion(channel.version);
 	console.log(`VERSION=${channel.version}`);
 	console.log(`NPM_DIST_TAG=${channel.npmDistTag}`);

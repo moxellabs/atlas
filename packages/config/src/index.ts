@@ -12,6 +12,9 @@ export type {
 } from "./atlas-config.schema";
 export {
 	atlasConfigSchema,
+	atlasDocAudienceSchema,
+	atlasDocPurposeSchema,
+	atlasDocVisibilitySchema,
 	atlasGhesRepoSourceConfigSchema,
 	atlasGitRepoSourceConfigSchema,
 	atlasHostConfigSchema,
