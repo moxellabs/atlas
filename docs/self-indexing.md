@@ -71,7 +71,7 @@ Use a clean runtime to verify the consumer view:
 
 ```bash
 HOME=$(mktemp -d) bun apps/cli/src/index.ts setup --non-interactive
-HOME=$HOME bun apps/cli/src/index.ts add-repo .
+HOME=$HOME bun apps/cli/src/index.ts repo add .
 HOME=$HOME bun apps/cli/src/index.ts search "self-indexing" --json
 ```
 

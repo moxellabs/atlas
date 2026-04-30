@@ -1,6 +1,6 @@
 ---
 title: Ingestion And Build Flow
-description: Understand Atlas sync, build, artifact publishing, add-repo, local-only indexing, and adoption workflows.
+description: Understand Atlas sync, build, artifact publishing, repo add, local-only indexing, and adoption workflows.
 audience: [consumer, contributor, maintainer]
 purpose: [guide, workflow]
 visibility: public
@@ -39,7 +39,7 @@ Failed rebuilds must not replace the last good corpus. Recovery status and diagn
 
 Maintainers can run `atlas init` and `atlas build` inside a normal Git checkout to produce a committed repo-local artifact at `.moxel/atlas/`. `atlas init` records `refMode: current-checkout` by default, so `atlas build` reads the current checkout `HEAD` and does not require the active branch or detached commit to exist on `origin`.
 
-Phase 14 artifact files are exact:
+Artifact files are exact:
 
 - `.moxel/atlas/manifest.json`
 - `.moxel/atlas/corpus.db`
@@ -165,7 +165,7 @@ Committed artifact files are `.moxel/atlas/manifest.json`, `.moxel/atlas/corpus.
 
 Maintainers own docs quality. Improve weak docs before `atlas build`; the `document-codebase` skill can be used before indexing/building. Atlas never chooses branch names, commit messages, hooks, PR templates, staging, commit, or push. Use [artifact verification in CI](#artifact-verification-in-ci) for freshness gates.
 
-## Artifact-only add-repo fetch
+## Artifact-only repo add fetch
 
 `atlas repo add org/repo` downloads committed `.moxel/atlas` artifact files via GitHub/GHES API into `~/.moxel/atlas/repos/<host>/<owner>/<name>/.moxel/atlas/` without cloning full repositories when artifacts exist. Legacy `atlas add-repo org/repo` remains a compatibility alias. Files fetched are exactly `manifest.json`, `corpus.db`, `docs.index.json`, and `checksums.json`.
 
@@ -229,7 +229,7 @@ Maintainer committed artifact path is identity root directly: `<repo>/.moxel/atl
 
 ## Public profile artifact publishing
 
-Repo-local `atlas build` defaults to the public profile and writes one committed public `.moxel/atlas` artifact: `manifest.json`, `corpus.db`, `checksums.json`, and `docs.index.json`. Atlas itself uses this same public artifact flow: maintainers run `atlas init`, `atlas build --profile public`, `atlas artifact verify --fresh`, then commit `.moxel/atlas` so consumers can `atlas repo add .`. Public artifact filtering excludes `.planning/**`, `docs/archive/**`, and `visibility: internal` docs before checksums and safety validation run. `docs.index.json` preserves included document metadata: `title`, `description`, `audience`, `purpose`, `visibility`, and `order`.
+Repo-local `atlas build` defaults to the public profile and writes one committed public `.moxel/atlas` artifact: `manifest.json`, `corpus.db`, `checksums.json`, and `docs.index.json`. Atlas itself uses this same public artifact flow: maintainers run `atlas init`, `atlas build --profile public`, `atlas artifact verify --fresh`, then commit `.moxel/atlas` so consumers can `atlas repo add .`. Public artifact filtering excludes `.planning/**`, `docs/archive/**`, `docs/prd/**`, and `visibility: internal` docs before checksums and safety validation run. `docs.index.json` preserves included document metadata: `title`, `description`, `audience`, `purpose`, `visibility`, and `order`.
 
 ## Public Consumer Workflow
 

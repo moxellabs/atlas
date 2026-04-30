@@ -41,12 +41,14 @@ const COMMIT_HINT =
 function filterPublicArtifactCorpus(db: StoreDatabase): void {
 	db.run(
 		`UPDATE documents
-		 SET visibility = 'public',
-		     audience_json = '["consumer"]',
+		 SET audience_json = '["consumer"]',
 		     purpose_json = '["guide","reference"]',
 		     profile = 'public'
-		 WHERE path LIKE 'apps/%/docs/%'
-		    OR path LIKE 'packages/%/docs/%'`,
+		 WHERE visibility = 'public'
+		   AND (
+		     path LIKE 'apps/%/docs/%'
+		     OR path LIKE 'packages/%/docs/%'
+		   )`,
 	);
 	db.run(
 		`DELETE FROM fts_entries

@@ -2,6 +2,7 @@ import { Database } from "bun:sqlite";
 import { join } from "node:path";
 
 const artifactDir = Bun.argv[2] ?? ".moxel/atlas";
+const sourceRoot = Bun.argv[3] ?? ".";
 const forbiddenPrefixes = ["docs/prd/", "docs/archive/", ".planning/"] as const;
 
 function forbidden(path: string): string | undefined {
@@ -22,6 +23,22 @@ const forbiddenIndexPaths = (docsIndex.documents ?? [])
 if (forbiddenIndexPaths.length > 0) {
 	throw new Error(
 		`public artifact docs.index.json includes forbidden paths: ${forbiddenIndexPaths.join(", ")}`,
+	);
+}
+
+const internalSourcePaths: string[] = [];
+for (const doc of docsIndex.documents ?? []) {
+	if (typeof doc.path !== "string") continue;
+	const sourceFile = Bun.file(join(sourceRoot, doc.path));
+	if (!(await sourceFile.exists())) continue;
+	const text = await sourceFile.text();
+	if (/^---\s*[\s\S]*?^visibility:\s*internal\s*$/m.test(text)) {
+		internalSourcePaths.push(doc.path);
+	}
+}
+if (internalSourcePaths.length > 0) {
+	throw new Error(
+		`public artifact docs.index.json includes source files marked visibility: internal: ${internalSourcePaths.join(", ")}`,
 	);
 }
 

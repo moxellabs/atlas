@@ -3069,6 +3069,22 @@ order: 230
 Package docs.
 `,
 		);
+		await writeFile(
+			join(selfRoot, "packages", "indexer", "docs", "internal.md"),
+			`---
+title: Internal Indexer Notes
+description: Internal package docs must not ship in public artifacts.
+audience: [internal]
+purpose: [implementation]
+visibility: internal
+order: 231
+---
+
+# Internal Indexer Notes
+
+Internal package docs.
+`,
+		);
 		await git(selfRoot, ["init", "-b", "main"]);
 		await git(selfRoot, ["config", "user.email", "atlas@example.test"]);
 		await git(selfRoot, ["config", "user.name", "ATLAS Test"]);
@@ -3106,6 +3122,7 @@ Package docs.
 		expect(paths).toContain("skills/document-codebase/SKILL.md");
 		expect(paths).toContain("apps/cli/docs/index.md");
 		expect(paths).toContain("packages/indexer/docs/index.md");
+		expect(paths).not.toContain("packages/indexer/docs/internal.md");
 		expect(paths).not.toContain(".planning/ROADMAP.md");
 		expect(paths).not.toContain("docs/archive/old.md");
 		const manifest = JSON.parse(
@@ -3131,6 +3148,11 @@ Package docs.
 				artifactDb
 					.query("SELECT COUNT(*) AS count FROM documents WHERE path = ?")
 					.get("docs/archive/old.md") as { count: number },
+			).toMatchObject({ count: 0 });
+			expect(
+				artifactDb
+					.query("SELECT COUNT(*) AS count FROM documents WHERE path = ?")
+					.get("packages/indexer/docs/internal.md") as { count: number },
 			).toMatchObject({ count: 0 });
 			expect(
 				artifactDb

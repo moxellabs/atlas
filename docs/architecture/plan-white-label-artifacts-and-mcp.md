@@ -42,7 +42,7 @@ MCP branding changes server metadata plus Atlas-prefixed resources/skill aliases
 
 **Key Details**:
 
-- Wire `init`, `build`, `artifact verify/inspect`, `add-repo`, adoption templates, and missing artifact guidance.
+- Wire `init`, `build`, `artifact verify/inspect`, `repo add`, adoption templates, and missing artifact guidance.
 - Emit migration hint when default root exists and custom root is missing.
 - Preserve no-option `.moxel/atlas` behavior.
 
@@ -87,9 +87,9 @@ MCP branding changes server metadata plus Atlas-prefixed resources/skill aliases
 | Phase | Component                                                   | Dependencies | Estimated Scope |
 | ----- | ----------------------------------------------------------- | ------------ | --------------- |
 | 1     | White-label profile resolver + repo-local artifact commands | None         | L               |
-| 2     | Runtime storage + consumer import paths                     | Phase 1      | L               |
-| 3     | MCP identity + Atlas-prefixed MCP resources/skill aliases   | Phase 1      | M               |
-| 4     | Docs, hardcode audit, release readiness                     | Phases 1-3   | M               |
+| 2     | Runtime storage + consumer import paths                     | 1            | L               |
+| 3     | MCP identity + Atlas-prefixed MCP resources/skill aliases   | 1            | M               |
+| 4     | Docs, hardcode audit, release readiness                     | 1-3          | M               |
 
 ## Risks and Mitigations
 

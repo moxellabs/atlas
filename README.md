@@ -22,7 +22,7 @@ Engineering docs often live across many repos, private hosts, and local checkout
 - Build committed public `.moxel/atlas` artifacts from docs and skills.
 - Import maintained artifacts from GitHub or GitHub Enterprise Server without cloning full repositories.
 - Search and plan retrieval context across one or many imported repos.
-- Expose CLI, HTTP server, OpenAPI/Scalar docs, MCP tools, and [embedded Commander CLI mounts](docs/enterprise-cli-mount.md).
+- Expose CLI, HTTP server, OpenAPI/Scalar docs, MCP tools, and [embedded Commander CLI mounts](https://github.com/moxellabs/atlas/blob/main/docs/enterprise-cli-mount.md).
 - Support repo identity as `host/owner/name` for enterprise hosts.
 - Filter public artifacts by document metadata and profile.
 - Keep query-time surfaces local-first and credential-safe.
@@ -41,6 +41,13 @@ Atlas publishes one public npm package, `@moxellabs/atlas`, with the `atlas` CLI
 ```bash
 bunx @moxellabs/atlas --help
 bunx @moxellabs/atlas repo add moxellabs/atlas
+```
+
+If installed globally or through another package manager, run the binary as `atlas`:
+
+```bash
+atlas setup
+atlas repo add moxellabs/atlas
 ```
 
 Run from source during development:
@@ -62,23 +69,23 @@ bun run release:check
 bun apps/cli/src/index.ts artifact verify --fresh
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contributor validation notes and [docs/release.md](docs/release.md) for maintainer release process. Rebuild `.moxel/atlas` before artifact freshness verification when public docs or public skills change.
+See [CONTRIBUTING.md](https://github.com/moxellabs/atlas/blob/main/CONTRIBUTING.md) for contributor validation notes and [docs/release.md](https://github.com/moxellabs/atlas/blob/main/docs/release.md) for maintainer release process. Rebuild `.moxel/atlas` before artifact freshness verification when public docs or public skills change.
 
 ## Quickstart: choose your path
 
 Unsure what state you are in? Ask Atlas first:
 
 ```bash
-bun run cli next
+atlas next
 ```
 
 ### I want to use docs from a repo
 
 ```bash
-bun run cli setup --non-interactive
-bun run cli repo add org/repo
-bun run cli search "deployment rollback" --repo github.com/org/repo
-bun run cli inspect retrieval --query "deployment rollback" --repo github.com/org/repo
+atlas setup --non-interactive
+atlas repo add org/repo
+atlas search "deployment rollback" --repo github.com/org/repo
+atlas inspect retrieval --query "deployment rollback" --repo github.com/org/repo
 ```
 
 `atlas add-repo` remains a compatibility alias for `atlas repo add`.
@@ -86,15 +93,15 @@ bun run cli inspect retrieval --query "deployment rollback" --repo github.com/or
 ### I maintain a repo artifact
 
 ```bash
-bun run cli init
-bun run cli build --profile public
-bun run cli artifact verify --fresh
+atlas init
+atlas build --profile public
+atlas artifact verify --fresh
 ```
 
 ### I need emergency local-only indexing
 
 ```bash
-bun run cli index org/repo --repo-id github.com/org/repo
+atlas index org/repo --repo-id github.com/org/repo
 ```
 
 `atlas index` is a fallback when no maintained artifact exists. It builds a local-only corpus for your machine and is not the primary publishing path.
@@ -106,14 +113,16 @@ Runtime state lives under `~/.moxel/atlas` by default. Search, retrieval, MCP, a
 Maintainers can publish docs for consumers by committing `.moxel/atlas`:
 
 ```bash
-bun run cli init
-bun apps/cli/src/index.ts build --profile public
-bun apps/cli/src/index.ts artifact inspect
-bun apps/cli/src/index.ts artifact verify --fresh
+atlas init
+atlas build --profile public
+atlas artifact inspect
+atlas artifact verify --fresh
 git add .moxel/atlas
 ```
 
-`.moxel/atlas` contains `manifest.json`, `corpus.db`, `docs.index.json`, `checksums.json`, and `atlas.repo.json` when applicable. Public artifacts exclude internal planning, archive docs, private docs, credentials, and machine-local paths by default.
+From a source checkout, replace `atlas` with `bun run cli` for these commands.
+
+`.moxel/atlas` contains `manifest.json`, `corpus.db`, `docs.index.json`, `checksums.json`, and `atlas.repo.json` when applicable. Public artifacts exclude internal planning, archive docs, docs marked `visibility: internal`, credentials, and machine-local paths by default.
 
 Atlas never chooses branch names, commits, pushes, opens PRs, or bypasses organization review. Maintainers control normal Git workflow.
 
@@ -122,8 +131,10 @@ Atlas never chooses branch names, commits, pushes, opens PRs, or bypasses organi
 Start local server:
 
 ```bash
-bun run serve
+atlas serve
 ```
+
+From a source checkout, use `bun run serve`.
 
 Useful local routes:
 
@@ -135,21 +146,25 @@ Useful local routes:
 Run stdio MCP server:
 
 ```bash
-bun run cli mcp
+atlas mcp
 ```
+
+From a source checkout, use `bun run cli mcp`.
 
 MCP and server reads operate over local corpus data.
 
 ## Docs map
 
-- [Ingestion and build flow](docs/ingestion-build-flow.md)
-- [Runtime surfaces](docs/runtime-surfaces.md)
-- [Configuration](docs/configuration.md)
-- [Security](docs/security.md)
-- [Self-indexing](docs/self-indexing.md)
-- [Architecture](docs/architecture.md)
-- [Server docs](apps/server/docs/index.md)
-- [CLI docs](apps/cli/docs/index.md)
+The npm package does not include full `docs/**`. These links target repository docs on GitHub/source checkouts. For local searchable docs, run `atlas repo add moxellabs/atlas`.
+
+- [Ingestion and build flow](https://github.com/moxellabs/atlas/blob/main/docs/ingestion-build-flow.md)
+- [Runtime surfaces](https://github.com/moxellabs/atlas/blob/main/docs/runtime-surfaces.md)
+- [Configuration](https://github.com/moxellabs/atlas/blob/main/docs/configuration.md)
+- [Security](https://github.com/moxellabs/atlas/blob/main/docs/security.md)
+- [Self-indexing](https://github.com/moxellabs/atlas/blob/main/docs/self-indexing.md)
+- [Architecture](https://github.com/moxellabs/atlas/blob/main/docs/architecture.md)
+- [Server docs](https://github.com/moxellabs/atlas/blob/main/apps/server/docs/index.md)
+- [CLI docs](https://github.com/moxellabs/atlas/blob/main/apps/cli/docs/index.md)
 
 ## Security guarantees
 
@@ -158,14 +173,14 @@ MCP and server reads operate over local corpus data.
 - Tokens must not be stored in configs, logs, diagnostics, OpenAPI examples, MCP output, artifacts, fixtures, or issue templates.
 - Public issue templates ask for sanitized reproductions only.
 
-See [SECURITY.md](SECURITY.md) and [docs/security.md](docs/security.md).
+See [SECURITY.md](SECURITY.md) and [docs/security.md](https://github.com/moxellabs/atlas/blob/main/docs/security.md).
 
 ## Contributing and community
 
-- [Contributing guide](CONTRIBUTING.md)
+- [Contributing guide](https://github.com/moxellabs/atlas/blob/main/CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
-- [Code of conduct](CODE_OF_CONDUCT.md)
-- [Pull request template](.github/PULL_REQUEST_TEMPLATE.md)
+- [Code of conduct](https://github.com/moxellabs/atlas/blob/main/CODE_OF_CONDUCT.md)
+- [Pull request template](https://github.com/moxellabs/atlas/blob/main/.github/PULL_REQUEST_TEMPLATE.md)
 
 ## License
 
