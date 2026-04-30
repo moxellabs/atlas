@@ -1013,6 +1013,34 @@ describe("server app", () => {
 			error: { code: "validation_failed" },
 		});
 
+		const contentLengthTooLarge = await response(app, "/api/search/scopes", {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				"content-length": String(1024 * 1024 + 1),
+			},
+			body: JSON.stringify({ query: "session rotation" }),
+		});
+		expect(contentLengthTooLarge.status).toBe(413);
+		expect(await contentLengthTooLarge.json()).toMatchObject({
+			ok: false,
+			error: {
+				code: "payload_too_large",
+				details: { maxBytes: 1024 * 1024, actualBytes: 1024 * 1024 + 1 },
+			},
+		});
+
+		const bodyTooLarge = await response(app, "/api/search/scopes", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ query: "x".repeat(1024 * 1024) }),
+		});
+		expect(bodyTooLarge.status).toBe(413);
+		expect(await bodyTooLarge.json()).toMatchObject({
+			ok: false,
+			error: { code: "payload_too_large", details: { maxBytes: 1024 * 1024 } },
+		});
+
 		const missing = await response(app, "/api/skills/missing");
 		expect(missing.status).toBe(404);
 		expect(await missing.json()).toMatchObject({
