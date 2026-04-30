@@ -29,16 +29,18 @@ Engineering docs often live across many repos, private hosts, and local checkout
 
 ## Requirements
 
-- Bun 1.3+
+- Node.js 24+ for installed npm package runtime (`atlas` binary runs as a Node bundle)
+- Bun 1.3+ for source checkout development, build, and test workflows
 - Git for local checkout workflows
 - GitHub CLI or token env var only when explicit GHES/GitHub artifact fetch is needed
 
 ## Install / run
 
-Atlas publishes one public npm package, `@moxellabs/atlas`, with the `atlas` CLI binary:
+Atlas publishes one public npm package, `@moxellabs/atlas`, with the `atlas` CLI binary. The npm tarball contains runtime assets only (`bin`, `dist`, README/license/security notices). It does not ship full `docs/**` or `.moxel/atlas/**`; import Atlas docs through the public repo artifact instead.
 
 ```bash
 bunx @moxellabs/atlas --help
+bunx @moxellabs/atlas repo add moxellabs/atlas
 ```
 
 Run from source during development:

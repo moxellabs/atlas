@@ -12,8 +12,8 @@ interface PackEntry {
 
 const forbiddenPackagePaths = [
 	/^(?:package\/)?\.planning(?:\/|$)/,
-	/^(?:package\/)?docs\/archive(?:\/|$)/,
-	/^(?:package\/)?docs\/prd(?:\/|$)/,
+	/^(?:package\/)?\.moxel(?:\/|$)/,
+	/^(?:package\/)?docs(?:\/|$)/,
 	/^(?:package\/)?\.git(?:\/|$)/,
 	/^(?:package\/)?\.cache(?:\/|$)/,
 	/^(?:package\/)?\.pi(?:\/|$)/,

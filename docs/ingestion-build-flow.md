@@ -92,7 +92,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install
       - run: bun run typecheck
-      - run: bunx atlas artifact verify --fresh
+      - run: bunx @moxellabs/atlas artifact verify --fresh
 ```
 
 For monorepos using this checkout before package publishing, replace last step with `bun run cli -- artifact verify --fresh` or equivalent local command. Manual alternatives remain valid:
@@ -145,7 +145,7 @@ atlas mcp
 atlas repo remove github.mycorp.com/platform/docs --yes
 ```
 
-`atlas setup` creates `~/.moxel/atlas/config.yaml` and runtime directories. `atlas repo add` lazy-creates setup if missing; `atlas add-repo` remains a compatibility alias with the same JSON/script behavior. Remote repo onboarding fetches committed `.moxel/atlas` artifacts through the configured GitHub/GHES API without cloning the full repo. Local checkout artifacts are preferred when present.
+`atlas setup` creates `~/.moxel/atlas/config.yaml` and runtime directories. `atlas repo add` lazy-creates setup if missing; legacy `atlas add-repo` remains script-compatible with the same JSON behavior. Remote repo onboarding fetches committed `.moxel/atlas` artifacts through the configured GitHub/GHES API without cloning the full repo. Local checkout artifacts are preferred when present.
 
 Stale artifacts print `Artifact is stale; importing anyway.` and are still imported. Missing artifact choices are `clone and index locally only`, `skip`, `show maintainer instructions`, and `generate issue/PR instructions`. Use `atlas index` for the local-only fallback only; it writes to the user-home global corpus and never writes `.moxel/atlas` into the managed checkout. Runtime search/retrieval/MCP/server read `~/.moxel/atlas/corpus.db` and do not fetch remote source at query time.
 
@@ -167,7 +167,7 @@ Maintainers own docs quality. Improve weak docs before `atlas build`; the `docum
 
 ## Artifact-only add-repo fetch
 
-`atlas repo add org/repo` downloads committed `.moxel/atlas` artifact files via GitHub/GHES API into `~/.moxel/atlas/repos/<host>/<owner>/<name>/.moxel/atlas/` without cloning full repositories when artifacts exist. `atlas add-repo org/repo` is the compatibility alias. Files fetched are exactly `manifest.json`, `corpus.db`, `docs.index.json`, and `checksums.json`.
+`atlas repo add org/repo` downloads committed `.moxel/atlas` artifact files via GitHub/GHES API into `~/.moxel/atlas/repos/<host>/<owner>/<name>/.moxel/atlas/` without cloning full repositories when artifacts exist. Legacy `atlas add-repo org/repo` remains a compatibility alias. Files fetched are exactly `manifest.json`, `corpus.db`, `docs.index.json`, and `checksums.json`.
 
 Validation order is manifest schema and identity, checksums, then safety scanner. Errors include `CLI_ARTIFACT_NOT_FOUND`, `CLI_ARTIFACT_FETCH_FAILED`, `CLI_ARTIFACT_SCHEMA_INVALID`, `CLI_ARTIFACT_ID_MISMATCH`, and `CLI_ARTIFACT_CHECKSUM_INVALID`. Tokens come from environment variables only and are not persisted.
 
@@ -175,7 +175,7 @@ Local Atlas knowledge bundles take precedence over remote bundles for local path
 
 ## Global corpus import lifecycle
 
-`atlas add-repo` acquires and validates `.moxel/atlas` artifacts, then imports the artifact `corpus.db` into the global runtime database at `~/.moxel/atlas/corpus.db`. A re-import replaces rows for the same repo (`host/owner/name`) before copying new artifact rows, so other imported repositories remain intact.
+`atlas repo add` acquires and validates `.moxel/atlas` artifacts, then imports the artifact `corpus.db` into the global runtime database at `~/.moxel/atlas/corpus.db`. A re-import replaces rows for the same repo (`host/owner/name`) before copying new artifact rows, so other imported repositories remain intact.
 
 If validation or import fails, `repo.json` is not marked as `imported`; previous global rows remain intact on failed re-import. `atlas repo remove` deletes global corpus rows for that repo and removes its repo folder metadata.
 
@@ -194,8 +194,8 @@ Atlas does not branch, commit, push, create issues, or create PRs.
 Consumers can generate copyable maintainer request text when `.moxel/atlas` is missing:
 
 ```bash
-atlas add-repo org/repo --maintainer-instructions
-atlas add-repo org/repo --issue-pr-instructions
+atlas repo add org/repo --maintainer-instructions
+atlas repo add org/repo --issue-pr-instructions
 atlas adoption-template org/repo --repo-id github.com/org/repo
 ```
 
@@ -203,13 +203,13 @@ Generated text includes maintainer setup instructions, issue template text, PR t
 
 ## Consumer-to-maintainer adoption workflow
 
-1. Consumer runs `atlas add-repo org/repo`.
-2. When `.moxel/atlas` is missing, consumer runs `atlas add-repo org/repo --maintainer-instructions` or `atlas add-repo org/repo --issue-pr-instructions`.
+1. Consumer runs `atlas repo add org/repo`.
+2. When `.moxel/atlas` is missing, consumer runs `atlas repo add org/repo --maintainer-instructions` or `atlas repo add org/repo --issue-pr-instructions`.
 3. Consumer copies generated text into their org's normal issue, PR, support, or maintainer-request process.
 4. Maintainer reviews request and decides whether published Atlas docs fit repo policy.
 5. Maintainer runs `atlas init`, `atlas build`, and `git add .moxel/atlas` in their checkout.
 6. Maintainer uses their own branch, commit message, hooks, PR template, CI, approvals, and permissions.
-7. Consumer retries `atlas add-repo org/repo` after artifact lands.
+7. Consumer retries `atlas repo add org/repo` after artifact lands.
 
 `.moxel/atlas` lets consumers add remote docs without cloning, improves retrieval speed, records a reproducible corpus snapshot, exposes readable `docs.index.json`, and enables checksum validation.
 
@@ -229,7 +229,7 @@ Maintainer committed artifact path is identity root directly: `<repo>/.moxel/atl
 
 ## Public profile artifact publishing
 
-Repo-local `atlas build` defaults to the public profile and writes one committed public `.moxel/atlas` artifact: `manifest.json`, `corpus.db`, `checksums.json`, and `docs.index.json`. Atlas itself uses this same public artifact flow: maintainers run `atlas init`, `atlas build --profile public`, `atlas artifact verify --fresh`, then commit `.moxel/atlas` so consumers can `atlas add-repo .`. Public artifact filtering excludes `.planning/**`, `docs/archive/**`, and `visibility: internal` docs before checksums and safety validation run. `docs.index.json` preserves included document metadata: `title`, `description`, `audience`, `purpose`, `visibility`, and `order`.
+Repo-local `atlas build` defaults to the public profile and writes one committed public `.moxel/atlas` artifact: `manifest.json`, `corpus.db`, `checksums.json`, and `docs.index.json`. Atlas itself uses this same public artifact flow: maintainers run `atlas init`, `atlas build --profile public`, `atlas artifact verify --fresh`, then commit `.moxel/atlas` so consumers can `atlas repo add .`. Public artifact filtering excludes `.planning/**`, `docs/archive/**`, and `visibility: internal` docs before checksums and safety validation run. `docs.index.json` preserves included document metadata: `title`, `description`, `audience`, `purpose`, `visibility`, and `order`.
 
 ## Public Consumer Workflow
 
@@ -237,7 +237,7 @@ Consumers import maintained public artifacts into local runtime storage:
 
 ```bash
 atlas setup
-atlas add-repo org/repo
+atlas repo add org/repo
 atlas search "how to deploy" --repo github.com/org/repo
 ```
 
@@ -264,8 +264,8 @@ atlas index org/repo
 ## Adoption Workflow Commands
 
 ```bash
-atlas add-repo org/repo --maintainer-instructions
-atlas add-repo org/repo --issue-pr-instructions
+atlas repo add org/repo --maintainer-instructions
+atlas repo add org/repo --issue-pr-instructions
 atlas adoption-template org/repo --repo-id github.com/org/repo
 ```
 

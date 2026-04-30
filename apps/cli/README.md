@@ -18,7 +18,7 @@ The CLI owns local workflows: creating config, registering repos, syncing source
 ```text
 atlas setup
 atlas init (compatibility alias for setup)
-atlas add-repo
+atlas repo add
 atlas sync
 atlas build
 atlas serve
@@ -145,4 +145,4 @@ bun test
 
 Use `atlas hosts add github.mycorp.com --web-url https://github.mycorp.com --api-url https://github.mycorp.com/api/v3 --protocol ssh --priority 10 --default` to add GHES hosts. Use `atlas hosts list`, `atlas hosts set-default github.mycorp.com`, and `atlas hosts prioritize github.mycorp.com --priority 10` to manage priority/defaults.
 
-`atlas add-repo` accepts `platform/docs --host github.mycorp.com`, `git@github.mycorp.com:platform/docs.git`, `https://github.mycorp.com/platform/docs.git`, and `atlas add-repo .`.
+`atlas repo add` accepts `platform/docs --host github.mycorp.com`, `git@github.mycorp.com:platform/docs.git`, `https://github.mycorp.com/platform/docs.git`, and `atlas repo add .`.

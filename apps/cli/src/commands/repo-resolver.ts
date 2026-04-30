@@ -1,5 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import {
 	type AtlasConfig,
 	type AtlasHostConfig,
@@ -9,6 +8,7 @@ import {
 import type { CliCommandContext } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { runProcess } from "../utils/node-runtime";
+import { readRepoLocalArtifactMetadata } from "./shared";
 
 export type ParsedRepoInput =
 	| {
@@ -124,23 +124,15 @@ function unknownHost(host: string, config: AtlasConfig): never {
 }
 
 async function readLocalArtifactMetadata(
+	context: CliCommandContext,
 	localPath: string,
 ): Promise<{ repoId: string } | undefined> {
-	try {
-		const metadata = JSON.parse(
-			await readFile(
-				join(localPath, ".moxel", "atlas", "atlas.repo.json"),
-				"utf8",
-			),
-		) as { repoId?: unknown };
-		if (typeof metadata.repoId !== "string") return undefined;
-		const parts = metadata.repoId.split("/");
-		return parts.length === 3 && parts.every((part) => part.length > 0)
-			? { repoId: metadata.repoId }
-			: undefined;
-	} catch {
-		return undefined;
-	}
+	const metadata = await readRepoLocalArtifactMetadata(context, localPath);
+	if (metadata === undefined) return undefined;
+	const parts = metadata.repoId.split("/");
+	return parts.length === 3 && parts.every((part) => part.length > 0)
+		? { repoId: metadata.repoId }
+		: undefined;
 }
 
 export interface ResolvedRepoInput {
@@ -174,7 +166,7 @@ export async function resolveRepoInput(
 			remote = result.exitCode === 0 ? result.stdout.trim() : "";
 		} catch {}
 		if (!remote) {
-			const metadata = await readLocalArtifactMetadata(localPath);
+			const metadata = await readLocalArtifactMetadata(context, localPath);
 			if (metadata !== undefined) {
 				const [hostName, owner, name] = metadata.repoId.split("/") as [
 					string,

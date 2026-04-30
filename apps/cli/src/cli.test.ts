@@ -2282,6 +2282,52 @@ repos:
 		});
 	});
 
+	test("mcp identity honors ATLAS_MCP_RESOURCE_PREFIX from loaded config env", async () => {
+		let receivedIdentity: unknown;
+		const transport: { onclose?: () => void } = {};
+		const context: CliCommandContext = {
+			argv: ["mcp"],
+			cwd: process.cwd(),
+			output: { json: false, verbose: false, quiet: false },
+			stdin: new PassThrough() as unknown as NodeJS.ReadStream,
+			stdout: new PassThrough() as unknown as NodeJS.WriteStream,
+			stderr: new PassThrough() as unknown as NodeJS.WriteStream,
+			env: {},
+		};
+		await runMcpCommandWithDependencies(
+			context,
+			{
+				db: {} as never,
+				sourceDiffProvider: {} as never,
+				config: {
+					env: { ATLAS_MCP_RESOURCE_PREFIX: "acme" },
+					config: {},
+				} as never,
+				close() {},
+			},
+			{
+				createServer(_deps, identity) {
+					receivedIdentity = identity;
+					return {
+						tools: [],
+						resources: ["acme-document"],
+						prompts: [],
+						diagnostics: [],
+						server: {
+							async connect() {
+								queueMicrotask(() => transport.onclose?.());
+							},
+						},
+					} as never;
+				},
+				createTransport() {
+					return transport as never;
+				},
+			},
+		);
+		expect(receivedIdentity).toMatchObject({ resourcePrefix: "acme" });
+	});
+
 	test("eval runs MCP adoption JSON success", async () => {
 		const datasetPath = join(rootDir, "mcp-adoption.dataset.json");
 		const tracePath = join(rootDir, "mcp-adoption.trace.json");
@@ -2402,15 +2448,20 @@ repos:
 		expect(result.stdout).toContain(".moxel/atlas");
 		for (const command of [
 			"setup",
+			"next",
 			"init",
-			"add-repo",
+			"repo",
 			"sync",
 			"build",
+			"index",
 			"serve",
 			"mcp",
 			"inspect",
 			"install-skill",
 			"list",
+			"hosts",
+			"search",
+			"artifact",
 			"clean",
 			"prune",
 			"doctor",
@@ -2418,6 +2469,7 @@ repos:
 		]) {
 			expect(result.stdout).toContain(`  ${command}`);
 		}
+		expect(result.stdout).not.toContain("  add-repo");
 	});
 
 	test("unknown commands return one Atlas error and print help in human mode", async () => {
@@ -2761,8 +2813,8 @@ repos:
 		);
 		const combined = docs.join("\n");
 		for (const required of [
-			"atlas add-repo org/repo --maintainer-instructions",
-			"atlas add-repo org/repo --issue-pr-instructions",
+			"atlas repo add org/repo --maintainer-instructions",
+			"atlas repo add org/repo --issue-pr-instructions",
 			"atlas adoption-template org/repo --repo-id github.com/org/repo",
 			"Maintainers control branch names, commit messages, hooks, PR templates, and permissions.",
 			"Atlas does not branch, commit, push, create issues, or create PRs.",
@@ -3515,7 +3567,7 @@ Package docs.
 			"~/.moxel/atlas",
 			".moxel/atlas",
 			"hosts",
-			"add-repo",
+			"repo add",
 			"index",
 			"search",
 			"repo",

@@ -17,7 +17,7 @@ Atlas exposes the same local corpus through a CLI, an embeddable Commander comma
 
 - `setup` creates `~/.moxel/atlas/config.yaml` and user-home runtime directories.
 - `init` initializes repo-local `.moxel/atlas` artifact metadata for maintainers.
-- `add-repo` mutates user-home config.
+- `repo add` mutates user-home config.
 - `sync` and `build` delegate to `@atlas/indexer`.
 - `list` and `inspect` read stored corpus state.
 - `install-skill` exports stored skill artifacts into supported agent/editor formats.
@@ -97,11 +97,11 @@ bun run release:check
 
 ## Host management and repo resolver
 
-CLI surface includes `atlas hosts list`, `atlas hosts add`, `atlas hosts set-default`, and `atlas hosts prioritize`. `atlas add-repo` accepts shorthand, SSH URLs, HTTPS URLs, and local paths such as `.` and normalizes them to `host/owner/name`.
+CLI surface includes `atlas hosts list`, `atlas hosts add`, `atlas hosts set-default`, and `atlas hosts prioritize`. `atlas repo add` accepts shorthand, SSH URLs, HTTPS URLs, and local paths such as `.` and normalizes them to `host/owner/name`.
 
 ## Add-repo artifact acquisition
 
-`atlas add-repo` uses artifact-only acquisition for remote GitHub/GHES repos. It stores `manifest.json`, `corpus.db`, `docs.index.json`, and `checksums.json` at `~/.moxel/atlas/repos/<host>/<owner>/<name>/.moxel/atlas/` and does not clone source repositories when artifacts exist.
+`atlas repo add` uses artifact-only acquisition for remote GitHub/GHES repos. It stores `manifest.json`, `corpus.db`, `docs.index.json`, and `checksums.json` at `~/.moxel/atlas/repos/<host>/<owner>/<name>/.moxel/atlas/` and does not clone source repositories when artifacts exist.
 
 Local Atlas knowledge bundles take precedence over remote bundles for local path and cwd inputs. Valid stale bundles warn with `Artifact is stale; importing anyway.` and remain ready for import. Missing bundles show `This repo doesn't publish an Atlas knowledge bundle yet.` and no automatic clone occurs.
 
@@ -122,7 +122,7 @@ After import, queries do not need artifact files and do not fetch remote source 
 
 ## Add-repo artifact acquisition fallback
 
-If remote artifact acquisition finds no `.moxel/atlas`, `atlas add-repo` offers clone and index locally only, skip repo, maintainer instructions, or issue/PR instructions. JSON output includes stable next action values and never writes repo config or repo metadata for skip/instruction choices.
+If remote artifact acquisition finds no `.moxel/atlas`, `atlas repo add` offers clone and index locally only, skip repo, maintainer instructions, or issue/PR instructions. JSON output includes stable next action values and never writes repo config or repo metadata for skip/instruction choices.
 
 Atlas does not branch, commit, push, create issues, or create PRs.
 

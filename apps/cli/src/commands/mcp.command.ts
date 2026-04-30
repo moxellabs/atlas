@@ -69,6 +69,7 @@ export async function runMcpCommandWithDependencies(
 						cliMcpResourcePrefix: context.mcpResourcePrefix,
 						envMcpName: deps.config.env.ATLAS_MCP_NAME,
 						envMcpTitle: deps.config.env.ATLAS_MCP_TITLE,
+						envMcpResourcePrefix: deps.config.env.ATLAS_MCP_RESOURCE_PREFIX,
 					},
 				}).mcpIdentity
 			: resolveIdentityProfile({
@@ -80,6 +81,7 @@ export async function runMcpCommandWithDependencies(
 							context.env.ATLAS_MCP_RESOURCE_PREFIX,
 						envMcpName: context.env.ATLAS_MCP_NAME,
 						envMcpTitle: context.env.ATLAS_MCP_TITLE,
+						envMcpResourcePrefix: context.env.ATLAS_MCP_RESOURCE_PREFIX,
 					},
 				}).mcpIdentity;
 	const server = runtime.createServer(deps, identity);

@@ -152,10 +152,12 @@ export function registerAtlasCommands(
 		program,
 		runtime,
 		"add-repo",
-		"Add a repo's published Atlas docs to local search",
+		"Legacy alias for repo add",
 		["[repo]"],
 		runAddRepoCommand,
 		addRepoOptions,
+		undefined,
+		{ hidden: true },
 	);
 	addCommand(
 		program,
@@ -480,7 +482,7 @@ Quick path:
 
 Command groups:
   Start: setup, next
-  Use repos: repo add, add-repo, repo list, repo show, sync
+  Use repos: repo add, repo list, repo show, sync
   Build artifacts: init, build, artifact verify, artifact inspect
   Search/query: search, list, serve, mcp
   Diagnose: doctor, repo doctor, inspect, clean, prune
@@ -497,6 +499,7 @@ function addCommand(
 	runner: Runner,
 	options: readonly OptionSpec[],
 	usage?: string,
+	optionsOverride: { hidden?: boolean } = {},
 ): void {
 	const command = configureCommandIo(new Command(name), runtime)
 		.description(description)
@@ -508,7 +511,7 @@ function addCommand(
 	command.action(async (...values: unknown[]) =>
 		emitCommandResult(command, runtime, values, runner),
 	);
-	program.addCommand(command);
+	program.addCommand(command, { hidden: optionsOverride.hidden === true });
 }
 
 function addSubcommand(

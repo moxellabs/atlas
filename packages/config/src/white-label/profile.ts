@@ -25,6 +25,7 @@ export interface ResolveMcpIdentityInput {
 	cliMcpResourcePrefix?: string | undefined;
 	envMcpName?: string | undefined;
 	envMcpTitle?: string | undefined;
+	envMcpResourcePrefix?: string | undefined;
 	configMcp?:
 		| {
 				name?: string | undefined;
@@ -77,6 +78,7 @@ export function resolveMcpIdentity(
 		DEFAULT_MCP_IDENTITY.title;
 	const resourcePrefix =
 		input.cliMcpResourcePrefix ??
+		input.envMcpResourcePrefix ??
 		input.configMcp?.resourcePrefix ??
 		DEFAULT_MCP_IDENTITY.resourcePrefix;
 	return {

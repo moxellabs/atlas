@@ -9,7 +9,7 @@ order: 70
 
 # Self-Indexing Atlas
 
-Atlas dogfoods its maintainer artifact workflow by publishing this repository's public docs and first-party skills as a committed `.moxel/atlas` public artifact. Consumers can import Atlas itself with the same `atlas add-repo` path used for any other maintained repository.
+Atlas dogfoods its maintainer artifact workflow by publishing this repository's public docs and first-party skills as a committed `.moxel/atlas` public artifact. Consumers can import Atlas itself with the same `atlas repo add` path used for any other maintained repository.
 
 ## Why Atlas Publishes Its Own Public Artifact
 
@@ -78,7 +78,7 @@ HOME=$HOME bun apps/cli/src/index.ts search "self-indexing" --json
 Consumers can also run normal commands after import:
 
 ```bash
-atlas add-repo .
+atlas repo add .
 atlas search "document-codebase" --json
 atlas inspect retrieval --query "How does Atlas self-index?"
 atlas mcp
