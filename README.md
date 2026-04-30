@@ -167,6 +167,7 @@ The npm package does not include full `docs/**`. These links target repository d
 - [Security](https://github.com/moxellabs/atlas/blob/main/docs/security.md)
 - [Self-indexing](https://github.com/moxellabs/atlas/blob/main/docs/self-indexing.md)
 - [Architecture](https://github.com/moxellabs/atlas/blob/main/docs/architecture.md)
+- [MCP and retrieval evals](https://github.com/moxellabs/atlas/blob/main/docs/evals.md)
 - [Server docs](https://github.com/moxellabs/atlas/blob/main/apps/server/docs/index.md)
 - [CLI docs](https://github.com/moxellabs/atlas/blob/main/apps/cli/docs/index.md)
 

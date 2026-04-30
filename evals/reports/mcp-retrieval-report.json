@@ -1,0 +1,667 @@
+{
+  "dataset": "atlas-mcp-retrieval-smoke",
+  "description": "Publishable Atlas MCP/retrieval evaluation seed set. Cases use stable path expectations so the suite can run against rebuilt corpora without hard-coding generated document IDs.",
+  "generatedAt": "2026-04-30T18:27:48.268Z",
+  "repoId": "github.com/moxellabs/atlas",
+  "modelJudge": {
+    "enabled": false,
+    "note": "Optional placeholder for later answer-quality grading with a cheap model such as grok-code-fast-1 via OpenRouter/xAI. Retrieval metrics run without API keys."
+  },
+  "researchNotes": [
+    "MCPBench is the closest open-source MCP-specific benchmark, but it targets web search/database/GAIA task completion rather than local documentation retrieval, so Atlas reuses the MCP adoption idea rather than vendoring it.",
+    "Promptfoo is a strong option for model/provider comparison and hosted-looking reports; this harness keeps deterministic retrieval metrics local and can export JSON for promptfoo later.",
+    "Ragas and DeepEval provide RAG metrics, but add Python dependencies and LLM judges; Atlas starts with cheap deterministic path/term/latency metrics and leaves judge-model wiring optional."
+  ],
+  "totalCases": 8,
+  "passedCases": 0,
+  "failedCases": 8,
+  "metrics": {
+    "passRate": 0,
+    "pathRecall": 0.125,
+    "termRecall": 0.0833,
+    "nonEmptyContextRate": 0.375,
+    "averageLatencyMs": 626.375,
+    "averageRankedHits": 7.625
+  },
+  "byCategory": {
+    "maintainer-workflow": {
+      "total": 1,
+      "passed": 0,
+      "pathRecall": 0,
+      "termRecall": 0,
+      "averageLatencyMs": 606
+    },
+    "consumer-workflow": {
+      "total": 1,
+      "passed": 0,
+      "pathRecall": 0,
+      "termRecall": 0,
+      "averageLatencyMs": 630
+    },
+    "runtime": {
+      "total": 1,
+      "passed": 0,
+      "pathRecall": 0.5,
+      "termRecall": 0,
+      "averageLatencyMs": 635
+    },
+    "mcp": {
+      "total": 1,
+      "passed": 0,
+      "pathRecall": 0,
+      "termRecall": 0,
+      "averageLatencyMs": 643
+    },
+    "security": {
+      "total": 1,
+      "passed": 0,
+      "pathRecall": 0.5,
+      "termRecall": 0.3333,
+      "averageLatencyMs": 630
+    },
+    "query-robustness": {
+      "total": 2,
+      "passed": 0,
+      "pathRecall": 0,
+      "termRecall": 0.1666,
+      "averageLatencyMs": 623
+    },
+    "diagnostics": {
+      "total": 1,
+      "passed": 0,
+      "pathRecall": 0,
+      "termRecall": 0,
+      "averageLatencyMs": 621
+    }
+  },
+  "cases": [
+    {
+      "id": "maintainer-build-artifact",
+      "category": "maintainer-workflow",
+      "query": "How does a maintainer build and publish .moxel/atlas artifacts?",
+      "passed": false,
+      "latencyMs": 606,
+      "selectedCount": 0,
+      "rankedCount": 0,
+      "confidence": "low",
+      "scores": {
+        "pathRecall": 0,
+        "termRecall": 0,
+        "nonEmptyContext": false
+      },
+      "missing": {
+        "pathIncludes": [
+          "docs/ingestion-build-flow.md"
+        ],
+        "terms": [
+          "atlas init",
+          "atlas build",
+          ".moxel/atlas"
+        ]
+      },
+      "topPaths": [],
+      "diagnostics": [
+        {
+          "stage": "classification",
+          "message": "Classified query as exact-lookup.",
+          "metadata": {
+            "confidence": "high",
+            "signals": [
+              "overview",
+              "path-or-symbol"
+            ]
+          }
+        },
+        {
+          "stage": "scope-inference",
+          "message": "Inferred 0 candidate scopes.",
+          "metadata": {
+            "candidateCount": 1,
+            "returnedCount": 0
+          }
+        },
+        {
+          "stage": "candidate-generation",
+          "message": "Generated 0 retrieval candidates.",
+          "metadata": {
+            "byType": {},
+            "bySource": {}
+          }
+        },
+        {
+          "stage": "ranking",
+          "message": "Ranked 0 retrieval hits.",
+          "metadata": {
+            "topScore": 0
+          }
+        },
+        {
+          "stage": "planning",
+          "message": "Final context uses 0/1200 tokens.",
+          "metadata": {
+            "selectedCount": 0,
+            "omittedCount": 0,
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+    {
+      "id": "consumer-repo-add-import",
+      "category": "consumer-workflow",
+      "query": "How do consumers import a repo artifact without cloning the full repository?",
+      "passed": false,
+      "latencyMs": 630,
+      "selectedCount": 0,
+      "rankedCount": 0,
+      "confidence": "low",
+      "scores": {
+        "pathRecall": 0,
+        "termRecall": 0,
+        "nonEmptyContext": false
+      },
+      "missing": {
+        "pathIncludes": [
+          "docs/ingestion-build-flow.md",
+          "docs/runtime-surfaces.md"
+        ],
+        "terms": [
+          "repo add",
+          "artifact",
+          "without cloning"
+        ]
+      },
+      "topPaths": [],
+      "diagnostics": [
+        {
+          "stage": "classification",
+          "message": "Classified query as unknown.",
+          "metadata": {
+            "confidence": "low",
+            "signals": []
+          }
+        },
+        {
+          "stage": "scope-inference",
+          "message": "Inferred 0 candidate scopes.",
+          "metadata": {
+            "candidateCount": 1,
+            "returnedCount": 0
+          }
+        },
+        {
+          "stage": "candidate-generation",
+          "message": "Generated 0 retrieval candidates.",
+          "metadata": {
+            "byType": {},
+            "bySource": {}
+          }
+        },
+        {
+          "stage": "ranking",
+          "message": "Ranked 0 retrieval hits.",
+          "metadata": {
+            "topScore": 0
+          }
+        },
+        {
+          "stage": "planning",
+          "message": "Final context uses 0/1200 tokens.",
+          "metadata": {
+            "selectedCount": 0,
+            "omittedCount": 0,
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+    {
+      "id": "runtime-local-corpus",
+      "category": "runtime",
+      "query": "Where does Atlas store the local SQLite corpus used by search retrieval and MCP?",
+      "passed": false,
+      "latencyMs": 635,
+      "selectedCount": 6,
+      "rankedCount": 20,
+      "confidence": "low",
+      "scores": {
+        "pathRecall": 0.5,
+        "termRecall": 0,
+        "nonEmptyContext": true
+      },
+      "missing": {
+        "pathIncludes": [
+          "docs/runtime-surfaces.md"
+        ],
+        "terms": [
+          "~/.moxel/atlas/corpus.db",
+          "local corpus",
+          "MCP"
+        ]
+      },
+      "topPaths": [
+        "docs/self-indexing.md",
+        "README.md",
+        "skills/document-codebase/SKILL.md",
+        "apps/cli/docs/index.md",
+        "packages/indexer/docs/index.md"
+      ],
+      "diagnostics": [
+        {
+          "stage": "classification",
+          "message": "Classified query as unknown.",
+          "metadata": {
+            "confidence": "low",
+            "signals": []
+          }
+        },
+        {
+          "stage": "scope-inference",
+          "message": "Inferred 3 candidate scopes.",
+          "metadata": {
+            "candidateCount": 3,
+            "returnedCount": 3
+          }
+        },
+        {
+          "stage": "candidate-generation",
+          "message": "Generated 20 retrieval candidates.",
+          "metadata": {
+            "byType": {
+              "document": 5,
+              "summary": 15
+            },
+            "bySource": {
+              "scope": 5,
+              "summary": 15
+            }
+          }
+        },
+        {
+          "stage": "ranking",
+          "message": "Ranked 20 retrieval hits.",
+          "metadata": {
+            "topScore": 1.7997
+          }
+        },
+        {
+          "stage": "planning",
+          "message": "Final context uses 64/1200 tokens.",
+          "metadata": {
+            "selectedCount": 6,
+            "omittedCount": 29,
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+    {
+      "id": "mcp-tools-overview",
+      "category": "mcp",
+      "query": "What MCP tools are exposed for retrieval and context planning?",
+      "passed": false,
+      "latencyMs": 643,
+      "selectedCount": 0,
+      "rankedCount": 0,
+      "confidence": "low",
+      "scores": {
+        "pathRecall": 0,
+        "termRecall": 0,
+        "nonEmptyContext": false
+      },
+      "missing": {
+        "pathIncludes": [
+          "docs/retrieval-and-context.md",
+          "docs/runtime-surfaces.md"
+        ],
+        "terms": [
+          "find_docs",
+          "plan_context",
+          "read_section"
+        ]
+      },
+      "topPaths": [],
+      "diagnostics": [
+        {
+          "stage": "classification",
+          "message": "Classified query as unknown.",
+          "metadata": {
+            "confidence": "low",
+            "signals": []
+          }
+        },
+        {
+          "stage": "scope-inference",
+          "message": "Inferred 0 candidate scopes.",
+          "metadata": {
+            "candidateCount": 1,
+            "returnedCount": 0
+          }
+        },
+        {
+          "stage": "candidate-generation",
+          "message": "Generated 0 retrieval candidates.",
+          "metadata": {
+            "byType": {},
+            "bySource": {}
+          }
+        },
+        {
+          "stage": "ranking",
+          "message": "Ranked 0 retrieval hits.",
+          "metadata": {
+            "topScore": 0
+          }
+        },
+        {
+          "stage": "planning",
+          "message": "Final context uses 0/1200 tokens.",
+          "metadata": {
+            "selectedCount": 0,
+            "omittedCount": 0,
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security-query-time-local",
+      "category": "security",
+      "query": "Does MCP fetch remote source content at query time or upload indexed corpus content?",
+      "passed": false,
+      "latencyMs": 630,
+      "selectedCount": 6,
+      "rankedCount": 20,
+      "confidence": "low",
+      "scores": {
+        "pathRecall": 0.5,
+        "termRecall": 0.3333,
+        "nonEmptyContext": true
+      },
+      "missing": {
+        "pathIncludes": [
+          "docs/security.md"
+        ],
+        "terms": [
+          "remote",
+          "credentials"
+        ]
+      },
+      "topPaths": [
+        "docs/self-indexing.md",
+        "README.md",
+        "skills/document-codebase/SKILL.md",
+        "apps/cli/docs/index.md",
+        "packages/indexer/docs/index.md"
+      ],
+      "diagnostics": [
+        {
+          "stage": "classification",
+          "message": "Classified query as unknown.",
+          "metadata": {
+            "confidence": "low",
+            "signals": []
+          }
+        },
+        {
+          "stage": "scope-inference",
+          "message": "Inferred 3 candidate scopes.",
+          "metadata": {
+            "candidateCount": 3,
+            "returnedCount": 3
+          }
+        },
+        {
+          "stage": "candidate-generation",
+          "message": "Generated 20 retrieval candidates.",
+          "metadata": {
+            "byType": {
+              "document": 5,
+              "summary": 15
+            },
+            "bySource": {
+              "scope": 5,
+              "summary": 15
+            }
+          }
+        },
+        {
+          "stage": "ranking",
+          "message": "Ranked 20 retrieval hits.",
+          "metadata": {
+            "topScore": 1.7997
+          }
+        },
+        {
+          "stage": "planning",
+          "message": "Final context uses 64/1200 tokens.",
+          "metadata": {
+            "selectedCount": 6,
+            "omittedCount": 29,
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+    {
+      "id": "natural-language-broad",
+      "category": "query-robustness",
+      "query": "I set up a repository and want another agent to use the knowledge from it, what should happen?",
+      "passed": false,
+      "latencyMs": 625,
+      "selectedCount": 6,
+      "rankedCount": 21,
+      "confidence": "medium",
+      "scores": {
+        "pathRecall": 0,
+        "termRecall": 0.3333,
+        "nonEmptyContext": true
+      },
+      "missing": {
+        "pathIncludes": [
+          "docs/ingestion-build-flow.md",
+          "docs/runtime-surfaces.md"
+        ],
+        "terms": [
+          "repo add",
+          "runtime"
+        ]
+      },
+      "topPaths": [
+        "skills/document-codebase/SKILL.md",
+        "docs/self-indexing.md",
+        "README.md",
+        "apps/cli/docs/index.md",
+        "packages/indexer/docs/index.md"
+      ],
+      "diagnostics": [
+        {
+          "stage": "classification",
+          "message": "Classified query as unknown.",
+          "metadata": {
+            "confidence": "low",
+            "signals": []
+          }
+        },
+        {
+          "stage": "scope-inference",
+          "message": "Inferred 2 candidate scopes.",
+          "metadata": {
+            "candidateCount": 2,
+            "returnedCount": 2
+          }
+        },
+        {
+          "stage": "candidate-generation",
+          "message": "Generated 21 retrieval candidates.",
+          "metadata": {
+            "byType": {
+              "document": 5,
+              "summary": 15,
+              "skill": 1
+            },
+            "bySource": {
+              "scope": 5,
+              "summary": 15,
+              "skill": 1
+            }
+          }
+        },
+        {
+          "stage": "ranking",
+          "message": "Ranked 21 retrieval hits.",
+          "metadata": {
+            "topScore": 1.8368
+          }
+        },
+        {
+          "stage": "planning",
+          "message": "Final context uses 72/1200 tokens.",
+          "metadata": {
+            "selectedCount": 6,
+            "omittedCount": 30,
+            "confidence": "medium"
+          }
+        }
+      ]
+    },
+    {
+      "id": "keyword-baseline-repo-add",
+      "category": "query-robustness",
+      "query": "repo add artifact import corpus",
+      "passed": false,
+      "latencyMs": 621,
+      "selectedCount": 0,
+      "rankedCount": 0,
+      "confidence": "low",
+      "scores": {
+        "pathRecall": 0,
+        "termRecall": 0,
+        "nonEmptyContext": false
+      },
+      "missing": {
+        "pathIncludes": [
+          "docs/ingestion-build-flow.md"
+        ],
+        "terms": [
+          "repo add",
+          "artifact",
+          "corpus"
+        ]
+      },
+      "topPaths": [],
+      "diagnostics": [
+        {
+          "stage": "classification",
+          "message": "Classified query as unknown.",
+          "metadata": {
+            "confidence": "low",
+            "signals": []
+          }
+        },
+        {
+          "stage": "scope-inference",
+          "message": "Inferred 0 candidate scopes.",
+          "metadata": {
+            "candidateCount": 1,
+            "returnedCount": 0
+          }
+        },
+        {
+          "stage": "candidate-generation",
+          "message": "Generated 0 retrieval candidates.",
+          "metadata": {
+            "byType": {},
+            "bySource": {}
+          }
+        },
+        {
+          "stage": "ranking",
+          "message": "Ranked 0 retrieval hits.",
+          "metadata": {
+            "topScore": 0
+          }
+        },
+        {
+          "stage": "planning",
+          "message": "Final context uses 0/1200 tokens.",
+          "metadata": {
+            "selectedCount": 0,
+            "omittedCount": 0,
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspect-retrieval-debugging",
+      "category": "diagnostics",
+      "query": "How can I inspect retrieval planning diagnostics for a query?",
+      "passed": false,
+      "latencyMs": 621,
+      "selectedCount": 0,
+      "rankedCount": 0,
+      "confidence": "low",
+      "scores": {
+        "pathRecall": 0,
+        "termRecall": 0,
+        "nonEmptyContext": false
+      },
+      "missing": {
+        "pathIncludes": [
+          "README.md",
+          "apps/cli/README.md"
+        ],
+        "terms": [
+          "inspect retrieval",
+          "--query"
+        ]
+      },
+      "topPaths": [],
+      "diagnostics": [
+        {
+          "stage": "classification",
+          "message": "Classified query as usage.",
+          "metadata": {
+            "confidence": "medium",
+            "signals": [
+              "usage"
+            ]
+          }
+        },
+        {
+          "stage": "scope-inference",
+          "message": "Inferred 0 candidate scopes.",
+          "metadata": {
+            "candidateCount": 1,
+            "returnedCount": 0
+          }
+        },
+        {
+          "stage": "candidate-generation",
+          "message": "Generated 0 retrieval candidates.",
+          "metadata": {
+            "byType": {},
+            "bySource": {}
+          }
+        },
+        {
+          "stage": "ranking",
+          "message": "Ranked 0 retrieval hits.",
+          "metadata": {
+            "topScore": 0
+          }
+        },
+        {
+          "stage": "planning",
+          "message": "Final context uses 0/1200 tokens.",
+          "metadata": {
+            "selectedCount": 0,
+            "omittedCount": 0,
+            "confidence": "low"
+          }
+        }
+      ]
+    }
+  ]
+}
