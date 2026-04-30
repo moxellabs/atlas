@@ -19,9 +19,7 @@ export async function runSearchCommand(
 		readArgvString(context.argv, "--repo") ??
 		readArgvString(context.argv, "--repo-id");
 	const configPath = readArgvString(context.argv, "--config");
-	const filters = readSearchFilters(context.argv);
-	const appliedFilters =
-		Object.keys(filters).length === 0 ? { profile: "public" } : filters;
+	const { filters, profileDefaulted, allProfiles } = readSearchFilters(context.argv);
 	const deps = await buildCliDependencies({
 		cwd: context.cwd,
 		env: context.env,
@@ -29,19 +27,16 @@ export async function runSearchCommand(
 		...(configPath === undefined ? {} : { configPath }),
 	});
 	try {
-		if (
-			appliedFilters.profile !== undefined &&
-			appliedFilters.profile !== "public"
-		) {
+		if (filters.profile !== undefined && filters.profile !== "public") {
 			throw new CliError(
-				`Profile ${appliedFilters.profile} not available for repo; imported artifact contains public docs only.`,
+				`Profile ${filters.profile} not available for repo; imported artifact contains public docs only. Use --all-profiles or --profile any to search without a profile filter.`,
 				{ code: "CLI_SEARCH_PROFILE_UNAVAILABLE", exitCode: EXIT_INPUT_ERROR },
 			);
 		}
 		const hits = lexicalSearch(deps.db, {
 			query,
 			...(repoId === undefined ? {} : { repoId }),
-			filters: appliedFilters,
+			filters,
 		});
 		const rows = hits.map((hit) => ({
 			repoId: hit.repoId,
@@ -50,21 +45,36 @@ export async function runSearchCommand(
 			docId: hit.docId,
 			entityType: hit.entityType,
 		}));
+		const filterLine = allProfiles
+			? "Filters: profile=any (--all-profiles)"
+			: profileDefaulted
+				? "Filters: profile=public (default)"
+				: `Filters: profile=${filters.profile}`;
 		return renderSuccess(
 			context,
 			"search",
-			{ query, repoId, filters: appliedFilters, results: rows },
-			rows.length === 0 ? ["No results."] : [renderRows(rows)],
+			{ query, repoId, filters, profileDefaulted, allProfiles, results: rows },
+			rows.length === 0
+				? [filterLine, "No results."]
+				: [filterLine, renderRows(rows)],
 		);
 	} finally {
 		deps.close();
 	}
 }
 
-function readSearchFilters(argv: readonly string[]): DocumentMetadataFilters {
+interface SearchFiltersResult {
+	filters: DocumentMetadataFilters;
+	profileDefaulted: boolean;
+	allProfiles: boolean;
+}
+
+function readSearchFilters(argv: readonly string[]): SearchFiltersResult {
 	const filters: DocumentMetadataFilters = {};
 	const profile = readArgvString(argv, "--profile");
-	if (profile !== undefined) filters.profile = profile;
+	const allProfiles = argv.includes("--all-profiles") || profile === "any";
+	const profileDefaulted = profile === undefined && !allProfiles;
+	if (!allProfiles) filters.profile = profile ?? "public";
 	const audience = readRepeatedOption(argv, "--audience");
 	if (audience.length > 0)
 		filters.audience = audience as DocumentMetadataFilters["audience"];
@@ -74,7 +84,7 @@ function readSearchFilters(argv: readonly string[]): DocumentMetadataFilters {
 	const visibility = readRepeatedOption(argv, "--visibility");
 	if (visibility.length > 0)
 		filters.visibility = visibility as DocumentMetadataFilters["visibility"];
-	return filters;
+	return { filters, profileDefaulted, allProfiles };
 }
 
 function readRepeatedOption(argv: readonly string[], flag: string): string[] {

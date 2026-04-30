@@ -983,7 +983,12 @@ const searchOptions: OptionSpec[] = [
 	{ flags: "--repo-id <id>", description: "Repository id" },
 	{
 		flags: "--profile <profile>",
-		description: "Metadata profile (for example public)",
+		description:
+			"Metadata profile (defaults to public; use 'any' or --all-profiles to search without a profile filter)",
+	},
+	{
+		flags: "--all-profiles",
+		description: "Search without the default public profile filter",
 	},
 	{ flags: "--audience <audience>", description: "Filter by audience" },
 	{ flags: "--purpose <purpose>", description: "Filter by purpose" },
