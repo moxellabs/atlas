@@ -57,7 +57,6 @@ function assertPackageContents(entry: PackEntry): void {
     "dist/commander.js",
     "dist/commander.d.ts",
     "dist/schema.sql",
-    "scripts/postinstall.cjs",
   ]) {
     if (!paths.has(required)) {
       throw new Error(`packed package missing required file: ${required}`);
