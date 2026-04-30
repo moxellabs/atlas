@@ -4,12 +4,75 @@ import { AtlasServerError, ServerValidationError } from "../errors";
 import { fail } from "../response";
 import { requestIdFrom } from "../response";
 
+export const MAX_JSON_BODY_BYTES = 1024 * 1024;
+
+class JsonBodyTooLargeError extends AtlasServerError {
+  constructor(operation: string, details: { maxBytes: number; actualBytes?: number }) {
+    super("Request JSON body is too large.", {
+      code: "payload_too_large",
+      status: 413,
+      context: { operation, entity: "body", details },
+    });
+  }
+}
+
+async function readJsonBodyText(request: Request, operation: string, maxBytes = MAX_JSON_BODY_BYTES): Promise<string> {
+  const contentLength = request.headers.get("content-length");
+  if (contentLength !== null) {
+    const declaredBytes = Number(contentLength);
+    if (Number.isFinite(declaredBytes) && declaredBytes > maxBytes) {
+      throw new JsonBodyTooLargeError(operation, { maxBytes, actualBytes: declaredBytes });
+    }
+  }
+
+  const reader = request.body?.getReader();
+  if (reader === undefined) {
+    return "";
+  }
+
+  const chunks: Uint8Array[] = [];
+  let bytesRead = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      bytesRead += value.byteLength;
+      if (bytesRead > maxBytes) {
+        throw new JsonBodyTooLargeError(operation, { maxBytes, actualBytes: bytesRead });
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return new TextDecoder().decode(concatChunks(chunks, bytesRead));
+}
+
+function concatChunks(chunks: Uint8Array[], totalBytes: number): Uint8Array {
+  if (chunks.length === 1) {
+    return chunks[0] ?? new Uint8Array();
+  }
+  const body = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
+
 /** Parses and validates a JSON body for route handlers. */
 export async function parseJsonBody<T>(request: Request, schema: ZodType<T>, operation: string): Promise<T> {
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(await readJsonBodyText(request, operation));
   } catch (error) {
+    if (error instanceof JsonBodyTooLargeError) {
+      throw error;
+    }
     throw new ServerValidationError("Request body must be valid JSON.", { operation, entity: "body", cause: error });
   }
   try {
