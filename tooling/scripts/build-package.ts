@@ -64,9 +64,11 @@ await writeFile(
   `import type { Command } from "commander";
 
 export type AtlasMountConfig = {
-  /** Commander namespace under an existing CLI, e.g. \`mycli atlas ...\`. */
+  /** Commander namespace under an existing CLI, e.g. \`mycli knowledge ...\`. */
   namespace: string;
-  /** Atlas identity root. Relative path only; same validation as the Atlas CLI/config. */
+  /** Display identity used in help text when mounted. Defaults to \`knowledge\`. */
+  displayName?: string;
+  /** Identity root. Relative path only; same validation as the CLI/config. */
   identityRoot?: string;
   mcp?: {
     /** MCP server identity name; lower-kebab identifier. */
