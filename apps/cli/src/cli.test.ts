@@ -2503,6 +2503,15 @@ repos:
 		expect(result.stdout).not.toContain("  add-repo");
 	});
 
+	test("search help explains default profile filter", async () => {
+		const result = await runWithCapture(["search", "--help"]);
+
+		expect(result.exitCode).toBe(0);
+		expect(result.stdout).toContain("--profile <profile>");
+		expect(result.stdout).toContain("defaults to public");
+		expect(result.stdout).toContain("--all-profiles");
+	});
+
 	test("unknown commands return one Atlas error and print help in human mode", async () => {
 		const result = await runWithCapture(["wat"]);
 
@@ -3225,6 +3234,40 @@ Internal package docs.
 		expect(search.exitCode).toBe(0);
 		expect(search.stdout).toContain("docs/self-indexing.md");
 		expect(search.stdout).not.toContain(".planning/");
+		const searchJson = JSON.parse(search.stdout);
+		expect(searchJson.data.filters).toMatchObject({ profile: "public" });
+		expect(searchJson.data.profileDefaulted).toBe(true);
+
+		const filteredSearch = await runWithCapture(
+			[
+				"search",
+				"self-indexing",
+				"--cwd",
+				rootDir,
+				"--audience",
+				"consumer",
+			],
+			{ HOME: home },
+		);
+		expect(filteredSearch.exitCode).toBe(0);
+		expect(filteredSearch.stdout).toContain("Filters: profile=public (default)");
+
+		const anyProfileSearch = await runWithCapture(
+			[
+				"search",
+				"self-indexing",
+				"--cwd",
+				rootDir,
+				"--profile",
+				"any",
+				"--json",
+			],
+			{ HOME: home },
+		);
+		expect(anyProfileSearch.exitCode).toBe(0);
+		const anyProfileJson = JSON.parse(anyProfileSearch.stdout);
+		expect(anyProfileJson.data.filters.profile).toBeUndefined();
+		expect(anyProfileJson.data.allProfiles).toBe(true);
 	});
 
 	test("identity root init build verify inspect migration and validation", async () => {
