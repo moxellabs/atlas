@@ -9,6 +9,7 @@ import {
 	buildReport,
 	type CaseResult,
 	caseMetadata,
+	type EvalCase,
 	evaluateExpectations,
 	loadBaseline,
 	loadEvalDataset,
@@ -61,6 +62,10 @@ export async function runMcpRetrievalEvalMain(input: {
 			? undefined
 			: resolve(input.cwd, args["trend-log"] ?? defaultTrendPath);
 	const quietEval = args.quiet === "true" || args.quiet === "";
+	const concurrency = parsePositiveInteger(
+		args.concurrency ?? input.env.ATLAS_EVAL_CONCURRENCY ?? "4",
+		"concurrency",
+	);
 
 	const dataset = await loadEvalDataset(datasetPath);
 	let tempConfigDir: string | undefined;
@@ -124,106 +129,41 @@ export async function runMcpRetrievalEvalMain(input: {
 			docCount: runtime.docCount ?? "unknown",
 		});
 
-		const results: CaseResult[] = [];
 		const casesTotal = dataset.cases.length;
+		const results = new Array<CaseResult>(casesTotal);
 		const casesStartedAt = performance.now();
 		let passSoFar = 0;
 		let failSoFar = 0;
+		let completedSoFar = 0;
 
 		try {
-			for (let caseIndex = 0; caseIndex < casesTotal; caseIndex++) {
-				const testCase = dataset.cases[caseIndex]!;
-				const startedAt = performance.now();
-				const output = await runCliJson(
-					[
-						...cliPrefix,
-						"inspect",
-						"retrieval",
-						"--query",
-						testCase.query,
-						"--json",
-						...((testCase.repoId ?? dataset.repoId)
-							? ["--repo", testCase.repoId ?? dataset.repoId ?? ""]
-							: []),
-					],
-					input.cwd,
-				);
-				const cliLatencyMs = Math.round(performance.now() - startedAt);
-				const data = isRecord(output.data) ? output.data : output;
-				const plan = isRecord(data.plan) ? data.plan : data;
-				const timings = isRecord(data.timings) ? data.timings : {};
-				const latencyMs =
-					typeof timings.retrievalLatencyMs === "number"
-						? Math.round(timings.retrievalLatencyMs)
-						: cliLatencyMs;
-				const rankedHits = asArray(plan.rankedHits);
-				const selected = asArray(plan.selected);
-				const contextPacket = isRecord(plan.contextPacket)
-					? plan.contextPacket
-					: {};
-				const evidence = asArray(contextPacket.evidence);
-				const diagnostics = asArray(plan.diagnostics);
-				const allHits = [...rankedHits, ...selected, ...evidence];
-				const topPaths = uniqueStrings(
-					allHits
-						.map((item) => getPath(item))
-						.filter((path): path is string => path !== undefined),
-				).slice(0, 10);
-				const textHaystack = await buildTextHaystack({
-					rankedHits,
-					selected,
-					contextPacket,
-					topPaths,
-					cwd: input.cwd,
-				});
-				const diagnosticsHaystack = JSON.stringify(diagnostics).toLowerCase();
-				const confidence =
-					typeof contextPacket.confidence === "string"
-						? contextPacket.confidence
-						: typeof plan.confidence === "string"
-							? plan.confidence
-							: undefined;
-				const expectationResult = evaluateExpectations({
-					testCase,
-					topPaths,
-					textHaystack,
-					diagnosticsHaystack,
-					selectedCount: selected.length,
-					rankedCount: rankedHits.length,
-					...(confidence === undefined ? {} : { confidence }),
-				});
-				results.push({
-					id: testCase.id,
-					category: testCase.category,
-					query: testCase.query,
-					...caseMetadata(testCase),
-					passed: expectationResult.passed,
-					latencyMs,
-					cliLatencyMs,
-					selectedCount: selected.length,
-					rankedCount: rankedHits.length,
-					...(confidence === undefined ? {} : { confidence }),
-					scores: expectationResult.scores,
-					retrieval: expectationResult.retrieval,
-					missing: expectationResult.missing,
-					topPaths,
-					diagnostics,
-				});
-				if (expectationResult.passed) {
-					passSoFar++;
-				} else {
-					failSoFar++;
-				}
-				progress.tick({
-					index: caseIndex + 1,
-					total: casesTotal,
-					caseId: testCase.id,
-					passed: expectationResult.passed,
-					latencyMs,
-					passSoFar,
-					failSoFar,
-				});
-			}
+			await runConcurrent(
+				dataset.cases.map((testCase, caseIndex) => async () => {
+					const result = await runRetrievalCase({
+						testCase,
+						datasetRepoId: dataset.repoId,
+						cliPrefix,
+						cwd: input.cwd,
+					});
+					results[caseIndex] = result;
+					if (result.passed) {
+						passSoFar++;
+					} else {
+						failSoFar++;
+					}
+					completedSoFar++;
+					progress.tick({
+						index: completedSoFar,
+						total: casesTotal,
+						caseId: result.id,
+						passed: result.passed,
+						latencyMs: result.latencyMs,
+						passSoFar,
+						failSoFar,
+					});
+				}),
+				Math.min(concurrency, Math.max(1, casesTotal)),
+			);
 		} finally {
 			progress.done({
 				elapsedMs: Math.round(performance.now() - casesStartedAt),
@@ -306,6 +246,104 @@ export async function runMcpRetrievalEvalMain(input: {
 			await rm(tempConfigDir, { recursive: true, force: true });
 		}
 	}
+}
+
+async function runRetrievalCase(input: {
+	readonly testCase: EvalCase;
+	readonly datasetRepoId?: string | undefined;
+	readonly cliPrefix: readonly string[];
+	readonly cwd: string;
+}): Promise<CaseResult> {
+	const startedAt = performance.now();
+	const output = await runCliJson(
+		[
+			...input.cliPrefix,
+			"inspect",
+			"retrieval",
+			"--query",
+			input.testCase.query,
+			"--json",
+			...((input.testCase.repoId ?? input.datasetRepoId)
+				? ["--repo", input.testCase.repoId ?? input.datasetRepoId ?? ""]
+				: []),
+		],
+		input.cwd,
+	);
+	const cliLatencyMs = Math.round(performance.now() - startedAt);
+	const data = isRecord(output.data) ? output.data : output;
+	const plan = isRecord(data.plan) ? data.plan : data;
+	const timings = isRecord(data.timings) ? data.timings : {};
+	const latencyMs =
+		typeof timings.retrievalLatencyMs === "number"
+			? Math.round(timings.retrievalLatencyMs)
+			: cliLatencyMs;
+	const rankedHits = asArray(plan.rankedHits);
+	const selected = asArray(plan.selected);
+	const contextPacket = isRecord(plan.contextPacket) ? plan.contextPacket : {};
+	const evidence = asArray(contextPacket.evidence);
+	const diagnostics = asArray(plan.diagnostics);
+	const allHits = [...rankedHits, ...selected, ...evidence];
+	const topPaths = uniqueStrings(
+		allHits
+			.map((item) => getPath(item))
+			.filter((path): path is string => path !== undefined),
+	).slice(0, 10);
+	const textHaystack = await buildTextHaystack({
+		rankedHits,
+		selected,
+		contextPacket,
+		topPaths,
+		cwd: input.cwd,
+	});
+	const diagnosticsHaystack = JSON.stringify(diagnostics).toLowerCase();
+	const confidence =
+		typeof contextPacket.confidence === "string"
+			? contextPacket.confidence
+			: typeof plan.confidence === "string"
+				? plan.confidence
+				: undefined;
+	const expectationResult = evaluateExpectations({
+		testCase: input.testCase,
+		topPaths,
+		textHaystack,
+		diagnosticsHaystack,
+		selectedCount: selected.length,
+		rankedCount: rankedHits.length,
+		...(confidence === undefined ? {} : { confidence }),
+	});
+	return {
+		id: input.testCase.id,
+		category: input.testCase.category,
+		query: input.testCase.query,
+		...caseMetadata(input.testCase),
+		passed: expectationResult.passed,
+		latencyMs,
+		cliLatencyMs,
+		selectedCount: selected.length,
+		rankedCount: rankedHits.length,
+		...(confidence === undefined ? {} : { confidence }),
+		scores: expectationResult.scores,
+		retrieval: expectationResult.retrieval,
+		missing: expectationResult.missing,
+		topPaths,
+		diagnostics,
+	};
+}
+
+async function runConcurrent(
+	tasks: readonly (() => Promise<void>)[],
+	concurrency: number,
+): Promise<void> {
+	let nextIndex = 0;
+	const worker = async () => {
+		while (nextIndex < tasks.length) {
+			const task = tasks[nextIndex++];
+			if (task !== undefined) await task();
+		}
+	};
+	await Promise.all(
+		Array.from({ length: Math.min(concurrency, tasks.length) }, () => worker()),
+	);
 }
 
 function parseArgs(values: string[]): Record<string, string | undefined> {
@@ -420,6 +458,14 @@ function parseInteger(value: string, name: string): number {
 	const parsed = Number.parseInt(value, 10);
 	if (!Number.isSafeInteger(parsed) || parsed < 0) {
 		throw new Error(`--${name} must be a non-negative integer.`);
+	}
+	return parsed;
+}
+
+function parsePositiveInteger(value: string, name: string): number {
+	const parsed = Number.parseInt(value, 10);
+	if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+		throw new Error(`--${name} must be a positive integer.`);
 	}
 	return parsed;
 }
