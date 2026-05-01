@@ -2,5 +2,146 @@
   "name": "atlas-artifact-runtime",
   "description": "Focused artifact import/export and runtime corpus eval cases.",
   "repoId": "github.com/moxellabs/atlas",
-  "cases": []
+  "cases": [
+    {
+      "id": "artifact-runtime-evals-prefer-repo-local-corpus",
+      "category": "artifact-runtime",
+      "query": "Atlas MCP and Retrieval Evals quick start prefers repo-local .moxel/atlas/corpus.db artifact when present",
+      "expected": {
+        "pathIncludes": ["docs/index.md"],
+        "terms": [".moxel/atlas", "local corpus", "MCP"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "maintainer",
+      "feature": "eval-runtime-selection",
+      "scenario": "prefer-repo-local-artifact-for-evals",
+      "priority": "p0"
+    },
+    {
+      "id": "artifact-runtime-user-home-corpus-path",
+      "category": "artifact-runtime",
+      "query": "Which runtime path stores the global corpus after atlas repo add imports artifacts?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md", "docs/runtime-surfaces.md"],
+        "terms": ["~/.moxel/atlas/corpus.db", "global corpus", "repo add"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "operator",
+      "feature": "global-corpus",
+      "scenario": "locate-user-home-corpus",
+      "priority": "p0"
+    },
+    {
+      "id": "artifact-runtime-import-without-full-clone",
+      "category": "artifact-runtime",
+      "query": "Explain artifact import without cloning full repositories for GitHub or GHES repos.",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md", "docs/runtime-surfaces.md", "README.md"],
+        "terms": ["without cloning full repositories", "GitHub/GHES", "artifact-only"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "consumer",
+      "feature": "artifact-only-import",
+      "scenario": "import-committed-artifact-no-clone",
+      "priority": "p0"
+    },
+    {
+      "id": "artifact-runtime-verification-checks",
+      "category": "artifact-runtime",
+      "query": "What does artifact verification check for manifest schema checksums corpus importability and secret path safety?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md", "apps/cli/docs/index.md"],
+        "terms": ["manifest schema", "checksums", "secret/path safety"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "maintainer",
+      "feature": "artifact-verification",
+      "scenario": "verify-artifact-safety-and-importability",
+      "priority": "p0"
+    },
+    {
+      "id": "artifact-runtime-rebuild-guidance-stale",
+      "category": "artifact-runtime",
+      "query": "What rebuild guidance appears when an artifact is stale and should run atlas build and commit .moxel/atlas?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["Artifact is stale; run atlas build and commit .moxel/atlas.", "artifact verify --fresh", "indexed revision"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "maintainer",
+      "feature": "rebuild-guidance",
+      "scenario": "stale-artifact-rebuild-message",
+      "priority": "p0"
+    },
+    {
+      "id": "artifact-runtime-import-failure-preserves-rows",
+      "category": "artifact-runtime",
+      "query": "If artifact validation or import fails during repo add, what happens to repo.json and previous global rows?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["repo.json", "not marked as imported", "previous global rows remain intact"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "operator",
+      "feature": "import-recovery",
+      "scenario": "failed-import-does-not-corrupt-global-corpus",
+      "priority": "p1"
+    },
+    {
+      "id": "artifact-runtime-report-revisions-metadata",
+      "category": "artifact-runtime",
+      "query": "Where are source revisions indexedRevision and diagnostic report metadata documented for artifacts and build reports?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["indexedRevision", "revisions", "diagnostics"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "maintainer",
+      "feature": "revision-metadata",
+      "scenario": "report-source-and-indexed-revisions",
+      "priority": "p1"
+    },
+    {
+      "id": "artifact-runtime-git-first-auth-expectations",
+      "category": "artifact-runtime",
+      "query": "What Git-first auth expectations apply to artifact fetches tokens and GitHub CLI credentials?",
+      "expected": {
+        "pathIncludes": ["docs/security.md", "README.md"],
+        "terms": ["GitHub CLI", "tokens", "credentials"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "security-reviewer",
+      "feature": "git-first-auth",
+      "scenario": "token-env-and-gh-cli-expectations",
+      "priority": "p0"
+    },
+    {
+      "id": "artifact-runtime-missing-artifact-fallback",
+      "category": "artifact-runtime",
+      "query": "When .moxel/atlas is missing, what fallback choices does atlas repo add print?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md", "docs/runtime-surfaces.md"],
+        "terms": ["This repo doesn't publish an Atlas knowledge bundle yet.", "local-only", "maintainer instructions"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "consumer",
+      "feature": "missing-artifact-fallback",
+      "scenario": "choose-local-only-or-adoption-instructions",
+      "priority": "p1"
+    },
+    {
+      "id": "artifact-runtime-public-filtering",
+      "category": "artifact-runtime",
+      "query": "Which public artifact filtering excludes .planning docs archive PRD and internal visibility docs before checksums?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": [".planning/**", "docs/archive/**", "visibility: internal"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "maintainer",
+      "feature": "public-artifact-filtering",
+      "scenario": "filter-public-artifact-contents",
+      "priority": "p1"
+    }
+  ]
 }
