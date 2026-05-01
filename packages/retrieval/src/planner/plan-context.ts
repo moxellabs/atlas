@@ -333,16 +333,19 @@ function gatherCandidates(
 		const lexicalQuery = toLexicalQuery(expandedQuery);
 
 		if (lexicalQuery.length > 0) {
-			for (const hit of lexicalSearch(db, {
+			const lexicalHits = lexicalSearch(db, {
 				query: lexicalQuery,
 				repoId: context.repoId,
 				limit: context.candidateLimit,
 				filters: context.filters,
-			})) {
+			});
+			const lexicalScores = normalizedLexicalScores(lexicalHits);
+			for (const hit of lexicalHits) {
 				const candidate = candidateFromLexicalHit({
 					db,
 					docRepo,
 					hit,
+					score: lexicalScores.get(lexicalHitKey(hit)) ?? 0.35,
 					countTokens: context.countTokens,
 				});
 				if (candidate !== undefined) {
@@ -359,25 +362,33 @@ function gatherCandidates(
 			}
 		}
 
-		for (const path of extractPathSignals(context.query)) {
+		for (const signal of pathSignals(context.query, expandedQuery)) {
 			for (const document of pathSearch(db, {
-				path,
-				mode: path.includes("/") ? "contains" : "prefix",
+				path: signal.path,
+				mode: signal.path.includes("/") ? "contains" : "prefix",
 				repoId: context.repoId,
 				limit: 12,
 				filters: context.filters,
 			})) {
+				const score = signal.expanded ? 0.94 : 1;
 				candidates.push(
 					documentCandidate(
 						document,
 						"path",
-						1,
-						[`Matched path signal ${path}.`],
+						score,
+						[
+							`Matched ${signal.expanded ? "expanded " : ""}path signal ${signal.path}.`,
+						],
 						context.countTokens,
 					),
 				);
 				candidates.push(
-					...documentSummaries(docRepo, summaryRepo, document.docId, 0.88),
+					...documentSummaries(
+						docRepo,
+						summaryRepo,
+						document.docId,
+						score * 0.72,
+					),
 				);
 			}
 		}
@@ -522,13 +533,14 @@ function candidateFromLexicalHit(input: {
 	readonly db: StoreDatabase;
 	readonly docRepo: DocRepository;
 	readonly hit: LexicalSearchHit;
+	readonly score: number;
 	readonly countTokens: (text: string) => number;
 }): RetrievalCandidate | undefined {
 	const document = input.docRepo.get(input.hit.docId);
 	if (document === undefined) {
 		return undefined;
 	}
-	const baseScore = lexicalRankToScore(input.hit.rank);
+	const baseScore = input.score;
 	if (input.hit.entityType === "chunk" && input.hit.chunkId !== undefined) {
 		const chunk = new ChunkRepository(input.db)
 			.listByDocument(input.hit.docId)
@@ -739,8 +751,35 @@ function sectionText(section: CanonicalSection): string {
 		.join("\n\n");
 }
 
-function lexicalRankToScore(rank: number): number {
-	return Number((1 / (1 + Math.abs(rank))).toFixed(3));
+function normalizedLexicalScores(
+	hits: readonly LexicalSearchHit[],
+): ReadonlyMap<string, number> {
+	const scores = new Map<string, number>();
+	if (hits.length === 0) {
+		return scores;
+	}
+	if (hits.length === 1) {
+		scores.set(lexicalHitKey(hits[0]!), 1);
+		return scores;
+	}
+	const bestRank = hits[0]?.rank ?? 0;
+	const worstRank = hits.at(-1)?.rank ?? bestRank;
+	const rankSpan = Math.abs(worstRank - bestRank);
+	const denominator = Math.max(1, hits.length - 1);
+	for (const [index, hit] of hits.entries()) {
+		const positional = 1 - (index / denominator) * 0.65;
+		const rankBased =
+			rankSpan <= Number.EPSILON
+				? positional
+				: 1 - (Math.abs(hit.rank - bestRank) / rankSpan) * 0.65;
+		const score = Math.max(0.25, Math.min(1, (positional + rankBased) / 2));
+		scores.set(lexicalHitKey(hit), Number(score.toFixed(3)));
+	}
+	return scores;
+}
+
+function lexicalHitKey(hit: LexicalSearchHit): string {
+	return `${hit.entityType}:${hit.entityId}`;
 }
 
 function toLexicalQuery(query: string): string {
@@ -774,6 +813,23 @@ const STOPWORDS = new Set([
 	"where",
 ]);
 
+function pathSignals(
+	query: string,
+	expandedQuery: string,
+): Array<{ path: string; expanded: boolean }> {
+	const signals = new Map<string, { path: string; expanded: boolean }>();
+	for (const path of extractPathSignals(query)) {
+		signals.set(normalizePathSignal(path), { path, expanded: false });
+	}
+	for (const path of extractPathSignals(expandedQuery)) {
+		const key = normalizePathSignal(path);
+		if (!signals.has(key)) {
+			signals.set(key, { path, expanded: true });
+		}
+	}
+	return [...signals.values()];
+}
+
 function extractPathSignals(query: string): string[] {
 	return [
 		...query.matchAll(/`([^`]+\.[a-z0-9]+|[^`]+\/[^`]+)`/gi),
@@ -782,6 +838,10 @@ function extractPathSignals(query: string): string[] {
 	]
 		.map((match) => (match[1] ?? match[0]).trim())
 		.filter((value) => value.length > 0);
+}
+
+function normalizePathSignal(path: string): string {
+	return path.trim().replace(/\\/g, "/").replace(/^\.\//, "").toLowerCase();
 }
 
 function dedupeCandidates(
@@ -793,9 +853,9 @@ function dedupeCandidates(
 		const existing = byKey.get(key);
 		if (
 			existing === undefined ||
-			(candidate.score ?? 0) > (existing.score ?? 0) ||
-			((candidate.score ?? 0) === (existing.score ?? 0) &&
-				candidate.source === "path")
+			candidate.source === "path" ||
+			(existing.source !== "path" &&
+				(candidate.score ?? 0) > (existing.score ?? 0))
 		) {
 			byKey.set(key, candidate);
 		}

@@ -1,6 +1,7 @@
 import type { QueryKind } from "@atlas/core";
 
 import { buildHitRationale } from "../presenters/hit-rationale";
+import { expandQuery } from "../query/expand-query";
 import type {
 	RankCandidatesInput,
 	RankedHit,
@@ -14,11 +15,12 @@ import { redundancyPenalty } from "./redundancy-penalty";
 /** Ranks raw candidates with explicit authority, locality, redundancy, and query-kind factors. */
 export function rankCandidates(input: RankCandidatesInput): RankedHit[] {
 	const candidates = dedupeCandidates(input.candidates);
+	const evidenceQuery = expandQuery(input.query);
 	const baseRanked: RankedHit[] = candidates
 		.map((candidate) => {
 			const factors = scoreCandidate(
 				candidate,
-				input.query,
+				evidenceQuery,
 				input.classification.kind,
 				input.scopes ?? [],
 				input.freshnessByRepo,
@@ -38,7 +40,7 @@ export function rankCandidates(input: RankCandidatesInput): RankedHit[] {
 	for (const candidate of baseRanked) {
 		const factors = scoreCandidate(
 			candidate,
-			input.query,
+			evidenceQuery,
 			input.classification.kind,
 			input.scopes ?? [],
 			input.freshnessByRepo,
@@ -67,14 +69,21 @@ function scoreCandidate(
 	freshnessByRepo: RankCandidatesInput["freshnessByRepo"],
 	previous: readonly RetrievalCandidate[],
 ): RankingFactors {
+	const lexicalScore = normalizeBaseScore(candidate.score ?? 0);
+	const evidenceMatch = evidenceMatchWeight(candidate, query, queryKind);
+	const rawLocality = localityWeight(candidate.provenance, scopes);
+	const locality =
+		lexicalScore >= 0.35 || evidenceMatch >= 0.25
+			? rawLocality
+			: rawLocality * 0.45;
 	return {
-		lexicalScore: normalizeBaseScore(candidate.score ?? 0),
+		lexicalScore,
 		authority: authorityWeight({ authority: candidate.authority, queryKind }),
-		locality: localityWeight(candidate.provenance, scopes),
+		locality: Number(locality.toFixed(3)),
 		queryKind: queryKindWeight(candidate, queryKind),
 		tokenEfficiency: tokenEfficiency(candidate.tokenCount),
 		freshness: freshnessByRepo?.get(candidate.provenance.repoId) ?? 0,
-		evidenceMatch: evidenceMatchWeight(candidate, query, queryKind),
+		evidenceMatch,
 		redundancyPenalty: redundancyPenalty(candidate, previous),
 	};
 }
@@ -85,7 +94,7 @@ function composeScore(factors: RankingFactors): number {
 		factors.authority * 0.74 +
 		factors.locality * 0.95 +
 		factors.queryKind * 0.62 +
-		factors.tokenEfficiency * 0.24 +
+		factors.tokenEfficiency * 0.08 +
 		factors.freshness * 0.7 +
 		factors.evidenceMatch * 1.1 -
 		factors.redundancyPenalty;
@@ -117,8 +126,8 @@ function queryKindWeight(
 			section: 0.9,
 			chunk: 0.9,
 			document: 0.48,
-			skill: 0.42,
-			summary: 0.38,
+			skill: 0.18,
+			summary: 0.26,
 			fallback: 0.22,
 		});
 	}
@@ -183,16 +192,23 @@ function evidenceMatchWeight(
 		weight += 0.95;
 	} else {
 		const basename = path.split("/").at(-1) ?? "";
+		const basenameStem = basename.replace(/\.[a-z0-9]+$/i, "");
 		if (basename.length > 0 && queryText.includes(basename)) {
 			weight += 0.45;
+		} else if (basenameStem.length >= 4 && queryText.includes(basenameStem)) {
+			weight += 0.28;
 		}
+		weight += pathSegmentOverlap(path, queryText) * 0.32;
 	}
 
-	const heading =
-		candidate.provenance.headingPath?.join(" ").toLowerCase() ?? "";
+	weight += textEvidenceWeight(candidate, queryText);
+
+	const headingPath = candidate.provenance.headingPath ?? [];
+	const heading = headingPath.join(" ").toLowerCase();
 	if (heading.length > 0 && queryText.includes(heading)) {
 		weight += 0.35;
 	}
+	weight += headingEvidenceWeight(headingPath, queryText);
 
 	if (isCanonicalDocsPath(path)) {
 		weight += canonicalDocsBoost(candidate, queryKind, queryText);
@@ -201,10 +217,102 @@ function evidenceMatchWeight(
 		candidate.provenance.skillId !== undefined &&
 		queryKind !== "skill-invocation"
 	) {
-		weight -= 0.22;
+		weight -= 0.38;
 	}
 	return Number(Math.max(0, Math.min(1.4, weight)).toFixed(3));
 }
+
+function pathSegmentOverlap(path: string, queryText: string): number {
+	const queryTokens = tokenSet(queryText);
+	const segments = evidenceTokens(path.replace(/\.[a-z0-9]+$/i, ""));
+	if (segments.length === 0 || queryTokens.size === 0) {
+		return 0;
+	}
+	const matches = segments.filter((segment) => queryTokens.has(segment)).length;
+	return Math.min(1, matches / Math.min(3, segments.length));
+}
+
+function textEvidenceWeight(
+	candidate: RetrievalCandidate,
+	queryText: string,
+): number {
+	const preview = candidate.textPreview;
+	if (preview === undefined || preview.trim().length === 0) {
+		return 0;
+	}
+	const lines = preview
+		.split(/\n+/)
+		.map((line) => normalizeQuery(line))
+		.filter((line) => line.length >= 4)
+		.slice(0, 3);
+	let weight = 0;
+	for (const line of lines) {
+		if (line.length >= 6 && line.length <= 80 && queryText.includes(line)) {
+			weight += 0.24;
+			break;
+		}
+	}
+	const titleTokens = evidenceTokens(lines[0] ?? "");
+	if (titleTokens.length > 0) {
+		const queryTokens = tokenSet(queryText);
+		const matches = titleTokens.filter((token) =>
+			queryTokens.has(token),
+		).length;
+		if (matches > 0) {
+			weight += Math.min(0.28, (matches / titleTokens.length) * 0.28);
+		}
+	}
+	return weight;
+}
+
+function headingEvidenceWeight(
+	headingPath: readonly string[],
+	queryText: string,
+): number {
+	if (headingPath.length === 0) {
+		return 0;
+	}
+	const queryTokens = tokenSet(queryText);
+	let weight = 0;
+	const leaf = normalizeQuery(headingPath.at(-1) ?? "");
+	if (leaf.length >= 4 && queryText.includes(leaf)) {
+		weight += 0.25;
+	}
+	const headingTokens = evidenceTokens(headingPath.join(" "));
+	const matches = headingTokens.filter((token) =>
+		queryTokens.has(token),
+	).length;
+	if (matches > 0) {
+		weight += Math.min(0.25, (matches / headingTokens.length) * 0.25);
+	}
+	return weight;
+}
+
+function evidenceTokens(text: string): string[] {
+	return [...tokenSet(text)].filter(
+		(token) => token.length >= 3 && !EVIDENCE_STOPWORDS.has(token),
+	);
+}
+
+function tokenSet(text: string): Set<string> {
+	return new Set(
+		normalizeQuery(text)
+			.split(/[^a-z0-9]+/i)
+			.map((token) => token.trim())
+			.filter((token) => token.length > 0),
+	);
+}
+
+const EVIDENCE_STOPWORDS = new Set([
+	"and",
+	"app",
+	"docs",
+	"for",
+	"index",
+	"readme",
+	"the",
+	"usage",
+]);
 
 function canonicalDocsBoost(
 	candidate: RetrievalCandidate,
@@ -251,7 +359,8 @@ function isCanonicalDocsPath(path: string): boolean {
 	return (
 		path === "readme.md" ||
 		path.startsWith("docs/") ||
-		path === "apps/cli/docs/index.md"
+		/^packages\/[^/]+\/docs\/index\.md$/.test(path) ||
+		/^apps\/[^/]+\/docs\/index\.md$/.test(path)
 	);
 }
 
@@ -262,6 +371,9 @@ function diversifyRankedHits(
 	if (hits.length <= 1 || queryKind === "skill-invocation") {
 		return [...hits];
 	}
+	if (queryKind === "exact-lookup" || queryKind === "location") {
+		return [...hits];
+	}
 	const selected: RankedHit[] = [];
 	const deferred: RankedHit[] = [];
 	const docCounts = new Map<string, number>();
@@ -269,7 +381,14 @@ function diversifyRankedHits(
 	const typeCounts = new Map<RankedHit["targetType"], number>();
 	const protectedWindow = Math.min(5, hits.length);
 
-	for (const hit of hits) {
+	for (const [index, hit] of hits.entries()) {
+		if (index === 0) {
+			selected.push(hit);
+			increment(docCounts, hit.provenance.docId);
+			increment(dirCounts, parentDir(hit.provenance.path));
+			increment(typeCounts, hit.targetType);
+			continue;
+		}
 		if (
 			selected.length < protectedWindow &&
 			wouldCrowdTopWindow(hit, { docCounts, dirCounts, typeCounts })
@@ -294,6 +413,9 @@ function wouldCrowdTopWindow(
 		readonly typeCounts: ReadonlyMap<RankedHit["targetType"], number>;
 	},
 ): boolean {
+	if (hit.source === "path") {
+		return false;
+	}
 	if ((counts.docCounts.get(hit.provenance.docId) ?? 0) >= 2) {
 		return true;
 	}
@@ -359,7 +481,9 @@ function dedupeCandidates(
 		const existing = byKey.get(key);
 		if (
 			existing === undefined ||
-			(candidate.score ?? 0) > (existing.score ?? 0)
+			candidate.source === "path" ||
+			(existing.source !== "path" &&
+				(candidate.score ?? 0) > (existing.score ?? 0))
 		) {
 			byKey.set(key, candidate);
 		}

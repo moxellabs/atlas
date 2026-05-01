@@ -504,6 +504,12 @@ describe("retrieval", () => {
 		expect(expandQuery("security credentials tokens local-first")).toContain(
 			"docs/security.md",
 		);
+		expect(expandQuery("private profile metadata precedence")).toContain(
+			"docs/configuration.md",
+		);
+		expect(expandQuery("generated vendor directories ignored")).toContain(
+			"docs/troubleshooting.md",
+		);
 		expect(
 			expandQuery("retrival contxt planing token budjet omissions diagnostics"),
 		).toContain("docs/retrieval-and-context.md");

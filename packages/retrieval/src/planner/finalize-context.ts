@@ -123,6 +123,13 @@ function computeConfidence(
 		return "low";
 	}
 	if (
+		input.classification.confidence === "low" &&
+		input.scopes.length === 0 &&
+		input.rankedHits.every((hit) => hit.source !== "path")
+	) {
+		return "low";
+	}
+	if (
 		input.classification.confidence === "high" &&
 		input.rankedHits[0] !== undefined &&
 		input.rankedHits[0].score >= 1.65
