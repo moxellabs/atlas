@@ -112,6 +112,31 @@ describe("store integration", () => {
 		expect(repos.get(canonicalRepoId)).toBeUndefined();
 	});
 
+	test("normalizes document paths at write and path-search ingress", () => {
+		seedStructuralStore(store);
+		const document = createDocument(
+			"Session",
+			"Use this guide to authenticate requests.",
+			"./packages\\auth//docs/session.md",
+		);
+
+		const stored = new DocRepository(store).upsert(document);
+
+		expect(stored.path).toBe("packages/auth/docs/session.md");
+		expect(new DocRepository(store).get(docId)?.path).toBe(
+			"packages/auth/docs/session.md",
+		);
+		expect(
+			pathSearch(store, {
+				repoId,
+				path: "\\packages\\auth\\docs\\session.md",
+				mode: "exact",
+			}),
+		).toEqual([
+			expect.objectContaining({ docId, path: "packages/auth/docs/session.md" }),
+		]);
+	});
+
 	test("repository batch writes can run inside an outer transaction in node sqlite runtime", () => {
 		const nodeRuntimeStore = store as unknown as { runtime: "bun" | "node" };
 		nodeRuntimeStore.runtime = "node";
@@ -374,10 +399,16 @@ describe("store integration", () => {
 
 	test("weights title path and heading matches above body-only matches", () => {
 		seedStructuralStore(store);
-		const titleDocId = createDocId({ repoId, path: "docs/public-artifacts.md" });
+		const titleDocId = createDocId({
+			repoId,
+			path: "docs/public-artifacts.md",
+		});
 		const bodyDocId = createDocId({ repoId, path: "docs/body-only.md" });
 		new DocRepository(store).replaceCanonicalDocument({
-			...createDocument("Public Artifact", "General release packaging guidance."),
+			...createDocument(
+				"Public Artifact",
+				"General release packaging guidance.",
+			),
 			docId: titleDocId,
 			path: "docs/public-artifacts.md",
 			sections: [
@@ -395,7 +426,10 @@ describe("store integration", () => {
 			],
 		});
 		new DocRepository(store).replaceCanonicalDocument({
-			...createDocument("Operations", "Artifact artifact artifact artifact details live here."),
+			...createDocument(
+				"Operations",
+				"Artifact artifact artifact artifact details live here.",
+			),
 			docId: bodyDocId,
 			path: "docs/body-only.md",
 		});
@@ -426,7 +460,8 @@ describe("store integration", () => {
 			headingPath: ["Session"],
 			ordinal: 0,
 			text: "Session token rotation is supported.",
-			searchText: "contextual-only Session token rotation is supported.",
+			searchText:
+				"repo: atlas | title: Session | section: Session | path: packages/auth/docs/session.md\n\ncontextual-only Session token rotation is supported.",
 			tokenCount: 8,
 		};
 		new ChunkRepository(store).replaceForDocument(docId, [chunk]);
@@ -441,7 +476,16 @@ describe("store integration", () => {
 			expect.objectContaining({ docId, path: "packages/auth/docs/session.md" }),
 		]);
 		expect(
-			pathSearch(store, { path: "packages/auth/docs", mode: "prefix" }),
+			pathSearch(store, {
+				repoId,
+				path: "./packages\\auth//docs/session.md",
+				mode: "exact",
+			}),
+		).toEqual([
+			expect.objectContaining({ docId, path: "packages/auth/docs/session.md" }),
+		]);
+		expect(
+			pathSearch(store, { path: "\\packages\\auth\\docs", mode: "prefix" }),
 		).toEqual([expect.objectContaining({ docId })]);
 		expect(scopeSearch(store, { repoId, moduleId })).toEqual([
 			expect.objectContaining({ docId }),
@@ -453,7 +497,9 @@ describe("store integration", () => {
 				docId,
 			}),
 		]);
-		expect(lexicalSearch(store, { query: "rotation imaginary", repoId })).toEqual([
+		expect(
+			lexicalSearch(store, { query: "rotation imaginary", repoId }),
+		).toEqual([
 			expect.objectContaining({
 				entityType: "chunk",
 				chunkId: chunk.chunkId,
@@ -477,6 +523,15 @@ describe("store integration", () => {
 				docId,
 			}),
 		]);
+		const chunkFtsBody = store.get<{ body: string }>(
+			"SELECT body FROM fts_entries WHERE entity_type = 'chunk' AND chunk_id = $chunkId",
+			{ $chunkId: chunk.chunkId },
+		)?.body;
+		expect(chunkFtsBody).toBe(
+			"repo: atlas | section: Session\n\ncontextual-only Session token rotation is supported.",
+		);
+		expect(chunkFtsBody).not.toContain("title: Session");
+		expect(chunkFtsBody).not.toContain("path: packages/auth/docs/session.md");
 		expect(new ChunkRepository(store).getById(chunk.chunkId)).toMatchObject({
 			chunkId: chunk.chunkId,
 			docId,
@@ -522,11 +577,15 @@ function seedStructuralStore(store: AtlasStoreClient): void {
 	});
 }
 
-function createDocument(title: string, text: string): CanonicalDocument {
+function createDocument(
+	title: string,
+	text: string,
+	path = "packages/auth/docs/session.md",
+): CanonicalDocument {
 	return {
 		docId,
 		repoId,
-		path: "packages/auth/docs/session.md",
+		path,
 		sourceVersion: "rev_1",
 		title,
 		kind: "module-doc",

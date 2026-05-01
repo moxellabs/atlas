@@ -106,17 +106,22 @@ describe("retrieval", () => {
 			kind: "exact-lookup",
 		});
 		expect(
-			classifyQuery("How does a maintainer build and publish .moxel/atlas artifacts?"),
+			classifyQuery(
+				"How does a maintainer build and publish .moxel/atlas artifacts?",
+			),
 		).not.toMatchObject({ kind: "exact-lookup" });
 		expect(classifyQuery("compare login and session flows")).toMatchObject({
 			kind: "compare",
 		});
-		expect(classifyQuery("how does MCP context retrieval work?"))
-			.toMatchObject({ kind: "usage" });
-		expect(classifyQuery("how do repo artifacts build publish and sync?"))
-			.toMatchObject({ kind: "usage" });
-		expect(classifyQuery("explain SQLite FTS corpus index search"))
-			.toMatchObject({ kind: "usage" });
+		expect(classifyQuery("how does MCP context retrieval work?")).toMatchObject(
+			{ kind: "usage" },
+		);
+		expect(
+			classifyQuery("how do repo artifacts build publish and sync?"),
+		).toMatchObject({ kind: "usage" });
+		expect(
+			classifyQuery("explain SQLite FTS corpus index search"),
+		).toMatchObject({ kind: "usage" });
 	});
 
 	test("infers scored package, module, and skill scopes from store metadata", () => {
@@ -235,8 +240,14 @@ describe("retrieval", () => {
 			{ packageId: authPackageId, moduleId: sessionModuleId },
 		);
 		const rank = (candidates: RetrievalCandidate[]) =>
-			rankCandidates({ query: "session rotation usage", classification, candidates })
-				.map((hit) => ({ id: hit.targetId, penalty: hit.factors.redundancyPenalty }));
+			rankCandidates({
+				query: "session rotation usage",
+				classification,
+				candidates,
+			}).map((hit) => ({
+				id: hit.targetId,
+				penalty: hit.factors.redundancyPenalty,
+			}));
 
 		const ordered = rank([stronger, weakerDuplicate]);
 		expect(rank([weakerDuplicate, stronger])).toEqual(ordered);
@@ -245,7 +256,86 @@ describe("retrieval", () => {
 		expect(ordered[1]?.penalty).toBeGreaterThan(0);
 	});
 
-	test("plans overview context summary-first without deep expansion when summaries are sufficient", () => {
+	test("diversifies high-ranked window and boosts canonical evidence paths", () => {
+		const classification = classifyQuery(
+			"How do build and publish artifact workflows work?",
+		);
+		const summaryA = candidate(
+			"summary",
+			"skill-summary-a",
+			"preferred",
+			"skills/atlas-contributor/SKILL.md",
+			1,
+			"Build artifact workflow summary.",
+		);
+		const summaryB = candidate(
+			"summary",
+			"skill-summary-b",
+			"preferred",
+			"skills/document-codebase/SKILL.md",
+			0.99,
+			"Build artifact workflow summary.",
+		);
+		const skill = candidate(
+			"skill",
+			"skill-hit",
+			"preferred",
+			"skills/skill-creator/SKILL.md",
+			0.94,
+			"Skill workflow helper.",
+		);
+		const canonicalEvidence = candidate(
+			"section",
+			"ingestion-evidence",
+			"canonical",
+			"docs/ingestion-build-flow.md",
+			0.55,
+			"Build and publish public .moxel/atlas artifacts.",
+		);
+		const runtimeEvidence = candidate(
+			"section",
+			"runtime-evidence",
+			"canonical",
+			"docs/runtime-surfaces.md",
+			0.52,
+			"Runtime artifact import paths.",
+		);
+		const packageEvidence = candidate(
+			"section",
+			"package-evidence",
+			"preferred",
+			"packages/indexer/docs/index.md",
+			0.5,
+			"Indexer writes artifact outputs.",
+		);
+
+		const ranked = rankCandidates({
+			query: "How do build and publish artifact workflows work?",
+			classification,
+			candidates: [
+				summaryA,
+				summaryB,
+				skill,
+				canonicalEvidence,
+				runtimeEvidence,
+				packageEvidence,
+			],
+			limit: 5,
+		});
+
+		expect(
+			ranked.filter((hit) => hit.targetType === "summary").length,
+		).toBeLessThanOrEqual(1);
+		expect(ranked.map((hit) => hit.provenance.path)).toContain(
+			"docs/ingestion-build-flow.md",
+		);
+		expect(
+			ranked.find((hit) => hit.targetId === "ingestion-evidence")?.factors
+				.evidenceMatch,
+		).toBeGreaterThan(0);
+	});
+
+	test("plans overview context with summary plus concrete evidence when budget allows", () => {
 		const plan = planContext({
 			db: store,
 			repoId,
@@ -257,7 +347,7 @@ describe("retrieval", () => {
 		expect(plan.selected.some((item) => item.targetType === "summary")).toBe(
 			true,
 		);
-		expect(plan.selected.every((item) => item.targetType === "summary")).toBe(
+		expect(plan.selected.some((item) => item.targetType !== "summary")).toBe(
 			true,
 		);
 		expect(plan.usedTokens).toBeLessThanOrEqual(plan.budgetTokens);
@@ -270,14 +360,17 @@ describe("retrieval", () => {
 		const plan = planContext({
 			db: store,
 			repoId,
-			query: "overview of auth docs for `rotateSessionToken` in packages/auth/docs/session.md",
+			query:
+				"overview of auth docs for `rotateSessionToken` in packages/auth/docs/session.md",
 			budgetTokens: 220,
 		});
 
-		expect(plan.selected.some((item) => item.targetType === "summary")).toBe(true);
-		expect(
-			plan.selected.some((item) => item.targetType !== "summary"),
-		).toBe(true);
+		expect(plan.selected.some((item) => item.targetType === "summary")).toBe(
+			true,
+		);
+		expect(plan.selected.some((item) => item.targetType !== "summary")).toBe(
+			true,
+		);
 	});
 
 	test("expands into local sections and chunks for usage queries", () => {
@@ -364,7 +457,8 @@ describe("retrieval", () => {
 		const plan = planContext({
 			db: store,
 			repoId,
-			query: "How should operators renew session credentials with nonexistent jargon?",
+			query:
+				"How should operators renew session credentials with nonexistent jargon?",
 			budgetTokens: 220,
 		});
 
@@ -393,14 +487,26 @@ describe("retrieval", () => {
 	});
 
 	test("expands Atlas query vocabulary for lexical candidate generation", () => {
-		expect(expandQuery("How do I publish artifacts?"))
-			.toContain(".moxel/atlas");
-		expect(expandQuery("How does MCP work?"))
-			.toContain("model context protocol");
-		expect(expandQuery("repo import without checkout"))
-			.toContain("repo add");
-		expect(expandQuery("inspect corpus search"))
-			.toContain("SQLite");
+		expect(expandQuery("How do I publish artifacts?")).toContain(
+			".moxel/atlas",
+		);
+		expect(expandQuery("How does MCP work?")).toContain(
+			"model context protocol",
+		);
+		expect(expandQuery("repo import without checkout")).toContain("repo add");
+		expect(expandQuery("inspect corpus search")).toContain("SQLite");
+		expect(expandQuery("atlas build --profile public")).toContain(
+			"docs/ingestion-build-flow.md",
+		);
+		expect(expandQuery("repo show target inference")).toContain(
+			"apps/cli/docs/index.md",
+		);
+		expect(expandQuery("security credentials tokens local-first")).toContain(
+			"docs/security.md",
+		);
+		expect(
+			expandQuery("retrival contxt planing token budjet omissions diagnostics"),
+		).toContain("docs/retrieval-and-context.md");
 
 		const plan = planContext({
 			db: store,

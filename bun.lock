@@ -159,6 +159,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@atlas/core": "workspace:*",
+        "@atlas/topology": "workspace:*",
       },
       "devDependencies": {
         "bun-types": "1.3.13",
@@ -169,6 +170,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@atlas/core": "workspace:*",
+        "@atlas/topology": "workspace:*",
         "micromatch": "4.0.8",
       },
       "devDependencies": {
@@ -180,6 +182,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@atlas/core": "workspace:*",
+        "@atlas/topology": "workspace:*",
         "better-sqlite3": "^12.9.0",
       },
       "devDependencies": {

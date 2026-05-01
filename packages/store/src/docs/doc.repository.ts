@@ -4,6 +4,7 @@ import {
 	stableHash,
 	stableJson,
 } from "@atlas/core";
+import { normalizeRepoPath } from "@atlas/topology";
 
 import { StoreRepositoryError } from "../errors";
 import { encodeJson } from "../json";
@@ -201,7 +202,7 @@ function upsertDocumentRow(
 		{
 			$docId: document.docId,
 			$repoId: document.repoId,
-			$path: document.path,
+			$path: normalizeRepoPath(document.path),
 			$sourceVersion: document.sourceVersion,
 			$kind: document.kind,
 			$authority: document.authority,
@@ -290,7 +291,7 @@ function toDocumentRecord(document: CanonicalDocument): DocumentRecord {
 	return {
 		docId: document.docId,
 		repoId: document.repoId,
-		path: document.path,
+		path: normalizeRepoPath(document.path),
 		sourceVersion: document.sourceVersion,
 		kind: document.kind,
 		authority: document.authority,
@@ -325,7 +326,7 @@ function toDocumentRecord(document: CanonicalDocument): DocumentRecord {
 function documentContentHash(document: CanonicalDocument): string {
 	return stableHash(
 		stableJson({
-			path: document.path,
+			path: normalizeRepoPath(document.path),
 			title: document.title,
 			sections: document.sections,
 		}),

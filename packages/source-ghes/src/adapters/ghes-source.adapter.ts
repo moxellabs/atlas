@@ -1,4 +1,5 @@
 import type { FileEntry, RepoConfig, RepoRevision, RepoSourceAdapter, SourceChange, SourceFile } from "@atlas/core";
+import { normalizeRepoPath } from "@atlas/topology";
 
 import { readBlobText } from "../api/blobs";
 import { compareCommits, resolveCommit, type GhesCommitResponse } from "../api/commits";
@@ -194,8 +195,8 @@ export function requireGhesRepo(repo: RepoConfig): NonNullable<RepoConfig["githu
 }
 
 function normalizeRelativePath(path: string): string {
-  const normalizedPath = path.replaceAll("\\", "/").replace(/^\/+/, "");
-  if (normalizedPath.length === 0 || normalizedPath === ".." || normalizedPath.startsWith("../") || normalizedPath.includes("/../")) {
+  const normalizedPath = normalizeRepoPath(path);
+  if (normalizedPath.length === 0 || normalizedPath.split("/").includes("..")) {
     throw new GhesDiffError({
       path,
       operation: "normalizeRelativePath",

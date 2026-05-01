@@ -1,4 +1,5 @@
 import type { CanonicalDocument, CorpusChunk } from "@atlas/core";
+import { normalizeRepoPath } from "@atlas/topology";
 
 import { StoreSearchError } from "../errors";
 import { encodeJson } from "../json";
@@ -61,7 +62,7 @@ function insertDocumentEntry(db: StoreDatabase, document: CanonicalDocument): vo
       $entityId: document.docId,
       $docId: document.docId,
       $repoId: document.repoId,
-      $path: document.path,
+      $path: normalizeRepoPath(document.path),
       $title: document.title ?? "",
       $headings: encodeJson(document.sections.map((section) => section.headingPath)),
       $body: document.sections.map(sectionSearchText).join("\n\n")
@@ -78,7 +79,7 @@ function insertSectionEntry(db: StoreDatabase, document: CanonicalDocument, sect
       $docId: document.docId,
       $sectionId: section.sectionId,
       $repoId: document.repoId,
-      $path: document.path,
+      $path: normalizeRepoPath(document.path),
       $title: document.title ?? "",
       $headings: section.headingPath.join(" "),
       $body: sectionSearchText(section)
@@ -95,12 +96,41 @@ function insertChunkEntry(db: StoreDatabase, document: CanonicalDocument, chunk:
       $docId: chunk.docId,
       $chunkId: chunk.chunkId,
       $repoId: chunk.repoId,
-      $path: document.path,
+      $path: normalizeRepoPath(document.path),
       $title: document.title ?? "",
       $headings: chunk.headingPath.join(" "),
-      $body: chunk.searchText ?? chunk.text
+      $body: chunkSearchBody(document, chunk)
     }
   );
+}
+
+function chunkSearchBody(document: CanonicalDocument, chunk: CorpusChunk): string {
+  return stripDuplicatedChunkMetadata(chunk.searchText ?? chunk.text, document);
+}
+
+function stripDuplicatedChunkMetadata(searchText: string, document: CanonicalDocument): string {
+  const separator = "\n\n";
+  const separatorIndex = searchText.indexOf(separator);
+  if (separatorIndex === -1) {
+    return searchText;
+  }
+
+  const header = searchText.slice(0, separatorIndex);
+  if (!header.includes(" | ")) {
+    return searchText;
+  }
+
+  const duplicateParts = new Set([
+    `path: ${normalizeRepoPath(document.path)}`,
+    ...(document.title === undefined ? [] : [`title: ${document.title}`])
+  ]);
+  const strippedHeader = header
+    .split(" | ")
+    .filter((part) => !duplicateParts.has(part.trim()))
+    .join(" | ");
+  const body = searchText.slice(separatorIndex + separator.length);
+
+  return strippedHeader.length === 0 ? body : `${strippedHeader}${separator}${body}`;
 }
 
 function sectionSearchText(section: Pick<SectionRecord, "text" | "codeBlocks">): string {

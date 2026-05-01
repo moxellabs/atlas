@@ -1,5 +1,5 @@
 import { access, opendir, readFile } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import type {
 	FileEntry,
 	RepoConfig,
@@ -8,6 +8,7 @@ import type {
 	SourceChange,
 	SourceFile,
 } from "@atlas/core";
+import { normalizeRepoPath } from "@atlas/topology";
 import type { RepoCacheServiceOptions } from "../cache/repo-cache.service";
 import {
 	RepoCacheService,
@@ -219,5 +220,5 @@ function resolveRepoPath(
 }
 
 function normalizeRelativePath(path: string): string {
-	return path.split(sep).join("/").replaceAll("\\", "/");
+	return normalizeRepoPath(path);
 }

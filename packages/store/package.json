@@ -8,6 +8,7 @@
 	},
 	"dependencies": {
 		"@atlas/core": "workspace:*",
+		"@atlas/topology": "workspace:*",
 		"better-sqlite3": "^12.9.0"
 	},
 	"devDependencies": {

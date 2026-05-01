@@ -1,4 +1,5 @@
 import type { SourceChange } from "@atlas/core";
+import { normalizeRepoPath } from "@atlas/topology";
 import type { SourceGitDiagnosticSink } from "../diagnostics";
 import { GitDiffError } from "../git/git-errors";
 import { parseNameStatusOutput } from "../git/parse-git-output";
@@ -89,11 +90,11 @@ function toSourceChange(entry: GitNameStatusEntry): SourceChange {
   } as const;
 
   const change: SourceChange = {
-    path: entry.path,
+    path: normalizeRepoPath(entry.path),
     ...statusMap[entry.status]
   };
   if (entry.oldPath) {
-    change.oldPath = entry.oldPath;
+    change.oldPath = normalizeRepoPath(entry.oldPath);
   }
   return change;
 }

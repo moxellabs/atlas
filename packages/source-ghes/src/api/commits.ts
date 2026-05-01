@@ -1,4 +1,5 @@
 import type { SourceChange } from "@atlas/core";
+import { normalizeRepoPath } from "@atlas/topology";
 
 import type { GhesClient } from "../client/ghes-client";
 import { paginateRequest } from "../client/pagination";
@@ -218,13 +219,8 @@ function toSourceChange(
 }
 
 function normalizePath(path: string, context: CompareCommitsOptions): string {
-	const normalizedPath = path.replaceAll("\\", "/").replace(/^\/+/, "");
-	if (
-		normalizedPath.length === 0 ||
-		normalizedPath === ".." ||
-		normalizedPath.startsWith("../") ||
-		normalizedPath.includes("/../")
-	) {
+	const normalizedPath = normalizeRepoPath(path);
+	if (normalizedPath.length === 0 || normalizedPath.split("/").includes("..")) {
 		throw new GhesDiffError({
 			repoId: context.repoId,
 			owner: context.owner,

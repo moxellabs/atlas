@@ -8,6 +8,7 @@
 	},
 	"dependencies": {
 		"@atlas/core": "workspace:*",
+		"@atlas/topology": "workspace:*",
 		"micromatch": "4.0.8"
 	},
 	"devDependencies": {
