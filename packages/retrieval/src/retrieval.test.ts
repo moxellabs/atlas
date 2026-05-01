@@ -101,6 +101,12 @@ describe("retrieval", () => {
 			kind: "exact-lookup",
 			confidence: "high",
 		});
+		expect(classifyQuery("packages/auth/docs/session.md")).toMatchObject({
+			kind: "exact-lookup",
+		});
+		expect(
+			classifyQuery("How does a maintainer build and publish .moxel/atlas artifacts?"),
+		).not.toMatchObject({ kind: "exact-lookup" });
 		expect(classifyQuery("compare login and session flows")).toMatchObject({
 			kind: "compare",
 		});
@@ -302,6 +308,38 @@ describe("retrieval", () => {
 		);
 	});
 
+	test("recovers candidates for natural-language queries with no strict lexical AND match", () => {
+		const plan = planContext({
+			db: store,
+			repoId,
+			query: "How should operators renew session credentials with nonexistent jargon?",
+			budgetTokens: 220,
+		});
+
+		expect(plan.rankedHits.length).toBeGreaterThan(0);
+		expect(
+			plan.rankedHits.some((hit) => hit.provenance.docId === sessionDocId),
+		).toBe(true);
+	});
+
+	test("adds broad fallback candidates from document metadata when lexical search is sparse", () => {
+		const plan = planContext({
+			db: store,
+			repoId,
+			query: "How do payment ledger aliases work?",
+			budgetTokens: 220,
+		});
+
+		expect(
+			plan.rankedHits.some((hit) => hit.provenance.docId === invoiceDocId),
+		).toBe(true);
+		expect(
+			plan.rankedHits.some((hit) =>
+				hit.rationale.some((item) => item.includes("broad fallback")),
+			),
+		).toBe(true);
+	});
+
 	test("surfaces low-confidence ambiguity for no-result queries", () => {
 		const plan = planContext({
 			db: store,
@@ -456,6 +494,7 @@ function seedStore(store: AtlasStoreClient): void {
 			authority: "supplemental",
 			packageId: billingPackageId,
 			moduleId: invoiceModuleId,
+			description: "Payment ledger aliases for finance operators.",
 			sections: [
 				{
 					heading: ["Invoice"],
@@ -543,6 +582,7 @@ interface DocumentFixture {
 	readonly authority: CanonicalDocument["authority"];
 	readonly packageId?: string | undefined;
 	readonly moduleId?: string | undefined;
+	readonly description?: string | undefined;
 	readonly sections: readonly SectionFixture[];
 }
 
@@ -593,6 +633,9 @@ function createDocument(fixture: DocumentFixture): CanonicalDocument {
 				? {}
 				: { packageId: fixture.packageId }),
 			...(fixture.moduleId === undefined ? {} : { moduleId: fixture.moduleId }),
+			...(fixture.description === undefined
+				? {}
+				: { description: fixture.description }),
 			tags: [fixture.title.toLowerCase()],
 		},
 	};
