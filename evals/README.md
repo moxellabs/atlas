@@ -3,13 +3,14 @@
 Run the Atlas MCP retrieval evaluation from the repository root:
 
 ```sh
-cd /home/mrmendez/Projects/atlas && bun tooling/scripts/mcp-retrieval-eval.ts
+bun run eval
 ```
 
-The same workflow is available through the package script:
+This prints a terminal summary with pass count, recall metrics, non-empty context rate, and per-case failures. The longer aliases are also available:
 
 ```sh
 bun run eval:retrieval
+bun run eval:mcp
 ```
 
 Generated reports are written to:

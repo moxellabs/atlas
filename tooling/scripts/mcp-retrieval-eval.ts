@@ -165,9 +165,47 @@ await mkdir(dirname(htmlPath), { recursive: true });
 await writeFile(htmlPath, renderHtml(report));
 console.log(`Wrote ${outPath}`);
 console.log(`Wrote ${htmlPath}`);
-console.log(
-  `${report.passedCases}/${report.totalCases} passed, pathRecall=${report.metrics.pathRecall}, termRecall=${report.metrics.termRecall}`,
-);
+printTerminalSummary(report);
+
+function printTerminalSummary(report: Report): void {
+  console.log("");
+  console.log("Retrieval eval");
+  console.log("==============");
+  console.log(`Passed: ${report.passedCases}/${report.totalCases}`);
+  console.log(`Pass rate: ${percent(report.metrics.passRate)}`);
+  console.log(`Path recall: ${percent(report.metrics.pathRecall)}`);
+  console.log(`Term recall: ${percent(report.metrics.termRecall)}`);
+  console.log(`Non-empty context: ${percent(report.metrics.nonEmptyContextRate)}`);
+  console.log(`Average ranked hits: ${report.metrics.averageRankedHits}`);
+  console.log(`Average latency: ${report.metrics.averageLatencyMs}ms`);
+
+  const failed = report.cases.filter((testCase) => !testCase.passed);
+  if (failed.length === 0) {
+    console.log("");
+    console.log("All cases passed.");
+    return;
+  }
+
+  console.log("");
+  console.log("Failures");
+  console.log("--------");
+  for (const testCase of failed) {
+    console.log(
+      `- ${testCase.id}: selected=${testCase.selectedCount}, ranked=${testCase.rankedCount}, path=${percent(testCase.scores.pathRecall)}, terms=${percent(testCase.scores.termRecall)}`,
+    );
+    if (testCase.missing.pathIncludes.length > 0) {
+      console.log(
+        `  missing paths: ${testCase.missing.pathIncludes.join(", ")}`,
+      );
+    }
+    if (testCase.missing.terms.length > 0) {
+      console.log(`  missing terms: ${testCase.missing.terms.join(", ")}`);
+    }
+    if (testCase.topPaths.length > 0) {
+      console.log(`  top paths: ${testCase.topPaths.slice(0, 5).join(", ")}`);
+    }
+  }
+}
 
 function parseArgs(values: string[]): Record<string, string | undefined> {
   const parsed: Record<string, string | undefined> = {};
