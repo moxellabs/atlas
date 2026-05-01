@@ -134,6 +134,7 @@ try {
       rankedCount: rankedHits.length,
       ...(confidence === undefined ? {} : { confidence }),
       scores: expectationResult.scores,
+      retrieval: expectationResult.retrieval,
       missing: expectationResult.missing,
       topPaths,
       diagnostics,
