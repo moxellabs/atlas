@@ -1,107 +1,106 @@
 {
-  "name": "@moxellabs/atlas",
-  "private": false,
-  "type": "module",
-  "packageManager": "bun@1.3.11",
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "tooling/*"
-  ],
-  "scripts": {
-    "dev": "bun --watch apps/server/src/index.ts",
-    "dev:hot": "bun --hot apps/server/src/index.ts",
-    "serve": "bun apps/server/src/index.ts",
-    "cli": "bun apps/cli/src/index.ts",
-    "verify": "bun tooling/scripts/verify.ts",
-    "release:check": "bun tooling/scripts/release.ts --dry-run",
-    "smoke:distribution": "bun tooling/scripts/distribution-smoke.ts",
-    "uat:production": "bun tooling/scripts/production-uat.ts",
-    "eval": "bun run eval:full",
-    "eval:quick": "bun tooling/scripts/mcp-retrieval-eval.ts --dataset evals/datasets/retrieval-smoke.json --out /tmp/atlas-eval-quick-report.json --html /tmp/atlas-eval-quick-report.html",
-    "eval:full": "bun tooling/scripts/mcp-retrieval-eval.ts --dataset evals/mcp-retrieval.dataset.json",
-    "eval:report": "bun run eval:full",
-    "eval:ci": "rm -rf /tmp/atlas-eval-report && mkdir -p /tmp/atlas-eval-report && bun tooling/scripts/mcp-retrieval-eval.ts --dataset evals/mcp-retrieval.dataset.json --out /tmp/atlas-eval-report/mcp-retrieval-report.json --html /tmp/atlas-eval-report/mcp-retrieval-report.html --min-pass-rate 0.95 --min-path-recall 0.9 --min-term-recall 0.9 --min-non-empty-context-rate 0.9",
-    "eval:mcp": "bun run eval:full",
-    "eval:retrieval": "bun run eval:full",
-    "typecheck": "bunx tsc --noEmit",
-    "test": "bun test",
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "build:package": "bun tooling/scripts/build-package.ts",
-    "prepack": "bun run build:package"
-  },
-  "devDependencies": {
-    "@ianvs/prettier-plugin-sort-imports": "4.7.1",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/bun": "1.3.12",
-    "@types/micromatch": "^4.0.10",
-    "@types/node": "^25.6.0",
-    "@typescript-eslint/eslint-plugin": "8.59.0",
-    "@typescript-eslint/parser": "8.59.0",
-    "bun-types": "1.3.13",
-    "eslint": "10.2.1",
-    "prettier": "3.8.3",
-    "typescript": "6.0.3"
-  },
-  "license": "AGPL-3.0-or-later",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/moxellabs/atlas.git"
-  },
-  "homepage": "https://github.com/moxellabs/atlas#readme",
-  "bugs": {
-    "url": "https://github.com/moxellabs/atlas/issues"
-  },
-  "funding": {
-    "type": "github",
-    "url": "https://github.com/sponsors/moxellabs"
-  },
-  "version": "0.1.5",
-  "description": "Local-first documentation ingestion, retrieval, and MCP/server access for multi-repo engineering docs.",
-  "engines": {
-    "node": ">=24.0.0"
-  },
-  "bin": {
-    "atlas": "./bin/atlas"
-  },
-  "types": "./dist/atlas.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/atlas.d.ts",
-      "default": "./dist/atlas.js"
-    },
-    "./commander": {
-      "types": "./dist/commander.d.ts",
-      "default": "./dist/commander.js"
-    }
-  },
-  "files": [
-    "bin",
-    "dist",
-    "README.md",
-    "LICENSE",
-    "NOTICE",
-    "SECURITY.md",
-    "!.planning/**",
-    "!.github/**",
-    "!tooling/**",
-    "!**/*.test.ts",
-    "!**/*.spec.ts"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "keywords": [
-    "atlas",
-    "documentation",
-    "mcp",
-    "retrieval",
-    "local-first",
-    "developer-tools"
-  ],
-  "dependencies": {
-    "better-sqlite3": "^12.9.0",
-    "commander": "^14.0.3"
-  }
+	"name": "@moxellabs/atlas",
+	"private": false,
+	"type": "module",
+	"packageManager": "bun@1.3.11",
+	"workspaces": [
+		"apps/*",
+		"packages/*",
+		"tooling",
+		"tooling/*"
+	],
+	"scripts": {
+		"dev": "bun --watch apps/server/src/index.ts",
+		"dev:hot": "bun --hot apps/server/src/index.ts",
+		"serve": "bun apps/server/src/index.ts",
+		"cli": "bun apps/cli/src/index.ts",
+		"verify": "bun tooling/scripts/verify.ts",
+		"release:check": "bun tooling/scripts/release.ts --dry-run",
+		"smoke:distribution": "bun tooling/scripts/distribution-smoke.ts",
+		"uat:production": "bun tooling/scripts/production-uat.ts",
+		"eval": "bun run eval:full",
+		"eval:quick": "bun tooling/scripts/mcp-retrieval-eval.ts --dataset evals/datasets/retrieval-smoke.json --out /tmp/atlas-eval-quick-report.json --html /tmp/atlas-eval-quick-report.html --trend-log none",
+		"eval:full": "bun tooling/scripts/mcp-retrieval-eval.ts --dataset evals/mcp-retrieval.dataset.json",
+		"eval:ci": "rm -rf /tmp/atlas-eval-report && mkdir -p /tmp/atlas-eval-report && bun tooling/scripts/mcp-retrieval-eval.ts --dataset evals/mcp-retrieval.dataset.json --out /tmp/atlas-eval-report/mcp-retrieval-report.json --html /tmp/atlas-eval-report/mcp-retrieval-report.html --trend-log none --min-pass-rate 0.98 --min-path-recall 0.9 --min-term-recall 0.9 --min-non-empty-context-rate 0.9 --min-recall-at-5 0.5 --min-mrr 0.25 --min-no-result-accuracy 0.95 --min-forbidden-path-accuracy 1.0 --max-p95-latency-ms 1500",
+		"eval:baseline:update": "bun tooling/scripts/mcp-retrieval-eval.ts --dataset evals/mcp-retrieval.dataset.json --update-baseline --trend-log none",
+		"typecheck": "bunx tsc --noEmit",
+		"test": "bun test",
+		"lint": "eslint .",
+		"format": "prettier --write .",
+		"build:package": "bun tooling/scripts/build-package.ts",
+		"prepack": "bun run build:package"
+	},
+	"devDependencies": {
+		"@ianvs/prettier-plugin-sort-imports": "4.7.1",
+		"@types/better-sqlite3": "^7.6.13",
+		"@types/bun": "1.3.12",
+		"@types/micromatch": "^4.0.10",
+		"@types/node": "^25.6.0",
+		"@typescript-eslint/eslint-plugin": "8.59.0",
+		"@typescript-eslint/parser": "8.59.0",
+		"bun-types": "1.3.13",
+		"eslint": "10.2.1",
+		"prettier": "3.8.3",
+		"typescript": "6.0.3"
+	},
+	"license": "AGPL-3.0-or-later",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/moxellabs/atlas.git"
+	},
+	"homepage": "https://github.com/moxellabs/atlas#readme",
+	"bugs": {
+		"url": "https://github.com/moxellabs/atlas/issues"
+	},
+	"funding": {
+		"type": "github",
+		"url": "https://github.com/sponsors/moxellabs"
+	},
+	"version": "0.1.5",
+	"description": "Local-first documentation ingestion, retrieval, and MCP/server access for multi-repo engineering docs.",
+	"engines": {
+		"node": ">=24.0.0"
+	},
+	"bin": {
+		"atlas": "./bin/atlas"
+	},
+	"types": "./dist/atlas.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/atlas.d.ts",
+			"default": "./dist/atlas.js"
+		},
+		"./commander": {
+			"types": "./dist/commander.d.ts",
+			"default": "./dist/commander.js"
+		}
+	},
+	"files": [
+		"bin",
+		"dist",
+		"README.md",
+		"LICENSE",
+		"NOTICE",
+		"SECURITY.md",
+		"!.planning/**",
+		"!.github/**",
+		"!tooling/**",
+		"!**/*.test.ts",
+		"!**/*.spec.ts"
+	],
+	"publishConfig": {
+		"access": "public"
+	},
+	"keywords": [
+		"atlas",
+		"documentation",
+		"mcp",
+		"retrieval",
+		"local-first",
+		"developer-tools"
+	],
+	"dependencies": {
+		"better-sqlite3": "^12.9.0",
+		"commander": "^14.0.3"
+	}
 }

@@ -1,8 +1,15 @@
+import {
+	classifyHealth,
+	formatMetricValue,
+	HEALTH_THRESHOLDS,
+	type HealthLevel,
+	type HealthMetric,
+	worstHealth,
+} from "./health";
+import { METRIC_GLOSSARY } from "./metric-glossary";
 import type {
 	BaselineSummary,
 	CaseResult,
-	HealthLevel,
-	HealthMetric,
 	MetricDeltaEntry,
 	NarrativeFinding,
 	QualityGroupSummary,
@@ -15,9 +22,6 @@ import type {
 	RuntimeInfo,
 	WeakCaseSummary,
 } from "./types";
-import { classifyHealth, formatMetricValue, worstHealth } from "./health";
-import { HEALTH_THRESHOLDS } from "./health";
-import { METRIC_GLOSSARY } from "./metric-glossary";
 
 interface HealthThreshold {
 	readonly good: number;
@@ -41,7 +45,12 @@ type ReportGroup = Record<
 >;
 
 export function buildReport(
-	dataset: { name: string; description?: string; repoId?: string },
+	dataset: {
+		name: string;
+		description?: string;
+		repoId?: string;
+		cases?: unknown[];
+	},
 	cases: CaseResult[],
 	runtime: RuntimeInfo,
 	judge: { provider?: string; model?: string },
@@ -79,21 +88,30 @@ export function buildReport(
 		expectedPathPrecisionAt5: average(
 			cases.map((result) => result.retrieval.precisionAt5),
 		),
-		expectedPathNdcgAt3: average(cases.map((result) => result.retrieval.ndcgAt3)),
-		expectedPathNdcgAt5: average(cases.map((result) => result.retrieval.ndcgAt5)),
+		expectedPathNdcgAt3: average(
+			cases.map((result) => result.retrieval.ndcgAt3),
+		),
+		expectedPathNdcgAt5: average(
+			cases.map((result) => result.retrieval.ndcgAt5),
+		),
 		mrr: average(cases.map((result) => result.retrieval.reciprocalRank)),
 		noResultAccuracy: rate(cases, (result) => result.retrieval.noResultCorrect),
 		forbiddenPathAccuracy: rate(
 			cases,
 			(result) => result.retrieval.forbiddenPathCorrect,
 		),
-		averageRankDistance: rankDistances.length === 0 ? 0 : average(rankDistances),
+		averageRankDistance:
+			rankDistances.length === 0 ? 0 : average(rankDistances),
 		averageTopPathDiversity: average(
 			cases.map((result) => result.retrieval.topPathDiversity),
 		),
 	};
 	const thresholdResults = evaluateThresholds(metrics, thresholds);
-	const deltas = computeDeltas(metrics, baseline, thresholds.maxMetricRegression);
+	const deltas = computeDeltas(
+		metrics,
+		baseline,
+		thresholds.maxMetricRegression,
+	);
 	const regressionResults = deltas
 		? evaluateRegressions(deltas, thresholds.maxMetricRegression)
 		: [];
@@ -101,7 +119,9 @@ export function buildReport(
 	const narrative = buildNarrative(metrics, cases, deltas);
 	return {
 		dataset: dataset.name,
-		...(dataset.description === undefined ? {} : { description: dataset.description }),
+		...(dataset.description === undefined
+			? {}
+			: { description: dataset.description }),
 		generatedAt: new Date().toISOString(),
 		...(dataset.repoId === undefined ? {} : { repoId: dataset.repoId }),
 		runtime,
@@ -141,7 +161,10 @@ export function buildReport(
 				cases,
 				(result) => result.capability ?? result.feature ?? result.category,
 			),
-			priorities: countBy(cases, (result) => result.priority ?? "unprioritized"),
+			priorities: countBy(
+				cases,
+				(result) => result.priority ?? "unprioritized",
+			),
 			riskAreas: countBy(cases, (result) => result.riskArea ?? "general"),
 			coverageTypes: countBy(
 				cases,
@@ -189,7 +212,11 @@ function rankBuckets(cases: CaseResult[]): RankBucket[] {
 				(result.retrieval.bestExpectedPathRank ?? 0) >= 6 &&
 				(result.retrieval.bestExpectedPathRank ?? 0) <= 10,
 		],
-		["rank-gt-10", ">10", (result) => (result.retrieval.bestExpectedPathRank ?? 0) > 10],
+		[
+			"rank-gt-10",
+			">10",
+			(result) => (result.retrieval.bestExpectedPathRank ?? 0) > 10,
+		],
 		[
 			"missing",
 			"missing/no label",
@@ -210,8 +237,16 @@ function rankBuckets(cases: CaseResult[]): RankBucket[] {
 function latencyBuckets(cases: CaseResult[]): RankBucket[] {
 	const buckets: Array<[string, string, (latency: number) => boolean]> = [
 		["latency-lte-250", "≤250ms", (latency) => latency <= 250],
-		["latency-251-500", "251-500ms", (latency) => latency > 250 && latency <= 500],
-		["latency-501-1000", "501-1000ms", (latency) => latency > 500 && latency <= 1000],
+		[
+			"latency-251-500",
+			"251-500ms",
+			(latency) => latency > 250 && latency <= 500,
+		],
+		[
+			"latency-501-1000",
+			"501-1000ms",
+			(latency) => latency > 500 && latency <= 1000,
+		],
 		["latency-gt-1000", ">1000ms", (latency) => latency > 1000],
 	];
 	return buckets.map(([bucket, label, predicate]) => {
@@ -266,7 +301,8 @@ function weakReason(result: CaseResult): string {
 			return "top-5 dominated by one directory";
 		return "expected path outside top five";
 	}
-	if (result.retrieval.bestExpectedPathRank > 1) return "expected path not ranked first";
+	if (result.retrieval.bestExpectedPathRank > 1)
+		return "expected path not ranked first";
 	return "slow relative latency";
 }
 
@@ -439,10 +475,14 @@ function buildHeadline(
 			finding.metric,
 		),
 	);
-	const latencyFinding = findings.find((finding) => finding.metric === "p95LatencyMs");
+	const latencyFinding = findings.find(
+		(finding) => finding.metric === "p95LatencyMs",
+	);
 	const rankBad = rankFindings.some((finding) => finding.severity === "bad");
 	const rankWarn = rankFindings.some((finding) => finding.severity !== "good");
-	const safetyBad = safetyFindings.some((finding) => finding.severity === "bad");
+	const safetyBad = safetyFindings.some(
+		(finding) => finding.severity === "bad",
+	);
 	const passBad = passFinding?.severity === "bad";
 	const latencyBad = latencyFinding?.severity === "bad";
 	if (severity === "good") {
@@ -463,7 +503,10 @@ function buildHeadline(
 	return `Retrieval is passing with minor warnings: ${passed}/${total} pass.`;
 }
 
-function buildVerdict(findings: NarrativeFinding[], deltas?: ReportDeltas): string {
+function buildVerdict(
+	findings: NarrativeFinding[],
+	deltas?: ReportDeltas,
+): string {
 	const segments: string[] = [];
 	const passFinding = findings.find((finding) => finding.metric === "passRate");
 	if (passFinding) {
@@ -488,9 +531,9 @@ function buildVerdict(findings: NarrativeFinding[], deltas?: ReportDeltas): stri
 	}
 	const safety = findings
 		.filter((finding) =>
-			(["noResultAccuracy", "forbiddenPathAccuracy"] as HealthMetric[]).includes(
-				finding.metric,
-			),
+			(
+				["noResultAccuracy", "forbiddenPathAccuracy"] as HealthMetric[]
+			).includes(finding.metric),
 		)
 		.map((finding) => `${finding.label} ${finding.value} (${finding.severity})`)
 		.join(", ");
@@ -523,15 +566,6 @@ function formatDeltaMagnitude(metric: HealthMetric, delta: number): string {
 	return `${pct > 0 ? "+" : ""}${pct}pp`;
 }
 
-function formatThresholdComparison(result: ReportThresholdResult): string {
-	const metric = result.metric as HealthMetric;
-	const isLatency = metric === "p95LatencyMs" || metric === "averageLatencyMs";
-	const formatLocal = (value: number): string =>
-		isLatency ? `${Math.round(value)}ms` : percent(value);
-	const comparator = result.direction === "lower" ? "<=" : ">=";
-	return `${formatLocal(result.actual)} ${comparator} ${formatLocal(result.limit)}`;
-}
-
 const BASELINE_METRICS: ReadonlyArray<HealthMetric> = [
 	"passRate",
 	"pathRecall",
@@ -560,7 +594,9 @@ function computeDeltas(
 	const entries: MetricDeltaEntry[] = [];
 	for (const metric of BASELINE_METRICS) {
 		const current = metricValue(metric, metrics);
-		const baselineValue = (baseline.metrics as Record<string, number | undefined>)[metric];
+		const baselineValue = (
+			baseline.metrics as Record<string, number | undefined>
+		)[metric];
 		if (baselineValue === undefined) continue;
 		const direction =
 			(HEALTH_THRESHOLDS[metric] as HealthThreshold).direction === "lower"
@@ -588,8 +624,12 @@ function computeDeltas(
 		}));
 	return {
 		baseline: {
-			...(baseline.generatedAt === undefined ? {} : { generatedAt: baseline.generatedAt }),
-			...(baseline.repoRevision === undefined ? {} : { repoRevision: baseline.repoRevision }),
+			...(baseline.generatedAt === undefined
+				? {}
+				: { generatedAt: baseline.generatedAt }),
+			...(baseline.repoRevision === undefined
+				? {}
+				: { repoRevision: baseline.repoRevision }),
 			...(baseline.dataset === undefined ? {} : { dataset: baseline.dataset }),
 		},
 		entries,
@@ -653,14 +693,20 @@ function byGroup(
 					total: grouped.length,
 					passed: grouped.filter((result) => result.passed).length,
 					passRate: rate(grouped, (result) => result.passed),
-					pathRecall: average(grouped.map((result) => result.scores.pathRecall)),
-					termRecall: average(grouped.map((result) => result.scores.termRecall)),
+					pathRecall: average(
+						grouped.map((result) => result.scores.pathRecall),
+					),
+					termRecall: average(
+						grouped.map((result) => result.scores.termRecall),
+					),
 					nonEmptyContextRate: rate(
 						grouped,
 						(result) => result.scores.nonEmptyContext,
 					),
 					averageLatencyMs: average(grouped.map((result) => result.latencyMs)),
-					recallAt5: average(grouped.map((result) => result.retrieval.recallAt5)),
+					recallAt5: average(
+						grouped.map((result) => result.retrieval.recallAt5),
+					),
 					mrr: average(
 						grouped.map((result) => result.retrieval.reciprocalRank),
 					),
@@ -679,7 +725,12 @@ function evaluateThresholds(
 	thresholds: ReportThresholdInput,
 ): ReportThresholdResult[] {
 	return [
-		floorThreshold("passRate", "Pass rate", metrics.passRate, thresholds.minPassRate),
+		floorThreshold(
+			"passRate",
+			"Pass rate",
+			metrics.passRate,
+			thresholds.minPassRate,
+		),
 		floorThreshold(
 			"pathRecall",
 			"Path recall",
@@ -826,8 +877,3 @@ function rate(
 function round(value: number): number {
 	return Number(value.toFixed(4));
 }
-
-function percent(value: number): string {
-	return `${Math.round(value * 100)}%`;
-}
-

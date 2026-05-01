@@ -1,0 +1,26 @@
+{
+  "dataset": "atlas-eval-full",
+  "generatedAt": "2026-05-01T05:56:12.281Z",
+  "repoRevision": "5a0a73347e022f5c6d8a717965021a8748a64b69",
+  "metrics": {
+    "passRate": 1,
+    "pathRecall": 1,
+    "termRecall": 1,
+    "nonEmptyContextRate": 1,
+    "averageLatencyMs": 684.3056,
+    "medianLatencyMs": 690,
+    "p95LatencyMs": 740,
+    "averageRankedHits": 37.3889,
+    "pathRecallAt1": 0.0972,
+    "pathRecallAt3": 0.3171,
+    "pathRecallAt5": 0.5787,
+    "expectedPathPrecisionAt1": 0.0833,
+    "expectedPathPrecisionAt3": 0.1204,
+    "expectedPathPrecisionAt5": 0.1444,
+    "expectedPathNdcgAt3": 0.1978,
+    "expectedPathNdcgAt5": 0.315,
+    "mrr": 0.3021,
+    "noResultAccuracy": 1,
+    "forbiddenPathAccuracy": 1
+  }
+}

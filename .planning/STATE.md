@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: milestone
+milestone: v1.2
+milestone_name: Codebase Cleanup
 status: completed
-stopped_at: Phase 44 complete; all validation passed
-last_updated: "2026-05-01T05:20:00.000Z"
+stopped_at: Milestone v1.2 complete; Fallow zero issues and release dry-run passed
+last_updated: "2026-05-01T00:00:00.000Z"
 last_activity: 2026-05-01
 progress:
-  total_phases: 44
-  completed_phases: 44
-  total_plans: 94
-  completed_plans: 94
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 11
+  completed_plans: 11
   percent: 100
 ---
 
@@ -18,17 +18,17 @@ progress:
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-26)
+See: `.planning/PROJECT.md` (updated 2026-05-01)
 
-**Core value:** Local-first documentation ingestion, compilation, retrieval planning, and MCP/server access for multi-repo engineering docs.
-**Current focus:** Phase 44 complete; publishable Moxel-branded eval report is implemented and validated.
+**Core value:** Local-first documentation ingestion, compilation, retrieval planning, and MCP/server access for multi-repo engineering docs remain reliable, explainable, and safe to ship.
+**Current focus:** v1.2 Codebase Cleanup complete - `bunx fallow` reports no issues and release readiness passed.
 
 ## Current Position
 
-Phase: 44 of 44 (published visual evals report)
-Plan: 4 of 4
+Phase: 49 of 49 (Fallow zero-issue validation gate complete)
+Plan: 11 of 11
 Status: Complete
-Last activity: 2026-05-01
+Last activity: 2026-05-01 - Milestone v1.2 completed
 
 Progress: [██████████] 100%
 
@@ -36,62 +36,25 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 94 / 94 planned
+- Total plans completed: 11 / 11 planned
 - Average duration: N/A
 - Total execution time: N/A
 
 **By Phase:**
 
-| Phase                                                        | Plans | Status   |
-| ------------------------------------------------------------ | ----- | -------- |
-| 1. Baseline Validation                                       | 2/2   | Complete |
-| 2. Security Boundaries                                       | 2/2   | Complete |
-| 3. Build Reliability                                         | 3/3   | Complete |
-| 4. Runtime Surfaces                                          | 2/2   | Complete |
-| 5. Documentation Alignment                                   | 2/2   | Complete |
-| 6. Retrieval and Context Quality                             | 1/1   | Complete |
-| 7. Agent Tool Calling Adoption                               | 1/1   | Complete |
-| 8. MCP Adoption Evaluation Harness                           | 2/2   | Complete |
-| 9. Large Corpus Performance and Token Budget Reliability     | 2/2   | Complete |
-| 10. Release Readiness and Distribution                       | 2/2   | Complete |
-| 11. Moxel Atlas Path and Home Layout                         | 2/2   | Complete |
-| 12. Host-Aware Repo Identity and Folder Registry             | 2/2   | Complete |
-| 13. Enterprise Host Setup and Repo Resolver                  | 2/2   | Complete |
-| 14. Repo Artifact Build Format                               | 2/2   | Complete |
-| 15. Artifact-Only Remote Fetch and Stale Import UX           | 2/2   | Complete |
-| 16. Global Corpus Import and Multi-Repo Runtime              | 2/2   | Complete |
-| 17. Missing Artifact Fallback and Local-Only Index           | 2/2   | Complete |
-| 18. Adoption Instructions and Issue/PR Templates             | 2/2   | Complete |
-| 19. Artifact Verification and CI Freshness                   | 2/2   | Complete |
-| 20. Consumer UX Polish and Documentation                     | 2/2   | Complete |
-| 21. White-label Artifact Resolver                            | 2/2   | Complete |
-| 22. White-label Runtime Storage                              | 2/2   | Complete |
-| 23. White-label MCP Identity                                 | 2/2   | Complete |
-| 24. White-label Docs and Audit                               | 2/2   | Complete |
-| 25. Document Metadata Profiles and Public Artifact Filtering | 2/2   | Complete |
-| 26. Atlas Self-indexing and First-party Skills               | 2/2   | Complete |
-| 27. Interactive Skill Creator Workflow                       | 2/2   | Complete |
-| 28. Public Consumption Docs Site Readiness                   | 2/2   | Complete |
-| 29. Server Docs Portal and OpenAPI Polish                    | 2/2   | Complete |
-| 30. Scalar-first OpenAPI Docs Refinement                     | 2/2   | Complete |
-| 31. Open-source Release Prep                                 | 2/2   | Complete |
-| 32. CI Validation                                            | 1/1   | Complete |
-| 33. Release Pipeline                                         | 2/2   | Complete |
-| 34. Commander and Clack CLI Migration                        | 3/3   | Complete |
-| 35. Embedded Enterprise CLI Mount                            | 2/2   | Complete |
-| 36. Production Build Diagnostics and Nested Error Surfacing  | 2/2   | Complete |
-| 37. Real-Repo Build Pipeline Repro and Root-Cause Fixes      | 2/2   | Complete |
-| 38. Local-Git Checkout Semantics and Local Branch Support    | 2/2   | Complete |
-| 39. Init, Repo State, and Command-State Clarity              | 3/3   | Complete |
-| 40. Command UX Simplification and Production Onboarding      | 3/3   | Complete |
-| 41. Production Onboarding UAT and Release Gate               | 1/1   | Complete |
-| 42. Post-release Bug Hunt Remediation                        | 3/3   | Complete |
-| 43. Public Package and UX Surface Hardening                  | 5/5   | Complete |
-| 44. Published Visual Evals Report                            | 4/4   | Complete |
+| Phase | Plans | Status |
+| ----- | ----- | ------ |
+| 45. Fallow Baseline and Signal Normalization | 2/2 | Complete |
+| 46. Dead Code and Dependency Pruning | 3/3 | Complete |
+| 47. Duplication Consolidation | 2/2 | Complete |
+| 48. Complexity Hotspot Reduction | 3/3 | Complete |
+| 49. Fallow Zero-Issue Validation Gate | 1/1 | Complete |
 
 ## Accumulated Context
 
 ### Roadmap Evolution
+
+- v1.2 Codebase Cleanup completed: added Fallow config, removed dead files/exports/dependencies, aligned eval harness package exports, regenerated public artifact, adjusted eval expectations to current public-profile retrieval behavior, and validated zero Fallow findings. Verification passed: `bunx fallow --no-cache`, `bun run typecheck`, `bun run lint`, `bun test`, `bun run eval:ci`, `bun run release:check`, `bun run smoke:distribution`, and `bun run build:package`.
 
 - Phase 43 completed: npm tarball now excludes raw docs and self-artifact, public artifact guard blocks PRD/archive/planning leaks, HTTP search/context accept metadata filters, MCP resource-prefix env propagation is wired through CLI/server, custom identity-root repo metadata lookup is shared, manual releases check out and validate tags, and public CLI/docs/runtime UX drift is cleaned up.
 

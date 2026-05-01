@@ -24,16 +24,14 @@ From this repo checkout with `.moxel/atlas/corpus.db` present:
 bun run eval
 ```
 
-`bun run eval` is intentionally the short memorable command and currently runs the full retrieval/MCP manifest. More explicit commands are available:
+What to run locally:
 
-```bash
-bun run eval:quick      # focused retrieval-smoke subset; writes reports under /tmp
-bun run eval:full       # full manifest; writes evals/reports/*.json and *.html
-bun run eval:report     # alias for the full report generation path
-bun run eval:ci         # full report plus conservative threshold gates; writes reports under /tmp
-bun run eval:mcp        # preserved alias for full suite
-bun run eval:retrieval  # preserved alias for full suite
-```
+| Command | When |
+| --- | --- |
+| `bun run eval` or `bun run eval:full` | Default: full MCP/retrieval manifest; writes `evals/reports/*.json` and `*.html` (same underlying script). |
+| `bun run eval:quick` | Fast smoke subset; reports under `/tmp`. |
+| `bun run eval:ci` | Same dataset as full, plus CI thresholds; writes under `/tmp` (GitHub Actions uses this). |
+| `bun run eval:baseline:update` | After reviewing a full run: promote metrics into `evals/baseline/`. |
 
 Default full-suite outputs:
 
@@ -82,27 +80,43 @@ Path-substring expectations are used instead of generated document IDs so the su
 2. Add a stable `id`, useful `category`, query text, and deterministic expectations.
 3. Prefer path and term expectations tied to public docs or public skills that should remain discoverable.
 4. Add profile/feature/scenario/priority metadata when the case represents a user workflow or product surface.
-5. Run `bun run eval:quick` for smoke coverage when relevant, then `bun run eval:full` or `bun run eval:report` before opening a PR.
+5. Run `bun run eval:quick` for smoke coverage when relevant, then `bun run eval` before opening a PR.
 6. Generated files under `evals/reports/` are ignored; do not force-add them unless an intentionally reviewed snapshot policy is introduced.
 
 ## Interpreting metrics
 
-- Pass rate: fraction of cases that passed every deterministic expectation. This is a gate, not the main public claim.
-- Path recall: fraction of expected path substrings found in the top retrieved paths considered by the case.
-- Path Recall@1 / @3 / @5: fraction of expected source paths that appear in the top 1, 3, or 5 retrieved paths. These are the main ranking-quality signals for whether the right evidence is near the top.
-- Expected-path Precision@1 / @3 / @5: lower-bound proportion of top-k paths matching sparse expected labels. It is not true relevance precision because unlabeled but relevant docs can exist.
-- Expected-path nDCG@3 / @5: rank-sensitive binary relevance over the sparse expected path labels. Use it to compare whether known-good evidence moves earlier in the result list.
-- MRR: mean reciprocal rank of the first expected source path. Higher values mean expected evidence appears earlier.
-- Term recall: fraction of expected terms found in selected/ranked context payloads plus local source contents for retrieved paths.
-- No-result accuracy: fraction of no-result expectations that correctly abstained from returning ranked/selected evidence.
-- Forbidden-path accuracy: fraction of cases where excluded paths were not retrieved.
-- Non-empty context rate: fraction of cases where Atlas produced selected or ranked retrieval context. No-result cases can still pass when they explicitly expect no results.
-- Median and P95 latency: wall-clock CLI query time per case.
-- Average ranked hits: mean ranked hit count.
+Every metric has a clickable `(i)` button in the HTML report that expands a plain-English definition, interpretation, and target bands. The same definitions are kept here for search/context.
 
-The report also groups metrics by category, profile, feature, scenario, capability, risk area, priority, and coverage type so regressions can be mapped back to user workflows. The coverage heatmap is quality-first: weak Recall@5/MRR groups sort before high-count groups. Case priority is preserved per case in the explorer.
+- **Pass rate** — fraction of cases that passed every deterministic expectation. Safety/coverage gate, not the ranking claim.
+- **Path recall** — fraction of expected path substrings present anywhere in the top retrieved paths. Coarse, rank-insensitive.
+- **Recall@1 / @3 / @5** — fraction of expected source paths that appear in the top 1/3/5 retrieved paths. Main rank-quality signals.
+- **Expected-path Precision@1 / @3 / @5** — lower-bound proportion of top-k paths that match sparse expected labels. Not true precision; unlabeled relevant docs can exist.
+- **Expected-path nDCG@3 / @5** — rank-sensitive binary relevance over the sparse expected-path labels.
+- **MRR** — mean reciprocal rank of the first expected source path. Higher = expected evidence appears earlier.
+- **Rank distance** — per-case `bestExpectedPathRank − 1`, averaged across cases with a labeled expected path. Lower is better; 0 means first labeled hit landed at rank 1 every time.
+- **Top-path diversity** — distinct parent directory count across the top-5 retrieved paths per case. Low values flag cases where the window is dominated by one directory.
+- **Term recall** — fraction of expected terms found in selected/ranked context and in local source contents of retrieved paths.
+- **Abstain (no-result) accuracy** — fraction of no-result expectations that correctly abstained from returning any hits.
+- **Forbidden-path accuracy** — fraction of cases where excluded paths were not retrieved. Safety regression indicator.
+- **Non-empty context rate** — fraction of cases where Atlas produced selected or ranked retrieval context. Expected-no-result cases still count as non-empty-correct when they abstain.
+- **Median / p95 latency** — wall-clock CLI query time per case. Includes CLI spawn cost.
+- **Average ranked hits** — mean ranked-hit count per case.
 
-A 100% pass rate can coexist with ranking headroom. Pass rate says deterministic gates were satisfied somewhere in the retrieved evidence; Recall@k, MRR, expected-path precision, and nDCG say how early known-good evidence appears. Treat perfect pass rate plus low Recall@1/Recall@5 as a successful safety/coverage run with ranking work still available.
+The report groups metrics by category, profile, feature, scenario, capability, risk area, priority, and coverage type so regressions can be mapped back to user workflows. The coverage heatmap is quality-first: weak Recall@5 / MRR / pass groups sort before high-count groups and inherit a color state. Case priority is preserved per case in the explorer.
+
+A 100% pass rate can coexist with ranking headroom. Pass rate says deterministic gates were satisfied somewhere in the retrieved evidence; Recall@k, MRR, rank distance, expected-path precision, and nDCG say how early known-good evidence appears. Treat perfect pass rate with low Recall@1 / Recall@5 as a successful safety/coverage run with ranking work still available — and expect the report to mark it as `NEEDS WORK`, not `PASSING`, until ranking closes the gap.
+
+### Color legend
+
+The HTML report is color-coded so glances at charts and cards carry signal:
+
+- `good` — green/mint. The metric is at or above its healthy band.
+- `warn` — amber. The metric is in the warn band; regressions here become red.
+- `bad` — red. The metric is below the warn floor and is calling for attention.
+
+The top-right status pill summarizes the run as `PASSING`, `NEEDS WORK`, or `BROKEN` by rolling up the worst per-metric health. `GATED FAIL` still applies when any CI gate fails. KPI cards, bar tracks, radar axes, bucket bars, coverage tiles, and ranking-worklist tags all carry a `data-health` attribute that drives the palette so the source of a red verdict is discoverable by scanning.
+
+Target bands live in source in `HEALTH_THRESHOLDS` inside [`tooling/scripts/eval-reporting.ts`](../tooling/scripts/eval-reporting.ts). Changing a band requires changing that file and its test coverage.
 
 ## Public report structure
 
@@ -136,18 +150,39 @@ https://moxellabs.github.io/atlas/
 
 ## Threshold and baseline policy
 
-The current policy intentionally avoids committing new generated report snapshots or a generated `baseline.json` in this batch. The eval corpus is still expanding, so trend/baseline comparison can be added later once the manifest and runtime environment are more stable.
-
-CI uses conservative fail gates focused on preventing obvious broken-corpus and no-result regressions:
+CI uses both correctness gates and ranking/latency gates so regressions that survive the pass-rate check still fail the build:
 
 ```text
-min pass rate: 0.95
-min path recall: 0.90
-min term recall: 0.90
-min non-empty context rate: 0.90
+--min-pass-rate 0.98
+--min-path-recall 0.90
+--min-term-recall 0.90
+--min-non-empty-context-rate 0.90
+--min-recall-at-5 0.50
+--min-mrr 0.25
+--min-no-result-accuracy 0.95
+--min-forbidden-path-accuracy 1.0
+--max-p95-latency-ms 1500
 ```
 
-These thresholds are not meant to freeze every ranking detail. They are guardrails that should catch missing corpora, empty retrieval responses, broad expectation failures, and major recall regressions while allowing the dataset to grow. If a new valid case lowers aggregate metrics, adjust the case expectations or thresholds in the same PR and explain why.
+All of those are exposed as CLI flags on `tooling/scripts/mcp-retrieval-eval.ts` and can be tightened per-run. `--max-average-latency-ms`, `--min-recall-at-1`, `--min-recall-at-3`, and `--max-metric-regression` are also available when you want a stricter run. The reasoning:
+
+- `--min-pass-rate 0.98` — a single broken case fails CI immediately.
+- `--min-recall-at-5 0.50` + `--min-mrr 0.25` — ranking regressions fail CI, not just corpus regressions.
+- `--min-forbidden-path-accuracy 1.0` — safety leaks are never tolerated.
+- `--max-p95-latency-ms 1500` — catches tail-heavy slowdowns; median is typically much lower.
+- `--max-metric-regression 0.10` (opt-in) — fails CI when any tracked metric falls more than 10 percentage points below the committed baseline.
+
+### Baseline and trend
+
+A committed baseline at [`evals/baseline/mcp-retrieval-baseline.json`](../evals/baseline/mcp-retrieval-baseline.json) carries the metric values we expect this dataset + corpus to hit. The HTML report surfaces per-metric deltas vs. the baseline on each KPI card. To promote the current run into the baseline after reviewing it:
+
+```bash
+bun run eval:baseline:update
+```
+
+A per-run trend log is appended locally to `evals/reports/mcp-retrieval-trend.jsonl` (gitignored with the rest of `evals/reports/`) for local `jq`/graphing. Pass `--trend-log none` to disable it; `eval:ci` disables it by default since CI already uploads a full report artifact.
+
+If a new valid case lowers aggregate metrics, adjust the case expectations or thresholds in the same PR and explain why.
 
 ## Optional model judge placeholder
 
@@ -156,7 +191,7 @@ Retrieval metrics run without API keys. To annotate reports with the intended ch
 ```bash
 ATLAS_EVAL_MODEL_PROVIDER=openrouter \
 ATLAS_EVAL_MODEL=x-ai/grok-code-fast-1 \
-  bun run eval:report
+  bun run eval
 ```
 
 This records the intended judge configuration in the report but does not call the model yet.

@@ -9,11 +9,11 @@
       "query": "public default profile local-first Atlas README visibility audience purpose",
       "profile": "public",
       "feature": "metadata-filtering",
-      "scenario": "default public profile retrieves public overview metadata",
+      "scenario": "default public profile retrieves public configuration metadata",
       "priority": "p0",
       "expected": {
         "pathIncludes": [
-          "README.md"
+          "docs/configuration.md"
         ],
         "terms": [
           "visibility: public",
@@ -25,7 +25,7 @@
       "capability": "Profile-aware retrieval",
       "claim": "Atlas retrieves evidence matched to maintainer, consumer, operator, and agent-integrator perspectives.",
       "whyItMatters": "Different roles need different evidence from the same corpus.",
-      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "expectedBehavior": "Retrieve public profile metadata evidence while satisfying term grounding expectations.",
       "coverageType": "source-recall+term-grounding",
       "riskArea": "workflow-retrieval"
     },

@@ -1,24 +1,30 @@
 /// <reference types="bun" />
 
-import { appendFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, resolve, relative } from "node:path";
+import { appendFile, mkdir, rm, writeFile } from "node:fs/promises";
+import { dirname, relative, resolve } from "node:path";
 
 import {
+	type BaselineSummary,
 	baselineSummaryFromReport,
 	buildReport,
+	type CaseResult,
 	caseMetadata,
 	evaluateExpectations,
 	loadBaseline,
 	loadEvalDataset,
 	printTerminalSummary,
-	renderHtml,
-	type BaselineSummary,
-	type CaseResult,
 	type ReportThresholdInput,
-	type RuntimeInfo,
+	renderHtml,
 } from "../retrieval-harness";
 import { inspectRuntime, omitConfigPath, resolveEvalConfig } from "./config";
-import { asArray, buildTextHaystack, getPath, isRecord, runCliJson, uniqueStrings } from "./io";
+import {
+	asArray,
+	buildTextHaystack,
+	getPath,
+	isRecord,
+	runCliJson,
+	uniqueStrings,
+} from "./io";
 import { createEvalProgressReporter } from "./progress";
 
 const defaultDatasetPath = "evals/mcp-retrieval.dataset.json";
@@ -37,13 +43,18 @@ export async function runMcpRetrievalEvalMain(input: {
 	const outPath = resolve(input.cwd, args.out ?? defaultOutPath);
 	const htmlPath = resolve(input.cwd, args.html ?? defaultHtmlPath);
 	const cli = args.cli ?? "bun run cli";
-	const modelProvider = args.modelProvider ?? input.env.ATLAS_EVAL_MODEL_PROVIDER;
+	const modelProvider =
+		args.modelProvider ?? input.env.ATLAS_EVAL_MODEL_PROVIDER;
 	const model = args.model ?? input.env.ATLAS_EVAL_MODEL;
-	const minDocs = parseInteger(args.minDocs ?? args["min-docs"] ?? "10", "min-docs");
+	const minDocs = parseInteger(
+		args.minDocs ?? args["min-docs"] ?? "10",
+		"min-docs",
+	);
 	const useGlobal = args.global === "true" || args["use-global"] === "true";
 	const thresholds = parseThresholds(args);
 	const baselinePath = resolve(input.cwd, args.baseline ?? defaultBaselinePath);
-	const baselineDisabled = args["no-baseline"] === "true" || args.baseline === "none";
+	const baselineDisabled =
+		args["no-baseline"] === "true" || args.baseline === "none";
 	const updateBaseline = args["update-baseline"] === "true";
 	const trendPath =
 		args["trend-log"] === "none"
@@ -64,22 +75,30 @@ export async function runMcpRetrievalEvalMain(input: {
 		tempConfigDir = config.tempConfigDir;
 		const cliPrefix = [
 			...splitCommand(cli),
-			...(config.configPath === undefined ? [] : ["--config", config.configPath]),
+			...(config.configPath === undefined
+				? []
+				: ["--config", config.configPath]),
 		];
 		if (!quietEval) {
 			process.stderr.write("\n");
-			process.stderr.write(`${evalStderrDim("Inspecting corpus and repository metadata…")}\n`);
+			process.stderr.write(
+				`${evalStderrDim("Inspecting corpus and repository metadata…")}\n`,
+			);
 		}
 		const inspectedRuntime = await inspectRuntime({
 			cliPrefix,
 			cli,
-			...(config.configPath === undefined ? {} : { configPath: config.configPath }),
+			...(config.configPath === undefined
+				? {}
+				: { configPath: config.configPath }),
 			source: config.source,
 			...(dataset.repoId === undefined ? {} : { repoId: dataset.repoId }),
 			cwd: input.cwd,
 		});
 		const runtime =
-			config.source === "repo-local-artifact" ? omitConfigPath(inspectedRuntime) : inspectedRuntime;
+			config.source === "repo-local-artifact"
+				? omitConfigPath(inspectedRuntime)
+				: inspectedRuntime;
 		if ((runtime.docCount ?? 0) < minDocs) {
 			throw new Error(
 				`Eval corpus too small for ${runtime.repoId ?? dataset.repoId ?? "dataset repo"}: ${runtime.docCount ?? 0} doc(s). ` +
@@ -134,7 +153,9 @@ export async function runMcpRetrievalEvalMain(input: {
 				const plan = isRecord(data.plan) ? data.plan : data;
 				const rankedHits = asArray(plan.rankedHits);
 				const selected = asArray(plan.selected);
-				const contextPacket = isRecord(plan.contextPacket) ? plan.contextPacket : {};
+				const contextPacket = isRecord(plan.contextPacket)
+					? plan.contextPacket
+					: {};
 				const evidence = asArray(contextPacket.evidence);
 				const diagnostics = asArray(plan.diagnostics);
 				const allHits = [...rankedHits, ...selected, ...evidence];
@@ -242,7 +263,9 @@ export async function runMcpRetrievalEvalMain(input: {
 				};
 				await appendFile(trendPath, `${JSON.stringify(trendEntry)}\n`);
 			} catch (error) {
-				console.error(`Warning: failed to append trend log ${trendPath}: ${String(error)}`);
+				console.error(
+					`Warning: failed to append trend log ${trendPath}: ${String(error)}`,
+				);
 			}
 		}
 		if (updateBaseline) {
@@ -259,9 +282,14 @@ export async function runMcpRetrievalEvalMain(input: {
 					.map((result) => {
 						const comparator = result.direction === "lower" ? ">" : "<";
 						const latency =
-							result.metric === "p95LatencyMs" || result.metric === "averageLatencyMs";
-						const actualText = latency ? `${Math.round(result.actual)}ms` : percent(result.actual);
-						const limitText = latency ? `${Math.round(result.limit)}ms` : percent(result.limit);
+							result.metric === "p95LatencyMs" ||
+							result.metric === "averageLatencyMs";
+						const actualText = latency
+							? `${Math.round(result.actual)}ms`
+							: percent(result.actual);
+						const limitText = latency
+							? `${Math.round(result.limit)}ms`
+							: percent(result.limit);
 						return `${result.label} ${actualText} ${comparator} ${limitText}`;
 					})
 					.join(", ")}`,
@@ -291,19 +319,36 @@ function parseArgs(values: string[]): Record<string, string | undefined> {
 	return parsed;
 }
 
-function parseThresholds(args: Record<string, string | undefined>): ReportThresholdInput {
+function parseThresholds(
+	args: Record<string, string | undefined>,
+): ReportThresholdInput {
 	return Object.fromEntries(
 		Object.entries({
 			minPassRate: parseOptionalRate(args["min-pass-rate"], "min-pass-rate"),
-			minPathRecall: parseOptionalRate(args["min-path-recall"], "min-path-recall"),
-			minTermRecall: parseOptionalRate(args["min-term-recall"], "min-term-recall"),
+			minPathRecall: parseOptionalRate(
+				args["min-path-recall"],
+				"min-path-recall",
+			),
+			minTermRecall: parseOptionalRate(
+				args["min-term-recall"],
+				"min-term-recall",
+			),
 			minNonEmptyContextRate: parseOptionalRate(
 				args["min-non-empty-context-rate"],
 				"min-non-empty-context-rate",
 			),
-			minRecallAt1: parseOptionalRate(args["min-recall-at-1"], "min-recall-at-1"),
-			minRecallAt3: parseOptionalRate(args["min-recall-at-3"], "min-recall-at-3"),
-			minRecallAt5: parseOptionalRate(args["min-recall-at-5"], "min-recall-at-5"),
+			minRecallAt1: parseOptionalRate(
+				args["min-recall-at-1"],
+				"min-recall-at-1",
+			),
+			minRecallAt3: parseOptionalRate(
+				args["min-recall-at-3"],
+				"min-recall-at-3",
+			),
+			minRecallAt5: parseOptionalRate(
+				args["min-recall-at-5"],
+				"min-recall-at-5",
+			),
 			minMrr: parseOptionalRate(args["min-mrr"], "min-mrr"),
 			minNoResultAccuracy: parseOptionalRate(
 				args["min-no-result-accuracy"],
@@ -313,17 +358,26 @@ function parseThresholds(args: Record<string, string | undefined>): ReportThresh
 				args["min-forbidden-path-accuracy"],
 				"min-forbidden-path-accuracy",
 			),
-			maxP95LatencyMs: parseOptionalPositive(args["max-p95-latency-ms"], "max-p95-latency-ms"),
+			maxP95LatencyMs: parseOptionalPositive(
+				args["max-p95-latency-ms"],
+				"max-p95-latency-ms",
+			),
 			maxAverageLatencyMs: parseOptionalPositive(
 				args["max-average-latency-ms"],
 				"max-average-latency-ms",
 			),
-			maxMetricRegression: parseOptionalRate(args["max-metric-regression"], "max-metric-regression"),
+			maxMetricRegression: parseOptionalRate(
+				args["max-metric-regression"],
+				"max-metric-regression",
+			),
 		}).filter(([, value]) => value !== undefined),
 	) as ReportThresholdInput;
 }
 
-function parseOptionalRate(value: string | undefined, label: string): number | undefined {
+function parseOptionalRate(
+	value: string | undefined,
+	label: string,
+): number | undefined {
 	if (value === undefined) {
 		return undefined;
 	}
@@ -334,7 +388,10 @@ function parseOptionalRate(value: string | undefined, label: string): number | u
 	return parsed;
 }
 
-function parseOptionalPositive(value: string | undefined, label: string): number | undefined {
+function parseOptionalPositive(
+	value: string | undefined,
+	label: string,
+): number | undefined {
 	if (value === undefined) {
 		return undefined;
 	}
@@ -384,4 +441,3 @@ function evalStderrDim(text: string): string {
 	}
 	return `\x1b[2m${text}\x1b[0m`;
 }
-
