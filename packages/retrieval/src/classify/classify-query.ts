@@ -31,13 +31,13 @@ const SIGNALS: readonly SignalRule[] = [
     kind: "location",
     signal: "location",
     weight: 3,
-    patterns: [/\b(where is|where are|where do i find|which file|what file|location of)\b/i]
+    patterns: [/\b(where is|where are|where do i find|which file|what file|location of|find (?:the )?(?:docs?|section|readme)|read (?:the )?(?:section|docs?))\b/i]
   },
   {
     kind: "usage",
     signal: "usage",
     weight: 3,
-    patterns: [/\b(how do i|how can i|how to use|how to|usage|example|examples|configure|configuration|setup|integrate)\b/i]
+    patterns: [/\b(how do i|how can i|how to use|how to|usage|example|examples|configure|configuration|setup|integrate|plan(?:ning)?|retrieve|retrieval|context|mcp|tools?|repo artifact|artifacts?|import|build|publish|init|sync|index|search|sqlite|fts|local|remote|upload|credentials?|tokens?|authentication|authorization)\b/i]
   },
   {
     kind: "overview",

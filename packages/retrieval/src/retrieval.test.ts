@@ -110,6 +110,12 @@ describe("retrieval", () => {
 		expect(classifyQuery("compare login and session flows")).toMatchObject({
 			kind: "compare",
 		});
+		expect(classifyQuery("how does MCP context retrieval work?"))
+			.toMatchObject({ kind: "usage" });
+		expect(classifyQuery("how do repo artifacts build publish and sync?"))
+			.toMatchObject({ kind: "usage" });
+		expect(classifyQuery("explain SQLite FTS corpus index search"))
+			.toMatchObject({ kind: "usage" });
 	});
 
 	test("infers scored package, module, and skill scopes from store metadata", () => {
@@ -207,6 +213,37 @@ describe("retrieval", () => {
 		);
 	});
 
+	test("applies redundancy penalties after base ranking regardless of candidate order", () => {
+		const classification = classifyQuery("session rotation usage");
+		const stronger = candidate(
+			"section",
+			"session-stronger",
+			"preferred",
+			"packages/auth/docs/session.md",
+			0.9,
+			"Session rotation usage examples.",
+			{ packageId: authPackageId, moduleId: sessionModuleId },
+		);
+		const weakerDuplicate = candidate(
+			"section",
+			"session-weaker",
+			"preferred",
+			"packages/auth/docs/session-copy.md",
+			0.5,
+			"Session rotation usage examples.",
+			{ packageId: authPackageId, moduleId: sessionModuleId },
+		);
+		const rank = (candidates: RetrievalCandidate[]) =>
+			rankCandidates({ query: "session rotation usage", classification, candidates })
+				.map((hit) => ({ id: hit.targetId, penalty: hit.factors.redundancyPenalty }));
+
+		const ordered = rank([stronger, weakerDuplicate]);
+		expect(rank([weakerDuplicate, stronger])).toEqual(ordered);
+		expect(ordered[0]).toEqual({ id: "session-stronger", penalty: 0 });
+		expect(ordered[1]?.id).toBe("session-weaker");
+		expect(ordered[1]?.penalty).toBeGreaterThan(0);
+	});
+
 	test("plans overview context summary-first without deep expansion when summaries are sufficient", () => {
 		const plan = planContext({
 			db: store,
@@ -226,6 +263,20 @@ describe("retrieval", () => {
 		expect(plan.diagnostics.map((diagnostic) => diagnostic.stage)).toContain(
 			"candidate-generation",
 		);
+	});
+
+	test("forces detail evidence for overview queries with commands tools and path-like tokens", () => {
+		const plan = planContext({
+			db: store,
+			repoId,
+			query: "overview of auth docs for `rotateSessionToken` in packages/auth/docs/session.md",
+			budgetTokens: 220,
+		});
+
+		expect(plan.selected.some((item) => item.targetType === "summary")).toBe(true);
+		expect(
+			plan.selected.some((item) => item.targetType !== "summary"),
+		).toBe(true);
 	});
 
 	test("expands into local sections and chunks for usage queries", () => {

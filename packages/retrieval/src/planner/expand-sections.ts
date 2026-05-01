@@ -1,7 +1,7 @@
 import type { QueryKind } from "@atlas/core";
 
 import type { PlanningSelectionState, RankedHit } from "../types";
-import { appendIfBudgetAllows, toPlannedItem } from "./select-summaries";
+import { appendIfBudgetAllows, needsConcreteEvidence, toPlannedItem } from "./select-summaries";
 
 /** Input for detail expansion after summary-first planning. */
 export interface ExpandSectionsInput {
@@ -9,6 +9,8 @@ export interface ExpandSectionsInput {
   rankedHits: readonly RankedHit[];
   /** Query kind used to decide whether deeper evidence is necessary. */
   queryKind: QueryKind;
+  /** Raw query text, used to force detail expansion for concrete tokens. */
+  query?: string | undefined;
   /** Current planning state. */
   state: PlanningSelectionState;
   /** Maximum expansion items to add. Defaults to 6. */
@@ -19,7 +21,7 @@ export interface ExpandSectionsInput {
 export function expandSections(input: ExpandSectionsInput): PlanningSelectionState {
   const state = cloneState(input.state);
   const limit = input.limit ?? defaultExpansionLimit(input.queryKind);
-  const needsDetail = shouldExpand(input.queryKind, state);
+  const needsDetail = shouldExpand(input.queryKind, state, input.query);
   if (!needsDetail) {
     for (const hit of input.rankedHits.filter((candidate) => candidate.targetType !== "summary")) {
       state.omitted.push(toPlannedItem(hit, "Summary-first policy did not require deeper expansion."));
@@ -50,7 +52,10 @@ export function expandSections(input: ExpandSectionsInput): PlanningSelectionSta
   return state;
 }
 
-function shouldExpand(queryKind: QueryKind, state: PlanningSelectionState): boolean {
+function shouldExpand(queryKind: QueryKind, state: PlanningSelectionState, query: string | undefined): boolean {
+  if (needsConcreteEvidence(query)) {
+    return true;
+  }
   if (queryKind === "overview" && state.selected.length > 0 && state.usedTokens <= state.budgetTokens * 0.55) {
     return false;
   }
