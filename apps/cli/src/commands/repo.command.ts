@@ -234,60 +234,120 @@ async function runRepoShow(
 	return renderSuccess(context, "repo show", data, renderRepoShowLines(data));
 }
 
-function renderRepoShowLines(data: {
+type RepoShowConfig = Awaited<
+	ReturnType<typeof loadConfig>
+>["config"]["repos"][number];
+type RepoShowMetadata = Awaited<ReturnType<typeof readRepoMetadata>>;
+type RepoShowTarget = Awaited<ReturnType<typeof resolveRepoTarget>>;
+
+interface RepoShowData {
 	repoId: string;
 	repoFolder: string;
 	metadataPath: string;
 	configured: boolean;
 	metadataFound: boolean;
-	config: Awaited<ReturnType<typeof loadConfig>>["config"]["repos"][number] | undefined;
-	metadata: Awaited<ReturnType<typeof readRepoMetadata>> | undefined;
-	targetResolution: Awaited<ReturnType<typeof resolveRepoTarget>>;
-}): string[] {
-	const source = data.metadata?.source;
-	const config = data.config;
-	const mode = source?.mode ?? config?.mode;
-	const lines = [
-		`Repo: ${data.repoId}`,
-		`Configured: ${data.configured ? "yes" : "no"}`,
-		`Metadata found: ${data.metadataFound ? "yes" : "no"}`,
-	];
-	if (mode !== undefined) lines.push(`Mode: ${mode}`);
-	if (source !== undefined) {
-		if (source.mode === "local-git") {
-			if (source.remote) lines.push(`Source: ${source.remote}`);
-			if (source.localPath) lines.push(`Local path: ${source.localPath}`);
-			if (source.ref) lines.push(`Ref: ${source.ref}`);
-		} else {
-			if (source.baseUrl) lines.push(`Source: ${source.baseUrl}`);
-			if (source.ref) lines.push(`Ref: ${source.ref}`);
-		}
-	} else if (config?.mode === "local-git") {
-		if (config.git?.remote) lines.push(`Source: ${config.git.remote}`);
-		if (config.git?.localPath) lines.push(`Local path: ${config.git.localPath}`);
-		if (config.git?.ref) lines.push(`Ref: ${config.git.ref}`);
-	} else if (config?.mode === "ghes-api") {
-		if (config.github?.baseUrl) lines.push(`Source: ${config.github.baseUrl}`);
-		if (config.github?.ref) lines.push(`Ref: ${config.github.ref}`);
-	}
+	config: RepoShowConfig | undefined;
+	metadata: RepoShowMetadata | undefined;
+	targetResolution: RepoShowTarget;
+}
+
+function renderRepoShowLines(data: RepoShowData): string[] {
+	const lines = renderRepoShowHeader(data);
+	appendRepoShowSource(lines, data.metadata?.source, data.config);
 	lines.push(`Repo folder: ${data.repoFolder}`);
 	lines.push(`Metadata path: ${data.metadataPath}`);
 	lines.push(`Target: ${data.targetResolution.source}`);
-	if (config !== undefined) {
-		const packageGlobCount = config.workspace.packageGlobs.length;
-		lines.push(
-			`Config entry: ${config.mode}, ${packageGlobCount} package glob${packageGlobCount === 1 ? "" : "s"}`,
-		);
-	} else {
-		lines.push("Config entry: missing");
+	appendRepoShowConfig(lines, data.config);
+	appendRepoShowNextSteps(lines, data);
+	lines.push("Full details: rerun with --json.");
+	return lines;
+}
+
+function renderRepoShowHeader(data: RepoShowData): string[] {
+	const mode = data.metadata?.source?.mode ?? data.config?.mode;
+	return [
+		`Repo: ${data.repoId}`,
+		`Configured: ${data.configured ? "yes" : "no"}`,
+		`Metadata found: ${data.metadataFound ? "yes" : "no"}`,
+		...(mode === undefined ? [] : [`Mode: ${mode}`]),
+	];
+}
+
+function appendRepoShowSource(
+	lines: string[],
+	source: RepoShowMetadata["source"] | undefined,
+	config: RepoShowConfig | undefined,
+): void {
+	if (source !== undefined) {
+		appendSourceDetails(lines, source);
+		return;
 	}
-	if (!data.configured) lines.push("Next: Run atlas add-repo to add this repo to config.");
-	if (!data.metadataFound)
+	appendConfigSourceDetails(lines, config);
+}
+
+function appendSourceDetails(
+	lines: string[],
+	source: RepoShowMetadata["source"],
+): void {
+	if (source.mode === "local-git") {
+		appendOptionalLine(lines, "Source", source.remote);
+		appendOptionalLine(lines, "Local path", source.localPath);
+		appendOptionalLine(lines, "Ref", source.ref);
+		return;
+	}
+	appendOptionalLine(lines, "Source", source.baseUrl);
+	appendOptionalLine(lines, "Ref", source.ref);
+}
+
+function appendConfigSourceDetails(
+	lines: string[],
+	config: RepoShowConfig | undefined,
+): void {
+	if (config?.mode === "local-git") {
+		appendOptionalLine(lines, "Source", config.git?.remote);
+		appendOptionalLine(lines, "Local path", config.git?.localPath);
+		appendOptionalLine(lines, "Ref", config.git?.ref);
+		return;
+	}
+	if (config?.mode === "ghes-api") {
+		appendOptionalLine(lines, "Source", config.github?.baseUrl);
+		appendOptionalLine(lines, "Ref", config.github?.ref);
+	}
+}
+
+function appendRepoShowConfig(
+	lines: string[],
+	config: RepoShowConfig | undefined,
+): void {
+	if (config === undefined) {
+		lines.push("Config entry: missing");
+		return;
+	}
+	const packageGlobCount = config.workspace.packageGlobs.length;
+	lines.push(
+		`Config entry: ${config.mode}, ${packageGlobCount} package glob${packageGlobCount === 1 ? "" : "s"}`,
+	);
+}
+
+function appendRepoShowNextSteps(lines: string[], data: RepoShowData): void {
+	if (!data.configured) {
+		lines.push("Next: Run atlas add-repo to add this repo to config.");
+	}
+	if (!data.metadataFound) {
 		lines.push(
 			"Next: Run atlas add-repo or atlas index to create repo registry metadata.",
 		);
-	lines.push("Full details: rerun with --json.");
-	return lines;
+	}
+}
+
+function appendOptionalLine(
+	lines: string[],
+	label: string,
+	value: string | undefined,
+): void {
+	if (value !== undefined && value.length > 0) {
+		lines.push(`${label}: ${value}`);
+	}
 }
 
 async function runRepoRemove(
@@ -318,7 +378,10 @@ async function runRepoRemove(
 	if (dryRun && !existsSync(resolved.config.corpusDbPath)) {
 		deletedCorpusCounts = emptyRepoCorpusCounts();
 	} else {
-		const db = openStore({ path: resolved.config.corpusDbPath, migrate: !dryRun });
+		const db = openStore({
+			path: resolved.config.corpusDbPath,
+			migrate: !dryRun,
+		});
 		try {
 			if (dryRun) {
 				deletedCorpusCounts = countRepoCorpusRows(db, repoId);
