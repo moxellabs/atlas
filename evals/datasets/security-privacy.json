@@ -1,6 +1,116 @@
 {
   "name": "atlas-security-privacy",
-  "description": "Focused local-first security and privacy eval cases.",
+  "description": "Focused local-first security, credential boundary, and privacy eval cases.",
   "repoId": "github.com/moxellabs/atlas",
-  "cases": []
+  "cases": [
+    {
+      "id": "security-query-time-local-only",
+      "category": "security-privacy",
+      "query": "query-time search retrieval MCP HTTP reads do not fetch remote source content local SQLite corpus",
+      "feature": "local-first",
+      "scenario": "query-time reads stay local-only",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["README.md"],
+        "terms": ["Query-time search", "do not fetch remote source content", "local"]
+      }
+    },
+    {
+      "id": "security-retrieval-local-corpus-no-credentials",
+      "category": "security-privacy",
+      "query": "retrieval remains store-backed query time does not fetch remote repositories or read credentials",
+      "feature": "local-first",
+      "scenario": "retrieval planning avoids source adapters and credentials",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["docs/retrieval-and-context.md"],
+        "terms": ["store-backed", "does not fetch remote repositories", "read credentials"]
+      }
+    },
+    {
+      "id": "security-no-upload-guarantee",
+      "category": "security-privacy",
+      "query": "Atlas does not upload indexed corpus content to external services no upload guarantee",
+      "feature": "privacy",
+      "scenario": "no indexed corpus upload",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["docs/security.md"],
+        "terms": ["No Upload Guarantee", "does not upload indexed corpus content", "external services"]
+      }
+    },
+    {
+      "id": "security-credentials-not-written",
+      "category": "security-privacy",
+      "query": "GHES tokens env vars GitHub CLI credentials must not be written config logs diagnostics OpenAPI MCP output snapshots",
+      "feature": "credential-boundary",
+      "scenario": "credential values are referenced and not persisted",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["docs/security.md"],
+        "terms": ["GHES tokens", "GitHub CLI credentials", "must not be written", "MCP output"]
+      }
+    },
+    {
+      "id": "security-secrets-by-env-name",
+      "category": "security-privacy",
+      "query": "secrets should be referenced by environment variable name not written into config files diagnostics errors",
+      "feature": "credential-boundary",
+      "scenario": "configuration docs explain secret references",
+      "priority": "p1",
+      "expected": {
+        "pathIncludes": ["docs/configuration.md"],
+        "terms": ["Secrets should be referenced by environment variable name", "without printing token values"]
+      }
+    },
+    {
+      "id": "security-git-first-auth-read-tokens",
+      "category": "security-privacy",
+      "query": "GitHub CLI token env var only explicit GHES GitHub artifact fetch least-privilege read tokens",
+      "feature": "credential-boundary",
+      "scenario": "auth is explicit and read-scoped for artifact fetch",
+      "priority": "p1",
+      "expected": {
+        "pathIncludes": ["README.md", "docs/configuration.md"],
+        "terms": ["GitHub CLI or token env var only", "least-privilege read tokens", "not write scopes"]
+      }
+    },
+    {
+      "id": "security-public-artifact-secret-path-safety",
+      "category": "security-privacy",
+      "query": "artifact JSON must not contain secrets absolute machine-local paths artifact verify secret path safety",
+      "feature": "artifact-safety",
+      "scenario": "artifact metadata avoids secrets and machine paths",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["Artifact JSON must not contain secrets", "absolute machine-local paths", "secret/path safety"]
+      }
+    },
+    {
+      "id": "security-public-private-profile-boundary",
+      "category": "security-privacy",
+      "query": "public artifacts exclude internal docs credentials machine-local paths visibility internal private profile safety",
+      "feature": "profile-safety",
+      "scenario": "public profile excludes private/internal material",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["docs/configuration.md"],
+        "pathExcludes": ["docs/archive/"],
+        "terms": ["Public artifacts exclude", "internal", "credentials", "machine-local paths"]
+      }
+    },
+    {
+      "id": "security-sanitized-troubleshooting",
+      "category": "security-privacy",
+      "query": "redacts token-like context values review diagnostics do not include tokens cookies private URLs proprietary document content",
+      "feature": "diagnostic-sanitization",
+      "scenario": "troubleshooting docs define safe sharing boundary",
+      "priority": "p1",
+      "expected": {
+        "pathIncludes": ["docs/troubleshooting.md"],
+        "terms": ["access tokens", "cookies", "private repository URLs", "redacts token-like context values"]
+      }
+    }
+  ]
 }

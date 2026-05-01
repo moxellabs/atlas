@@ -1,6 +1,99 @@
 {
   "name": "atlas-profiles",
-  "description": "Profile-specific eval cases for maintainer, contributor, consumer, and agent-user workflows.",
+  "description": "Profile-specific eval cases for public metadata defaults, explicit filters, and profile safety workflows.",
   "repoId": "github.com/moxellabs/atlas",
-  "cases": []
+  "cases": [
+    {
+      "id": "profile-public-default-readme",
+      "category": "profiles",
+      "query": "public default profile local-first Atlas README visibility audience purpose",
+      "profile": "public",
+      "feature": "metadata-filtering",
+      "scenario": "default public profile retrieves public overview metadata",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["README.md"],
+        "terms": ["visibility: public", "audience", "purpose", "local-first"]
+      }
+    },
+    {
+      "id": "profile-explicit-public-filter-example",
+      "category": "profiles",
+      "query": "explicit public profile audience maintainer purpose workflow visibility public artifact freshness filter example",
+      "profile": "public",
+      "feature": "metadata-filtering",
+      "scenario": "explicit public filter examples are documented",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["docs/retrieval-and-context.md"],
+        "terms": ["--profile public", "--audience maintainer", "--purpose workflow", "--visibility public"]
+      }
+    },
+    {
+      "id": "profile-any-all-profiles-search",
+      "category": "profiles",
+      "query": "profile any all-profiles search without default public profile filter",
+      "profile": "any",
+      "feature": "metadata-filtering",
+      "scenario": "all/any profile behavior is explained on search help surface",
+      "priority": "p1",
+      "expected": {
+        "pathIncludes": ["docs/retrieval-and-context.md"],
+        "terms": ["profile", "audience", "purpose", "visibility"]
+      }
+    },
+    {
+      "id": "profile-supported-metadata-values",
+      "category": "profiles",
+      "query": "supported visibility audience purpose values public internal consumer contributor maintainer",
+      "profile": "maintainer",
+      "feature": "metadata-rules",
+      "scenario": "configuration docs enumerate grounded metadata values",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["docs/configuration.md"],
+        "terms": ["supported `visibility` values", "consumer", "contributor", "maintainer", "internal"]
+      }
+    },
+    {
+      "id": "profile-frontmatter-precedence",
+      "category": "profiles",
+      "query": "frontmatter config rule built-in default profile metadata precedence",
+      "profile": "maintainer",
+      "feature": "metadata-rules",
+      "scenario": "profile metadata precedence is grounded in configuration docs",
+      "priority": "p1",
+      "expected": {
+        "pathIncludes": ["docs/configuration.md"],
+        "terms": ["frontmatter > config rule > built-in default", "docs.metadata.rules", "docs.metadata.profiles"]
+      }
+    },
+    {
+      "id": "profile-public-artifact-excludes-internal",
+      "category": "profiles",
+      "query": "public artifacts exclude internal planning archive visibility internal credentials machine-local paths",
+      "profile": "public",
+      "feature": "profile-safety",
+      "scenario": "public profile artifact safety boundary",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["README.md"],
+        "pathExcludes": ["docs/archive/"],
+        "terms": ["public artifacts exclude", "visibility: internal", "credentials", "machine-local paths"]
+      }
+    },
+    {
+      "id": "profile-built-in-defaults",
+      "category": "profiles",
+      "query": "built-in defaults README docs skills public consumer docs archive planning internal profiles",
+      "profile": "maintainer",
+      "feature": "metadata-rules",
+      "scenario": "built-in profile defaults are documented",
+      "priority": "p1",
+      "expected": {
+        "pathIncludes": ["docs/configuration.md"],
+        "terms": ["Built-in defaults", "README.md", "docs/**", "skills/**", "docs/archive/**"]
+      }
+    }
+  ]
 }

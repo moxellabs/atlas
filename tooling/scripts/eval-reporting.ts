@@ -21,11 +21,19 @@ export interface EvalCase extends EvalCaseMetadata {
   category: string;
   query: string;
   repoId?: string;
-  expected: {
-    pathIncludes?: string[];
-    terms?: string[];
-    tools?: string[];
-  };
+  expected: EvalExpected;
+}
+
+export interface EvalExpected {
+  pathIncludes?: string[];
+  pathExcludes?: string[];
+  terms?: string[];
+  tools?: string[];
+  noResults?: boolean;
+  minRankedHits?: number;
+  maxRankedHits?: number;
+  confidence?: string;
+  diagnosticsInclude?: string[];
 }
 
 export interface CaseResult extends EvalCaseMetadata {
@@ -44,7 +52,12 @@ export interface CaseResult extends EvalCaseMetadata {
   };
   missing: {
     pathIncludes: string[];
+    pathExcludes: string[];
     terms: string[];
+    diagnosticsInclude: string[];
+    rankedHits: string[];
+    confidence: string[];
+    noResults: string[];
   };
   topPaths: string[];
   diagnostics: unknown[];
@@ -59,6 +72,91 @@ export interface RuntimeInfo {
   indexedRevision?: string;
   docCount?: number;
   source: "repo-local-artifact" | "explicit-config" | "cli-default";
+}
+
+export interface ExpectationInput {
+  testCase: EvalCase;
+  topPaths: string[];
+  textHaystack: string;
+  diagnosticsHaystack: string;
+  selectedCount: number;
+  rankedCount: number;
+  confidence?: string;
+}
+
+export interface ExpectationResult {
+  passed: boolean;
+  scores: CaseResult["scores"];
+  missing: CaseResult["missing"];
+}
+
+export function evaluateExpectations(input: ExpectationInput): ExpectationResult {
+  const expected = input.testCase.expected;
+  const pathIncludes = expected.pathIncludes ?? [];
+  const pathExcludes = expected.pathExcludes ?? [];
+  const terms = expected.terms ?? [];
+  const diagnosticsInclude = expected.diagnosticsInclude ?? [];
+  const missingPathIncludes = pathIncludes.filter(
+    (pathPart) => !input.topPaths.some((path) => path.includes(pathPart)),
+  );
+  const matchedPathExcludes = pathExcludes.filter((pathPart) =>
+    input.topPaths.some((path) => path.includes(pathPart)),
+  );
+  const missingTerms = terms.filter(
+    (term) => !input.textHaystack.includes(term.toLowerCase()),
+  );
+  const missingDiagnostics = diagnosticsInclude.filter(
+    (term) => !input.diagnosticsHaystack.includes(term.toLowerCase()),
+  );
+  const missingRankedHits: string[] = [];
+  if (
+    expected.minRankedHits !== undefined &&
+    input.rankedCount < expected.minRankedHits
+  ) {
+    missingRankedHits.push(`rankedCount >= ${expected.minRankedHits}`);
+  }
+  if (
+    expected.maxRankedHits !== undefined &&
+    input.rankedCount > expected.maxRankedHits
+  ) {
+    missingRankedHits.push(`rankedCount <= ${expected.maxRankedHits}`);
+  }
+  const missingConfidence =
+    expected.confidence !== undefined && input.confidence !== expected.confidence
+      ? [`confidence=${expected.confidence}`]
+      : [];
+  const hasResults = input.selectedCount > 0 || input.rankedCount > 0;
+  const missingNoResults =
+    expected.noResults === true && hasResults ? ["no selected or ranked hits"] : [];
+  const nonEmptyContext = hasResults;
+  const nonEmptyExpectationPassed =
+    expected.noResults === true ? !hasResults : nonEmptyContext;
+  const missing = {
+    pathIncludes: missingPathIncludes,
+    pathExcludes: matchedPathExcludes,
+    terms: missingTerms,
+    diagnosticsInclude: missingDiagnostics,
+    rankedHits: missingRankedHits,
+    confidence: missingConfidence,
+    noResults: missingNoResults,
+  };
+  return {
+    passed:
+      missingPathIncludes.length === 0 &&
+      matchedPathExcludes.length === 0 &&
+      missingTerms.length === 0 &&
+      missingDiagnostics.length === 0 &&
+      missingRankedHits.length === 0 &&
+      missingConfidence.length === 0 &&
+      missingNoResults.length === 0 &&
+      nonEmptyExpectationPassed,
+    scores: {
+      pathRecall: recall(pathIncludes.length, missingPathIncludes.length),
+      termRecall: recall(terms.length, missingTerms.length),
+      nonEmptyContext,
+    },
+    missing,
+  };
 }
 
 export interface Report {
@@ -252,6 +350,20 @@ export function printTerminalSummary(report: Report): void {
     if (testCase.missing.terms.length > 0) {
       console.log(`  missing terms: ${testCase.missing.terms.join(", ")}`);
     }
+    const missingOther = [
+      ...testCase.missing.pathExcludes.map(
+        (value) => `excluded path present: ${value}`,
+      ),
+      ...testCase.missing.diagnosticsInclude.map(
+        (value) => `missing diagnostic: ${value}`,
+      ),
+      ...testCase.missing.rankedHits,
+      ...testCase.missing.confidence,
+      ...testCase.missing.noResults,
+    ];
+    if (missingOther.length > 0) {
+      console.log(`  expectation gaps: ${missingOther.join(", ")}`);
+    }
     if (testCase.topPaths.length > 0) {
       console.log(`  top paths: ${testCase.topPaths.slice(0, 5).join(", ")}`);
     }
@@ -338,6 +450,10 @@ function average(values: number[]): number {
   return values.length === 0
     ? 0
     : round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function recall(total: number, missing: number): number {
+  return total === 0 ? 1 : round((total - missing) / total);
 }
 
 function rate(
