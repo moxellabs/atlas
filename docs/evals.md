@@ -9,61 +9,122 @@ order: 90
 
 # Atlas MCP and Retrieval Evals
 
-Atlas keeps a lightweight evaluation harness for MCP and retrieval performance under `evals/`.
+Atlas keeps a lightweight evaluation harness for MCP and retrieval performance under `evals/`. It is local-first, deterministic, and cheap by default:
 
-The harness is intentionally local-first and cheap by default:
-
-- It runs against the local Atlas CLI and prefers the repo-local `.moxel/atlas/corpus.db` artifact when present, so maintainer evals reflect the built publishable bundle instead of stale user-home runtime state.
+- It runs against the local Atlas CLI and prefers the repo-local `.moxel/atlas/corpus.db` artifact when present.
 - It does not require model API keys for retrieval metrics.
-- It emits JSON plus a standalone HTML report with summary cards, bar charts, category breakdowns, and case-level tables.
-- It leaves an optional model-judge slot for later answer-quality grading with a cheap model such as `grok-code-fast-1` through OpenRouter/xAI or another low-cost provider.
+- It emits JSON plus a standalone HTML dashboard with summary cards, charts, grouped breakdowns, and case-level tables.
+- It has an optional model-judge metadata slot for a later answer-quality pass; setting model env vars records intent only and does not call a model today.
 
-## Research notes
-
-Before building a custom harness, we checked reusable open-source options:
-
-- MCPBench is the closest MCP-specific benchmark. It evaluates MCP servers for task completion, latency, and token consumption, but its shipped tasks focus on web search, database query, and GAIA-style agents rather than local documentation retrieval. Atlas borrows the task-completion framing, not the whole framework.
-- Promptfoo is a strong general LLM eval runner with a polished viewer and provider comparison. It is a good future export target for model-vs-model comparisons, but would add more setup than needed for deterministic retrieval metrics.
-- Ragas and DeepEval are mature RAG eval frameworks with LLM-based metrics. They are useful once Atlas has generated answers to grade, but they add Python dependencies and judge-model costs. Atlas starts with deterministic retrieval stats first.
-
-## Quick start
+## Local commands
 
 From this repo checkout with `.moxel/atlas/corpus.db` present:
 
 ```bash
-bun run eval:mcp
+bun run eval
 ```
 
-Outputs:
+`bun run eval` is intentionally the short memorable command and currently runs the full retrieval/MCP manifest. More explicit commands are available:
+
+```bash
+bun run eval:quick      # focused retrieval-smoke subset; writes reports under /tmp
+bun run eval:full       # full manifest; writes evals/reports/*.json and *.html
+bun run eval:report     # alias for the full report generation path
+bun run eval:ci         # full report plus conservative threshold gates
+bun run eval:mcp        # preserved alias for full suite
+bun run eval:retrieval  # preserved alias for full suite
+```
+
+Default full-suite outputs:
 
 ```text
 evals/reports/mcp-retrieval-report.json
 evals/reports/mcp-retrieval-report.html
 ```
 
-Open the HTML file in a browser or publish it as a static artifact.
+The generated reports include timestamps, runtime paths, revision details, and per-run metrics. They may change whenever the eval is re-run. Do not commit report changes unless the snapshot is intentionally being updated.
 
-## Dataset format
+## Dataset layout
 
-The seed dataset lives at:
+The full-suite manifest lives at:
 
 ```text
 evals/mcp-retrieval.dataset.json
 ```
 
-`evals/mcp-retrieval.dataset.json` is the default full-suite manifest. It can define `cases` directly and can include focused dataset files with `includes` paths relative to the manifest file. Current focused files live under `evals/datasets/`.
+It includes focused datasets from:
+
+```text
+evals/datasets/
+```
+
+The smoke subset used by `eval:quick` is `evals/datasets/retrieval-smoke.json`.
 
 Each case contains:
 
-- `id`: stable case identifier.
-- `category`: grouping used in report charts.
-- `query`: natural-language or keyword query.
-- Optional metadata: `profile`, `feature`, `scenario`, and `priority`. These are copied into JSON reports for filtering and public eval analysis.
+- `id`: stable case identifier, unique across the loaded manifest and included datasets.
+- `category`: report grouping used in charts and tables.
+- `query`: natural-language or keyword query passed to `atlas inspect retrieval`.
+- Optional metadata: `profile`, `feature`, `scenario`, and `priority`; these flow into JSON reports for filtering and public analysis.
 - `expected.pathIncludes`: path substrings that should appear in top retrieval results.
-- `expected.terms`: terms expected somewhere in selected/ranked context.
+- `expected.pathExcludes`: path substrings that must not appear in top retrieval results, useful for negative/edge cases.
+- `expected.terms`: terms expected somewhere in selected/ranked context payloads or retrieved local source text.
+- `expected.minRankedHits` / `expected.maxRankedHits`: ranked-hit count bounds.
+- `expected.confidence`, `expected.diagnosticsInclude`, and `expected.noResults`: deterministic checks for diagnostics, confidence, and no-result behavior.
 - `expected.tools`: intended MCP tools for the scenario. These are documented now and can be used by future agent-trace evals.
 
-Path-substring expectations are used instead of generated doc IDs so the suite survives corpus rebuilds. Case IDs must be unique across a manifest and all included datasets.
+Path-substring expectations are used instead of generated document IDs so the suite survives corpus rebuilds.
+
+## Adding or changing cases
+
+1. Pick the narrowest focused file under `evals/datasets/`, or add a new focused dataset and include it from `evals/mcp-retrieval.dataset.json`.
+2. Add a stable `id`, useful `category`, query text, and deterministic expectations.
+3. Prefer path and term expectations tied to public docs or public skills that should remain discoverable.
+4. Add profile/feature/scenario/priority metadata when the case represents a user workflow or product surface.
+5. Run `bun run eval:quick` for smoke coverage when relevant, then `bun run eval:full` or `bun run eval:report` before opening a PR.
+6. Restore generated files in `evals/reports/` unless the report snapshot is an intentional part of the change.
+
+## Interpreting metrics
+
+- Pass rate: fraction of cases that passed every deterministic expectation.
+- Path recall: fraction of expected path substrings found in top paths.
+- Term recall: fraction of expected terms found in selected/ranked context payloads plus local source contents for retrieved paths.
+- Non-empty context rate: fraction of cases where Atlas produced selected or ranked retrieval context. No-result cases can still pass when they explicitly expect no results.
+- Average latency: wall-clock CLI query time per case.
+- Average ranked hits: mean ranked hit count.
+
+The report also groups metrics by category, profile, feature, scenario, and priority so regressions can be mapped back to user workflows.
+
+## Publishing and CI behavior
+
+`.github/workflows/evals.yml` runs on pull requests, manual dispatch, and pushes to `main`. The workflow:
+
+1. Sets up Bun 1.3.11.
+2. Installs with `bun install --frozen-lockfile`.
+3. Runs `bun run eval:ci`.
+4. Uploads `evals/reports` as the `atlas-eval-reports` GitHub Actions artifact, even when the eval step fails.
+5. On pushes to `main`, uploads the same report directory as a GitHub Pages artifact and deploys it with the standard Pages actions.
+
+If GitHub Pages has not been enabled for the repository, the Actions artifact is still the source of truth for the latest dashboard. When Pages is enabled, the workflow copies `mcp-retrieval-report.html` to `index.html`, so the latest dashboard is expected at:
+
+```text
+https://moxellabs.github.io/atlas/
+```
+
+## Threshold and baseline policy
+
+The current policy intentionally avoids committing new generated report snapshots or a generated `baseline.json` in this batch. The eval corpus is still expanding, so trend/baseline comparison can be added later once the manifest and runtime environment are more stable.
+
+CI uses conservative fail gates focused on preventing obvious broken-corpus and no-result regressions:
+
+```text
+min pass rate: 0.95
+min path recall: 0.90
+min term recall: 0.90
+min non-empty context rate: 0.90
+```
+
+These thresholds are not meant to freeze every ranking detail. They are guardrails that should catch missing corpora, empty retrieval responses, broad expectation failures, and major recall regressions while allowing the dataset to grow. If a new valid case lowers aggregate metrics, adjust the case expectations or thresholds in the same PR and explain why.
 
 ## Optional model judge placeholder
 
@@ -72,10 +133,10 @@ Retrieval metrics run without API keys. To annotate reports with the intended ch
 ```bash
 ATLAS_EVAL_MODEL_PROVIDER=openrouter \
 ATLAS_EVAL_MODEL=x-ai/grok-code-fast-1 \
-  bun run eval:mcp
+  bun run eval:report
 ```
 
-This does not call the model yet. It records the intended judge configuration in the report so the next iteration can add answer-quality scoring without changing the report contract.
+This records the intended judge configuration in the report but does not call the model yet.
 
 ## Custom paths
 
@@ -86,19 +147,19 @@ bun tooling/scripts/mcp-retrieval-eval.ts \
   --html evals/reports/mcp-retrieval-report.html
 ```
 
-If you need to evaluate an installed `atlas` binary rather than source checkout CLI:
+Evaluate an installed `atlas` binary rather than the source checkout CLI:
 
 ```bash
 bun tooling/scripts/mcp-retrieval-eval.ts --cli atlas
 ```
 
-If you need to evaluate a user-home imported corpus instead of the repo-local artifact:
+Evaluate a user-home imported corpus instead of the repo-local artifact:
 
 ```bash
 bun tooling/scripts/mcp-retrieval-eval.ts --global
 ```
 
-If you need to evaluate a specific runtime config:
+Evaluate a specific runtime config:
 
 ```bash
 bun tooling/scripts/mcp-retrieval-eval.ts --config ~/.moxel/atlas/config.yaml
@@ -106,13 +167,10 @@ bun tooling/scripts/mcp-retrieval-eval.ts --config ~/.moxel/atlas/config.yaml
 
 The harness inspects the repo before scoring and fails fast when the corpus has fewer than 10 docs. Use `--min-docs 0` only for intentionally tiny fixtures.
 
-## Interpreting metrics
+## Research notes
 
-- Pass rate: case passed all deterministic expectations.
-- Path recall: fraction of expected path substrings found in top paths.
-- Term recall: fraction of expected terms found in selected/ranked context payloads plus local source contents for retrieved paths, so document-level hits can be credited for terms that live in the retrieved document.
-- Non-empty context: whether Atlas produced any selected or ranked retrieval context.
-- Average latency: wall-clock CLI query time per case.
-- Average ranked hits: mean ranked hit count.
+Before building a custom harness, we checked reusable open-source options:
 
-The `natural-language-broad` and `keyword-baseline-repo-add` cases are intentionally paired to expose strict lexical retrieval behavior: broad natural language should improve over time without regressing precise keyword queries.
+- MCPBench is the closest MCP-specific benchmark. It evaluates MCP servers for task completion, latency, and token consumption, but its shipped tasks focus on web search, database query, and GAIA-style agents rather than local documentation retrieval. Atlas borrows the task-completion framing, not the whole framework.
+- Promptfoo is a strong general LLM eval runner with a polished viewer and provider comparison. It is a good future export target for model-vs-model comparisons, but would add more setup than needed for deterministic retrieval metrics.
+- Ragas and DeepEval are mature RAG eval frameworks with LLM-based metrics. They are useful once Atlas has generated answers to grade, but they add Python dependencies and judge-model costs. Atlas starts with deterministic retrieval stats first.

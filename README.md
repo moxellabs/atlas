@@ -75,6 +75,12 @@ bun apps/cli/src/index.ts artifact verify --fresh
 
 See [CONTRIBUTING.md](https://github.com/moxellabs/atlas/blob/main/CONTRIBUTING.md) for contributor validation notes and [docs/release.md](https://github.com/moxellabs/atlas/blob/main/docs/release.md) for maintainer release process. Rebuild `.moxel/atlas` before artifact freshness verification when public docs or public skills change.
 
+## Retrieval evals and dashboard
+
+Atlas publishes deterministic MCP/retrieval eval reports from GitHub Actions. Run the full suite locally with `bun run eval` or the smoke subset with `bun run eval:quick`. See [docs/evals.md](https://github.com/moxellabs/atlas/blob/main/docs/evals.md) for commands, dataset layout, metrics, CI thresholds, and baseline policy.
+
+When GitHub Pages is enabled, the latest dashboard is expected at https://moxellabs.github.io/atlas/. If Pages is not enabled, download the `atlas-eval-reports` artifact from the Evals workflow run.
+
 ## Quickstart: choose your path
 
 Unsure what state you are in? Ask Atlas first:
