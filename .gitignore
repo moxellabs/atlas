@@ -33,6 +33,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 *.tsbuildinfo
 .ruff_cache/
 
+# generated eval dashboards/reports
+evals/reports/
+
 # local ATLAS runtime config
 atlas.config.json
 atlas.config.yaml
