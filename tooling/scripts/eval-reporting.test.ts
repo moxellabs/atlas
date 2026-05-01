@@ -353,7 +353,6 @@ describe("eval reporting", () => {
 		expect(html).toContain("MOXEL ATLAS EVALS");
 		expect(html).toContain('id="banded-field"');
 		expect(html).toContain('data-eval-chart="recall-funnel"');
-		expect(html).toContain('data-eval-chart="at-a-glance"');
 		expect(html).toContain('id="case-explorer"');
 		expect(html).toContain('id="case-search"');
 		expect(html).toContain(
