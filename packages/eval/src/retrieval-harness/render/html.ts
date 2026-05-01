@@ -36,7 +36,6 @@ export function renderHtml(report: Report): string {
 ${renderLabHeader(report)}
 ${renderVerdictCard(report)}
 ${renderKpiStrip(report)}
-${renderAtAGlance(report)}
 ${renderInterpretation(report)}
 ${renderCharts(report)}
 ${renderCoverageLab(report)}
@@ -119,32 +118,6 @@ function renderKpiDelta(delta: MetricDeltaEntry): string {
 
 function renderInfoButton(metric: HealthMetric): string {
 	return `<button type="button" class="info-btn" data-info-metric="${escapeHtml(metric)}" aria-label="What is ${escapeHtml(METRIC_GLOSSARY[metric].label)}?">i</button>`;
-}
-
-function renderAtAGlance(report: Report): string {
-	const radarMetrics: Array<[string, number, HealthLevel]> = [
-		["Pass", report.metrics.passRate, classifyHealth("passRate", report.metrics.passRate)],
-		["R@5", report.metrics.pathRecallAt5, classifyHealth("pathRecallAt5", report.metrics.pathRecallAt5)],
-		["MRR", report.metrics.mrr, classifyHealth("mrr", report.metrics.mrr)],
-		["Abstain", report.metrics.noResultAccuracy, classifyHealth("noResultAccuracy", report.metrics.noResultAccuracy)],
-		["Forbidden", report.metrics.forbiddenPathAccuracy, classifyHealth("forbiddenPathAccuracy", report.metrics.forbiddenPathAccuracy)],
-		["Terms", report.metrics.termRecall, classifyHealth("termRecall", report.metrics.termRecall)],
-	];
-	const statDefs: Array<[string, number, HealthLevel, HealthMetric]> = [
-		["Pass rate", report.metrics.passRate, classifyHealth("passRate", report.metrics.passRate), "passRate"],
-		["Recall@5", report.metrics.pathRecallAt5, classifyHealth("pathRecallAt5", report.metrics.pathRecallAt5), "pathRecallAt5"],
-		["MRR", report.metrics.mrr, classifyHealth("mrr", report.metrics.mrr), "mrr"],
-		["Abstain", report.metrics.noResultAccuracy, classifyHealth("noResultAccuracy", report.metrics.noResultAccuracy), "noResultAccuracy"],
-		["Forbidden", report.metrics.forbiddenPathAccuracy, classifyHealth("forbiddenPathAccuracy", report.metrics.forbiddenPathAccuracy), "forbiddenPathAccuracy"],
-		["Terms", report.metrics.termRecall, classifyHealth("termRecall", report.metrics.termRecall), "termRecall"],
-	];
-	const statTiles = statDefs
-		.map(
-			([label, value, health, metric]) =>
-				`<div class="glance-stat" data-health="${escapeHtml(health)}"><div class="stat-label">${escapeHtml(label)}${renderInfoButton(metric)}</div><strong class="stat-value">${percent(value)}</strong><div class="track stat-track"><div class="fill" data-health="${escapeHtml(health)}" style="width:${Math.round(value * 100)}%"></div></div></div>`,
-		)
-		.join("");
-	return `<section class="panel" data-eval-chart="at-a-glance" data-health="${escapeHtml(report.narrative.severity)}"><div class="case-head"><div><div class="eyebrow">At a glance</div><h2>Metric constellation${renderInfoButton("mrr")}</h2></div></div><div class="glance-body"><div class="chart-frame chart-frame--radar">${renderRadarSvg(radarMetrics)}</div><div class="glance-stats">${statTiles}</div></div><p class="chart-caption">Each axis is a metric scaled to 0–1. Fill color tracks the worst axis; outer ring is target.</p></section>`;
 }
 
 function renderInterpretation(report: Report): string {
@@ -550,49 +523,6 @@ function renderBucketSvg(
 		.join("")}</g></svg></div>`;
 }
 
-function renderRadarSvg(metrics: Array<[string, number, HealthLevel]>): string {
-	const size = 320;
-	const center = size / 2;
-	const radius = 110;
-	const angleFor = (index: number) =>
-		(Math.PI * 2 * index) / metrics.length - Math.PI / 2;
-	const point = (index: number, value: number) => {
-		const angle = angleFor(index);
-		const r = radius * Math.max(0, Math.min(1, value));
-		return [
-			round(center + Math.cos(angle) * r),
-			round(center + Math.sin(angle) * r),
-		] as const;
-	};
-	const outer = metrics.map((_, index) => point(index, 1));
-	const poly = metrics
-		.map(([, value], index) => point(index, value).join(","))
-		.join(" ");
-	const overall = worstHealth(metrics.map(([, , health]) => health ?? "good"));
-	const fillColor = colorFor(overall);
-	return `<svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Metric radar chart">${[
-		0.25, 0.5, 0.75, 1,
-	]
-		.map(
-			(level) =>
-				`<polygon points="${metrics.map((_, index) => point(index, level).join(",")).join(" ")}" fill="none" stroke="rgba(70,215,255,.13)"/>`,
-		)
-		.join("")}${outer
-		.map(
-			([x, y]) =>
-				`<line x1="${center}" y1="${center}" x2="${x}" y2="${y}" stroke="rgba(70,215,255,.1)"/>`,
-		)
-		.join(
-			"",
-		)}<polygon points="${poly}" fill="${fillColor}" fill-opacity=".28" stroke="${fillColor}" stroke-width="2.5"/>${metrics
-		.map(([label, value, health], index) => {
-			const [x, y] = point(index, 1.1);
-			const axisColor = colorFor(health ?? "good");
-			const [dotX, dotY] = point(index, value);
-			return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="rgba(245,248,255,.82)" font-size="11" font-weight="800">${escapeHtml(label)}</text><circle cx="${dotX}" cy="${dotY}" r="4" fill="${axisColor}" stroke="#030711" stroke-width="1.5"/><title>${escapeHtml(label)} ${percent(value)} (${escapeHtml(health ?? "good")})</title>`;
-		})
-		.join("")}</svg>`;
-}
 
 function renderProgress(
 	label: string,
