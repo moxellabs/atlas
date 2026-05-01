@@ -1,0 +1,6 @@
+{
+  "name": "atlas-profiles",
+  "description": "Profile-specific eval cases for maintainer, contributor, consumer, and agent-user workflows.",
+  "repoId": "github.com/moxellabs/atlas",
+  "cases": []
+}

@@ -9,29 +9,29 @@
 </style>
 </head>
 <body><main>
-<section class="hero"><h1>Atlas MCP Retrieval Eval</h1><p class="muted">Publishable Atlas MCP/retrieval evaluation seed set. Cases use stable path expectations so the suite can run against rebuilt corpora without hard-coding generated document IDs. · generated 2026-05-01T02:40:45.318Z</p>
+<section class="hero"><h1>Atlas MCP Retrieval Eval</h1><p class="muted">Full Atlas public eval manifest for MCP retrieval, profile workflows, CLI workflows, artifact runtime, security/privacy, diagnostics, and negative edge cases. · generated 2026-05-01T03:03:13.595Z</p>
 <p class="note">Runtime: source=repo-local-artifact · corpus=/home/mrmendez/Projects/atlas/.moxel/atlas/corpus.db · docs=35 · indexed=5a0a73347e022f5c6d8a717965021a8748a64b69</p>
-<div class="cards"><div class="card"><span>Passed</span><br><b>8/8</b></div><div class="card"><span>Path recall</span><br><b>100%</b></div><div class="card"><span>Term recall</span><br><b>100%</b></div><div class="card"><span>Avg latency</span><br><b>643.75ms</b></div></div>
+<div class="cards"><div class="card"><span>Passed</span><br><b>8/8</b></div><div class="card"><span>Path recall</span><br><b>100%</b></div><div class="card"><span>Term recall</span><br><b>100%</b></div><div class="card"><span>Avg latency</span><br><b>694.625ms</b></div></div>
 <div class="bar"><span>Pass rate</span><strong>100%</strong><i style="width:100%"></i></div>
 <div class="bar"><span>Path recall</span><strong>100%</strong><i style="width:100%"></i></div>
 <div class="bar"><span>Term recall</span><strong>100%</strong><i style="width:100%"></i></div>
 <div class="bar"><span>Non-empty context</span><strong>100%</strong><i style="width:100%"></i></div>
 <p class="note">Judge model: disabled. Optional placeholder for later answer-quality grading with a cheap model such as grok-code-fast-1 via OpenRouter/xAI. Retrieval metrics run without API keys.</p></section>
-<section class="section"><h2>Category breakdown</h2><table><thead><tr><th>Category</th><th>Passed</th><th>Path recall</th><th>Term recall</th><th>Avg latency</th></tr></thead><tbody><tr><td>maintainer-workflow</td><td>1/1</td><td>100%</td><td>100%</td><td>590ms</td></tr>
-<tr><td>consumer-workflow</td><td>1/1</td><td>100%</td><td>100%</td><td>636ms</td></tr>
-<tr><td>runtime</td><td>1/1</td><td>100%</td><td>100%</td><td>663ms</td></tr>
-<tr><td>mcp</td><td>1/1</td><td>100%</td><td>100%</td><td>629ms</td></tr>
-<tr><td>security</td><td>1/1</td><td>100%</td><td>100%</td><td>686ms</td></tr>
-<tr><td>query-robustness</td><td>2/2</td><td>100%</td><td>100%</td><td>644.5ms</td></tr>
-<tr><td>diagnostics</td><td>1/1</td><td>100%</td><td>100%</td><td>657ms</td></tr></tbody></table></section>
-<section class="section"><h2>Cases</h2><table><thead><tr><th>Pass</th><th>ID</th><th>Category</th><th>Path</th><th>Terms</th><th>Latency</th><th>Ranked</th><th>Top paths</th></tr></thead><tbody><tr><td>✅</td><td>maintainer-build-artifact</td><td>maintainer-workflow</td><td>100%</td><td>100%</td><td>590ms</td><td>22</td><td>packages/indexer/src/build/docs/skills/change-build-pipeline/SKILL.md, apps/cli/docs/skills/add-cli-command/SKILL.md, docs/ingestion-build-flow.md</td></tr>
-<tr><td>✅</td><td>consumer-repo-add-import</td><td>consumer-workflow</td><td>100%</td><td>100%</td><td>636ms</td><td>40</td><td>docs/index.md, docs/ingestion-build-flow.md, docs/self-indexing.md</td></tr>
-<tr><td>✅</td><td>runtime-local-corpus</td><td>runtime</td><td>100%</td><td>100%</td><td>663ms</td><td>40</td><td>packages/mcp/src/tools/docs/skills/add-mcp-tool/SKILL.md, packages/store/docs/index.md, packages/mcp/docs/index.md</td></tr>
-<tr><td>✅</td><td>mcp-tools-overview</td><td>mcp</td><td>100%</td><td>100%</td><td>629ms</td><td>40</td><td>packages/mcp/src/tools/docs/skills/add-mcp-tool/SKILL.md, packages/mcp/docs/index.md, docs/retrieval-and-context.md</td></tr>
-<tr><td>✅</td><td>security-query-time-local</td><td>security</td><td>100%</td><td>100%</td><td>686ms</td><td>40</td><td>skills/atlas-contributor/SKILL.md, packages/mcp/src/tools/docs/skills/add-mcp-tool/SKILL.md, skills/skill-creator/SKILL.md</td></tr>
-<tr><td>✅</td><td>natural-language-broad</td><td>query-robustness</td><td>100%</td><td>100%</td><td>695ms</td><td>40</td><td>skills/document-codebase/SKILL.md, skills/skill-creator/SKILL.md, skills/atlas-contributor/SKILL.md</td></tr>
-<tr><td>✅</td><td>keyword-baseline-repo-add</td><td>query-robustness</td><td>100%</td><td>100%</td><td>594ms</td><td>36</td><td>packages/mcp/src/tools/docs/skills/add-mcp-tool/SKILL.md, apps/cli/docs/skills/add-cli-command/SKILL.md, apps/server/docs/skills/add-http-route/SKILL.md</td></tr>
-<tr><td>✅</td><td>inspect-retrieval-debugging</td><td>diagnostics</td><td>100%</td><td>100%</td><td>657ms</td><td>40</td><td>packages/retrieval/docs/index.md, docs/retrieval-and-context.md, docs/self-indexing.md</td></tr></tbody></table></section>
+<section class="section"><h2>Category breakdown</h2><table><thead><tr><th>Category</th><th>Passed</th><th>Path recall</th><th>Term recall</th><th>Avg latency</th></tr></thead><tbody><tr><td>maintainer-workflow</td><td>1/1</td><td>100%</td><td>100%</td><td>627ms</td></tr>
+<tr><td>consumer-workflow</td><td>1/1</td><td>100%</td><td>100%</td><td>681ms</td></tr>
+<tr><td>runtime</td><td>1/1</td><td>100%</td><td>100%</td><td>707ms</td></tr>
+<tr><td>mcp</td><td>1/1</td><td>100%</td><td>100%</td><td>682ms</td></tr>
+<tr><td>security</td><td>1/1</td><td>100%</td><td>100%</td><td>699ms</td></tr>
+<tr><td>query-robustness</td><td>2/2</td><td>100%</td><td>100%</td><td>703.5ms</td></tr>
+<tr><td>diagnostics</td><td>1/1</td><td>100%</td><td>100%</td><td>754ms</td></tr></tbody></table></section>
+<section class="section"><h2>Cases</h2><table><thead><tr><th>Pass</th><th>ID</th><th>Category</th><th>Path</th><th>Terms</th><th>Latency</th><th>Ranked</th><th>Top paths</th></tr></thead><tbody><tr><td>✅</td><td>maintainer-build-artifact</td><td>maintainer-workflow</td><td>100%</td><td>100%</td><td>627ms</td><td>22</td><td>packages/indexer/src/build/docs/skills/change-build-pipeline/SKILL.md, apps/cli/docs/skills/add-cli-command/SKILL.md, docs/ingestion-build-flow.md</td></tr>
+<tr><td>✅</td><td>consumer-repo-add-import</td><td>consumer-workflow</td><td>100%</td><td>100%</td><td>681ms</td><td>40</td><td>docs/index.md, docs/ingestion-build-flow.md, docs/self-indexing.md</td></tr>
+<tr><td>✅</td><td>runtime-local-corpus</td><td>runtime</td><td>100%</td><td>100%</td><td>707ms</td><td>40</td><td>packages/mcp/src/tools/docs/skills/add-mcp-tool/SKILL.md, packages/store/docs/index.md, packages/mcp/docs/index.md</td></tr>
+<tr><td>✅</td><td>mcp-tools-overview</td><td>mcp</td><td>100%</td><td>100%</td><td>682ms</td><td>40</td><td>packages/mcp/src/tools/docs/skills/add-mcp-tool/SKILL.md, packages/mcp/docs/index.md, docs/retrieval-and-context.md</td></tr>
+<tr><td>✅</td><td>security-query-time-local</td><td>security</td><td>100%</td><td>100%</td><td>699ms</td><td>40</td><td>skills/atlas-contributor/SKILL.md, packages/mcp/src/tools/docs/skills/add-mcp-tool/SKILL.md, skills/skill-creator/SKILL.md</td></tr>
+<tr><td>✅</td><td>natural-language-broad</td><td>query-robustness</td><td>100%</td><td>100%</td><td>729ms</td><td>40</td><td>skills/document-codebase/SKILL.md, skills/skill-creator/SKILL.md, skills/atlas-contributor/SKILL.md</td></tr>
+<tr><td>✅</td><td>keyword-baseline-repo-add</td><td>query-robustness</td><td>100%</td><td>100%</td><td>678ms</td><td>36</td><td>packages/mcp/src/tools/docs/skills/add-mcp-tool/SKILL.md, apps/cli/docs/skills/add-cli-command/SKILL.md, apps/server/docs/skills/add-http-route/SKILL.md</td></tr>
+<tr><td>✅</td><td>inspect-retrieval-debugging</td><td>diagnostics</td><td>100%</td><td>100%</td><td>754ms</td><td>40</td><td>packages/retrieval/docs/index.md, docs/retrieval-and-context.md, docs/self-indexing.md</td></tr></tbody></table></section>
 <section class="section"><h2>Reuse research</h2><p class="note">MCPBench is the closest open-source MCP-specific benchmark, but it targets web search/database/GAIA task completion rather than local documentation retrieval, so Atlas reuses the MCP adoption idea rather than vendoring it.</p>
 <p class="note">Promptfoo is a strong option for model/provider comparison and hosted-looking reports; this harness keeps deterministic retrieval metrics local and can export JSON for promptfoo later.</p>
 <p class="note">Ragas and DeepEval provide RAG metrics, but add Python dependencies and LLM judges; Atlas starts with cheap deterministic path/term/latency metrics and leaves judge-model wiring optional.</p></section>

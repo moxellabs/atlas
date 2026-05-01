@@ -51,16 +51,19 @@ The seed dataset lives at:
 evals/mcp-retrieval.dataset.json
 ```
 
+`evals/mcp-retrieval.dataset.json` is the default full-suite manifest. It can define `cases` directly and can include focused dataset files with `includes` paths relative to the manifest file. Current focused files live under `evals/datasets/`.
+
 Each case contains:
 
 - `id`: stable case identifier.
 - `category`: grouping used in report charts.
 - `query`: natural-language or keyword query.
+- Optional metadata: `profile`, `feature`, `scenario`, and `priority`. These are copied into JSON reports for filtering and public eval analysis.
 - `expected.pathIncludes`: path substrings that should appear in top retrieval results.
 - `expected.terms`: terms expected somewhere in selected/ranked context.
 - `expected.tools`: intended MCP tools for the scenario. These are documented now and can be used by future agent-trace evals.
 
-Path-substring expectations are used instead of generated doc IDs so the suite survives corpus rebuilds.
+Path-substring expectations are used instead of generated doc IDs so the suite survives corpus rebuilds. Case IDs must be unique across a manifest and all included datasets.
 
 ## Optional model judge placeholder
 

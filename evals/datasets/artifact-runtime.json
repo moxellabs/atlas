@@ -1,0 +1,6 @@
+{
+  "name": "atlas-artifact-runtime",
+  "description": "Focused artifact import/export and runtime corpus eval cases.",
+  "repoId": "github.com/moxellabs/atlas",
+  "cases": []
+}

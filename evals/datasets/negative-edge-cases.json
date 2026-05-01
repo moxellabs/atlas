@@ -1,0 +1,6 @@
+{
+  "name": "atlas-negative-edge-cases",
+  "description": "Focused negative, malformed, and edge-case retrieval eval cases.",
+  "repoId": "github.com/moxellabs/atlas",
+  "cases": []
+}

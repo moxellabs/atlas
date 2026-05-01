@@ -1,7 +1,7 @@
 {
-  "dataset": "atlas-mcp-retrieval-smoke",
-  "description": "Publishable Atlas MCP/retrieval evaluation seed set. Cases use stable path expectations so the suite can run against rebuilt corpora without hard-coding generated document IDs.",
-  "generatedAt": "2026-05-01T02:40:45.318Z",
+  "dataset": "atlas-eval-full",
+  "description": "Full Atlas public eval manifest for MCP retrieval, profile workflows, CLI workflows, artifact runtime, security/privacy, diagnostics, and negative edge cases.",
+  "generatedAt": "2026-05-01T03:03:13.595Z",
   "repoId": "github.com/moxellabs/atlas",
   "runtime": {
     "cli": "bun run cli",
@@ -29,7 +29,7 @@
     "pathRecall": 1,
     "termRecall": 1,
     "nonEmptyContextRate": 1,
-    "averageLatencyMs": 643.75,
+    "averageLatencyMs": 694.625,
     "averageRankedHits": 37.25
   },
   "byCategory": {
@@ -38,49 +38,49 @@
       "passed": 1,
       "pathRecall": 1,
       "termRecall": 1,
-      "averageLatencyMs": 590
+      "averageLatencyMs": 627
     },
     "consumer-workflow": {
       "total": 1,
       "passed": 1,
       "pathRecall": 1,
       "termRecall": 1,
-      "averageLatencyMs": 636
+      "averageLatencyMs": 681
     },
     "runtime": {
       "total": 1,
       "passed": 1,
       "pathRecall": 1,
       "termRecall": 1,
-      "averageLatencyMs": 663
+      "averageLatencyMs": 707
     },
     "mcp": {
       "total": 1,
       "passed": 1,
       "pathRecall": 1,
       "termRecall": 1,
-      "averageLatencyMs": 629
+      "averageLatencyMs": 682
     },
     "security": {
       "total": 1,
       "passed": 1,
       "pathRecall": 1,
       "termRecall": 1,
-      "averageLatencyMs": 686
+      "averageLatencyMs": 699
     },
     "query-robustness": {
       "total": 2,
       "passed": 2,
       "pathRecall": 1,
       "termRecall": 1,
-      "averageLatencyMs": 644.5
+      "averageLatencyMs": 703.5
     },
     "diagnostics": {
       "total": 1,
       "passed": 1,
       "pathRecall": 1,
       "termRecall": 1,
-      "averageLatencyMs": 657
+      "averageLatencyMs": 754
     }
   },
   "cases": [
@@ -88,8 +88,12 @@
       "id": "maintainer-build-artifact",
       "category": "maintainer-workflow",
       "query": "How does a maintainer build and publish .moxel/atlas artifacts?",
+      "profile": "maintainer",
+      "feature": "artifact-build",
+      "scenario": "build-and-publish-artifacts",
+      "priority": "p0",
       "passed": true,
-      "latencyMs": 590,
+      "latencyMs": 627,
       "selectedCount": 7,
       "rankedCount": 22,
       "confidence": "medium",
@@ -169,8 +173,12 @@
       "id": "consumer-repo-add-import",
       "category": "consumer-workflow",
       "query": "How do consumers import a repo artifact without cloning the full repository?",
+      "profile": "consumer",
+      "feature": "artifact-import",
+      "scenario": "import-without-full-clone",
+      "priority": "p0",
       "passed": true,
-      "latencyMs": 636,
+      "latencyMs": 681,
       "selectedCount": 8,
       "rankedCount": 40,
       "confidence": "low",
@@ -252,8 +260,12 @@
       "id": "runtime-local-corpus",
       "category": "runtime",
       "query": "Where does Atlas store the local SQLite corpus used by search retrieval and MCP?",
+      "profile": "operator",
+      "feature": "local-runtime",
+      "scenario": "locate-local-corpus",
+      "priority": "p0",
       "passed": true,
-      "latencyMs": 663,
+      "latencyMs": 707,
       "selectedCount": 8,
       "rankedCount": 40,
       "confidence": "medium",
@@ -338,8 +350,12 @@
       "id": "mcp-tools-overview",
       "category": "mcp",
       "query": "What MCP tools are exposed for retrieval and context planning?",
+      "profile": "agent-integrator",
+      "feature": "mcp-tools",
+      "scenario": "discover-retrieval-tools",
+      "priority": "p0",
       "passed": true,
-      "latencyMs": 629,
+      "latencyMs": 682,
       "selectedCount": 8,
       "rankedCount": 40,
       "confidence": "medium",
@@ -424,8 +440,12 @@
       "id": "security-query-time-local",
       "category": "security",
       "query": "Does MCP fetch remote source content at query time or upload indexed corpus content?",
+      "profile": "security-reviewer",
+      "feature": "security-privacy",
+      "scenario": "verify-query-time-locality",
+      "priority": "p0",
       "passed": true,
-      "latencyMs": 686,
+      "latencyMs": 699,
       "selectedCount": 8,
       "rankedCount": 40,
       "confidence": "low",
@@ -510,8 +530,12 @@
       "id": "natural-language-broad",
       "category": "query-robustness",
       "query": "I set up a repository and want another agent to use the knowledge from it, what should happen?",
+      "profile": "agent-user",
+      "feature": "query-robustness",
+      "scenario": "natural-language-workflow-query",
+      "priority": "p1",
       "passed": true,
-      "latencyMs": 695,
+      "latencyMs": 729,
       "selectedCount": 6,
       "rankedCount": 40,
       "confidence": "low",
@@ -594,8 +618,12 @@
       "id": "keyword-baseline-repo-add",
       "category": "query-robustness",
       "query": "repo add artifact import corpus",
+      "profile": "agent-user",
+      "feature": "query-robustness",
+      "scenario": "keyword-baseline-query",
+      "priority": "p0",
       "passed": true,
-      "latencyMs": 594,
+      "latencyMs": 678,
       "selectedCount": 8,
       "rankedCount": 36,
       "confidence": "medium",
@@ -676,8 +704,12 @@
       "id": "inspect-retrieval-debugging",
       "category": "diagnostics",
       "query": "How can I inspect retrieval planning diagnostics for a query?",
+      "profile": "maintainer",
+      "feature": "diagnostics",
+      "scenario": "inspect-retrieval-debugging",
+      "priority": "p1",
       "passed": true,
-      "latencyMs": 657,
+      "latencyMs": 754,
       "selectedCount": 8,
       "rankedCount": 40,
       "confidence": "medium",
