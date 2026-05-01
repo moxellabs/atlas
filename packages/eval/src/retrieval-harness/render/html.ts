@@ -123,37 +123,28 @@ function renderInfoButton(metric: HealthMetric): string {
 
 function renderAtAGlance(report: Report): string {
 	const radarMetrics: Array<[string, number, HealthLevel]> = [
-		[
-			"Pass",
-			report.metrics.passRate,
-			classifyHealth("passRate", report.metrics.passRate),
-		],
-		[
-			"R@5",
-			report.metrics.pathRecallAt5,
-			classifyHealth("pathRecallAt5", report.metrics.pathRecallAt5),
-		],
+		["Pass", report.metrics.passRate, classifyHealth("passRate", report.metrics.passRate)],
+		["R@5", report.metrics.pathRecallAt5, classifyHealth("pathRecallAt5", report.metrics.pathRecallAt5)],
 		["MRR", report.metrics.mrr, classifyHealth("mrr", report.metrics.mrr)],
-		[
-			"Abstain",
-			report.metrics.noResultAccuracy,
-			classifyHealth("noResultAccuracy", report.metrics.noResultAccuracy),
-		],
-		[
-			"Forbidden",
-			report.metrics.forbiddenPathAccuracy,
-			classifyHealth(
-				"forbiddenPathAccuracy",
-				report.metrics.forbiddenPathAccuracy,
-			),
-		],
-		[
-			"Terms",
-			report.metrics.termRecall,
-			classifyHealth("termRecall", report.metrics.termRecall),
-		],
+		["Abstain", report.metrics.noResultAccuracy, classifyHealth("noResultAccuracy", report.metrics.noResultAccuracy)],
+		["Forbidden", report.metrics.forbiddenPathAccuracy, classifyHealth("forbiddenPathAccuracy", report.metrics.forbiddenPathAccuracy)],
+		["Terms", report.metrics.termRecall, classifyHealth("termRecall", report.metrics.termRecall)],
 	];
-	return `<section class="panel" data-eval-chart="at-a-glance" data-health="${escapeHtml(report.narrative.severity)}"><div class="case-head"><div><div class="eyebrow">At a glance</div><h2>Metric constellation${renderInfoButton("mrr")}</h2></div></div><div class="chart-frame chart-frame--radar">${renderRadarSvg(radarMetrics)}</div><p class="chart-caption">Each axis is a metric scaled to 0–1. Fill color tracks the worst axis; outer ring is target.</p></section>`;
+	const statDefs: Array<[string, number, HealthLevel, HealthMetric]> = [
+		["Pass rate", report.metrics.passRate, classifyHealth("passRate", report.metrics.passRate), "passRate"],
+		["Recall@5", report.metrics.pathRecallAt5, classifyHealth("pathRecallAt5", report.metrics.pathRecallAt5), "pathRecallAt5"],
+		["MRR", report.metrics.mrr, classifyHealth("mrr", report.metrics.mrr), "mrr"],
+		["Abstain", report.metrics.noResultAccuracy, classifyHealth("noResultAccuracy", report.metrics.noResultAccuracy), "noResultAccuracy"],
+		["Forbidden", report.metrics.forbiddenPathAccuracy, classifyHealth("forbiddenPathAccuracy", report.metrics.forbiddenPathAccuracy), "forbiddenPathAccuracy"],
+		["Terms", report.metrics.termRecall, classifyHealth("termRecall", report.metrics.termRecall), "termRecall"],
+	];
+	const statTiles = statDefs
+		.map(
+			([label, value, health, metric]) =>
+				`<div class="glance-stat" data-health="${escapeHtml(health)}"><div class="stat-label">${escapeHtml(label)}${renderInfoButton(metric)}</div><strong class="stat-value">${percent(value)}</strong><div class="track stat-track"><div class="fill" data-health="${escapeHtml(health)}" style="width:${Math.round(value * 100)}%"></div></div></div>`,
+		)
+		.join("");
+	return `<section class="panel" data-eval-chart="at-a-glance" data-health="${escapeHtml(report.narrative.severity)}"><div class="case-head"><div><div class="eyebrow">At a glance</div><h2>Metric constellation${renderInfoButton("mrr")}</h2></div></div><div class="glance-body"><div class="chart-frame chart-frame--radar">${renderRadarSvg(radarMetrics)}</div><div class="glance-stats">${statTiles}</div></div><p class="chart-caption">Each axis is a metric scaled to 0–1. Fill color tracks the worst axis; outer ring is target.</p></section>`;
 }
 
 function renderInterpretation(report: Report): string {
