@@ -122,12 +122,14 @@ export function planContext(input: PlanContextInput): PlannedContext {
 	const afterSummaries = selectSummaries({
 		rankedHits,
 		queryKind: classification.kind,
+		query: input.query,
 		state: initialState,
 		...(input.summaryLimit === undefined ? {} : { limit: input.summaryLimit }),
 	});
 	const afterExpansion = expandSections({
 		rankedHits,
 		queryKind: classification.kind,
+		query: input.query,
 		state: afterSummaries,
 		...(input.expansionLimit === undefined
 			? {}

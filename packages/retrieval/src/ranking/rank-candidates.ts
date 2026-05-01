@@ -9,9 +9,21 @@ import { redundancyPenalty } from "./redundancy-penalty";
 /** Ranks raw candidates with explicit authority, locality, redundancy, and query-kind factors. */
 export function rankCandidates(input: RankCandidatesInput): RankedHit[] {
   const candidates = dedupeCandidates(input.candidates);
+  const baseRanked: RankedHit[] = candidates
+    .map((candidate) => {
+      const factors = scoreCandidate(candidate, input.classification.kind, input.scopes ?? [], input.freshnessByRepo, []);
+      const score = composeScore(factors);
+      return {
+        ...candidate,
+        score,
+        rationale: buildHitRationale(candidate, factors),
+        factors
+      };
+    })
+    .sort(sortRankedHits);
   const ranked: RankedHit[] = [];
 
-  for (const candidate of candidates) {
+  for (const candidate of baseRanked) {
     const factors = scoreCandidate(candidate, input.classification.kind, input.scopes ?? [], input.freshnessByRepo, ranked);
     const score = composeScore(factors);
     ranked.push({

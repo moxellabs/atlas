@@ -8,6 +8,8 @@ export interface SelectSummariesInput {
   rankedHits: readonly RankedHit[];
   /** Query kind that controls summary-first aggressiveness. */
   queryKind: QueryKind;
+  /** Raw query text, used to detect detail-oriented concrete evidence requests. */
+  query?: string | undefined;
   /** Current planning state. */
   state: PlanningSelectionState;
   /** Maximum summary items to select. Defaults to 4. */
@@ -16,7 +18,7 @@ export interface SelectSummariesInput {
 
 /** Selects low-cost summaries and outlines before deeper evidence when policy allows it. */
 export function selectSummaries(input: SelectSummariesInput): PlanningSelectionState {
-  const limit = input.limit ?? (input.queryKind === "overview" || input.queryKind === "compare" ? 5 : 2);
+  const limit = input.limit ?? (needsConcreteEvidence(input.query) ? 2 : input.queryKind === "overview" || input.queryKind === "compare" ? 5 : 2);
   const state = cloneState(input.state);
   const summaryHits = input.rankedHits.filter((hit) => hit.targetType === "summary");
 
@@ -29,6 +31,14 @@ export function selectSummaries(input: SelectSummariesInput): PlanningSelectionS
   }
 
   return state;
+}
+
+/** Returns true when an overview-ish query still asks for command/tool/path-level evidence. */
+export function needsConcreteEvidence(query: string | undefined): boolean {
+  if (query === undefined) {
+    return false;
+  }
+  return /`[^`]+`|\b[\w.-]+\/[\w./-]+\b|\b(?:bun|npm|pnpm|yarn|npx|node|git|atlas|mcp|sqlite|fts5?|import|build|publish|init|sync|upload|token|credentials?|tools?)\b/i.test(query);
 }
 
 /** Appends a ranked hit if the current budget permits it; otherwise records it as omitted. */
