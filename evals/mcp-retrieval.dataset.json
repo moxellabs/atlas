@@ -1,99 +1,16 @@
 {
-	"name": "atlas-mcp-retrieval-smoke",
-	"description": "Publishable Atlas MCP/retrieval evaluation seed set. Cases use stable path expectations so the suite can run against rebuilt corpora without hard-coding generated document IDs.",
-	"repoId": "github.com/moxellabs/atlas",
-	"cases": [
-		{
-			"id": "maintainer-build-artifact",
-			"category": "maintainer-workflow",
-			"query": "How does a maintainer build and publish .moxel/atlas artifacts?",
-			"expected": {
-				"pathIncludes": ["docs/ingestion-build-flow.md"],
-				"terms": ["atlas init", "atlas build", ".moxel/atlas"],
-				"tools": ["plan_context", "find_docs"]
-			}
-		},
-		{
-			"id": "consumer-repo-add-import",
-			"category": "consumer-workflow",
-			"query": "How do consumers import a repo artifact without cloning the full repository?",
-			"expected": {
-				"pathIncludes": [
-					"docs/ingestion-build-flow.md",
-					"docs/runtime-surfaces.md"
-				],
-				"terms": ["repo add", "artifact", "without cloning"],
-				"tools": ["plan_context", "find_docs"]
-			}
-		},
-		{
-			"id": "runtime-local-corpus",
-			"category": "runtime",
-			"query": "Where does Atlas store the local SQLite corpus used by search retrieval and MCP?",
-			"expected": {
-				"pathIncludes": [
-					"packages/store/docs/index.md",
-					"docs/runtime-surfaces.md"
-				],
-				"terms": ["~/.moxel/atlas/corpus.db", "local corpus", "MCP"],
-				"tools": ["plan_context", "find_docs"]
-			}
-		},
-		{
-			"id": "mcp-tools-overview",
-			"category": "mcp",
-			"query": "What MCP tools are exposed for retrieval and context planning?",
-			"expected": {
-				"pathIncludes": [
-					"docs/retrieval-and-context.md",
-					"docs/runtime-surfaces.md"
-				],
-				"terms": ["find_docs", "plan_context", "read_section"],
-				"tools": ["plan_context", "find_docs"]
-			}
-		},
-		{
-			"id": "security-query-time-local",
-			"category": "security",
-			"query": "Does MCP fetch remote source content at query time or upload indexed corpus content?",
-			"expected": {
-				"pathIncludes": ["docs/security.md", "README.md"],
-				"terms": ["local", "remote", "credentials"],
-				"tools": ["plan_context", "find_docs"]
-			}
-		},
-		{
-			"id": "natural-language-broad",
-			"category": "query-robustness",
-			"query": "I set up a repository and want another agent to use the knowledge from it, what should happen?",
-			"expected": {
-				"pathIncludes": [
-					"skills/document-codebase/SKILL.md",
-					"docs/runtime-surfaces.md"
-				],
-				"terms": ["repo add", "artifact", "runtime"],
-				"tools": ["plan_context", "find_docs"]
-			}
-		},
-		{
-			"id": "keyword-baseline-repo-add",
-			"category": "query-robustness",
-			"query": "repo add artifact import corpus",
-			"expected": {
-				"pathIncludes": ["docs/ingestion-build-flow.md"],
-				"terms": ["repo add", "artifact", "corpus"],
-				"tools": ["plan_context", "find_docs"]
-			}
-		},
-		{
-			"id": "inspect-retrieval-debugging",
-			"category": "diagnostics",
-			"query": "How can I inspect retrieval planning diagnostics for a query?",
-			"expected": {
-				"pathIncludes": ["README.md", "apps/cli/docs/index.md"],
-				"terms": ["inspect retrieval", "--query"],
-				"tools": ["plan_context", "find_docs"]
-			}
-		}
-	]
+  "name": "atlas-eval-full",
+  "description": "Full Atlas public eval manifest for MCP retrieval, profile workflows, CLI workflows, artifact runtime, security/privacy, diagnostics, and negative edge cases.",
+  "repoId": "github.com/moxellabs/atlas",
+  "includes": [
+    "datasets/retrieval-smoke.json",
+    "datasets/profiles.json",
+    "datasets/mcp-tools.json",
+    "datasets/cli-workflows.json",
+    "datasets/artifact-runtime.json",
+    "datasets/security-privacy.json",
+    "datasets/diagnostics.json",
+    "datasets/negative-edge-cases.json"
+  ],
+  "cases": []
 }
