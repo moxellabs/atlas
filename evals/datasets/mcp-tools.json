@@ -8,168 +8,350 @@
       "category": "mcp-tools",
       "query": "MCP find_docs overview: what Atlas docs explain finding docs and planning context over the local corpus?",
       "expected": {
-        "pathIncludes": ["packages/mcp/docs/index.md", "docs/retrieval-and-context.md"],
-        "terms": ["find_docs", "plan_context", "local corpus"],
-        "tools": ["find_docs"]
+        "pathIncludes": [
+          "packages/mcp/docs/index.md",
+          "docs/retrieval-and-context.md"
+        ],
+        "terms": [
+          "find_docs",
+          "plan_context",
+          "local corpus"
+        ],
+        "tools": [
+          "find_docs"
+        ]
       },
       "profile": "consumer",
       "feature": "mcp-find-docs",
       "scenario": "overview-query",
-      "priority": "high"
+      "priority": "high",
+      "capability": "MCP integration",
+      "claim": "Atlas retrieves MCP tool and context-planning evidence for downstream coding agents.",
+      "whyItMatters": "The core product promise is giving agents grounded project context through MCP.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "agent-integration"
     },
     {
       "id": "mcp-tools-plan-context-detail",
       "category": "mcp-tools",
       "query": "MCP plan_context detail query: explain Atlas local-first retrieval planning, token budgets, selected evidence, and provenance for agents.",
       "expected": {
-        "pathIncludes": ["packages/retrieval/docs/index.md", "docs/retrieval-and-context.md"],
-        "terms": ["token budgets", "provenance", "local-first"],
-        "tools": ["plan_context"]
+        "pathIncludes": [
+          "packages/retrieval/docs/index.md",
+          "docs/retrieval-and-context.md"
+        ],
+        "terms": [
+          "token budgets",
+          "provenance",
+          "local-first"
+        ],
+        "tools": [
+          "plan_context"
+        ]
       },
       "profile": "agent-integrator",
       "feature": "mcp-plan-context",
       "scenario": "detail-query",
-      "priority": "high"
+      "priority": "high",
+      "capability": "MCP integration",
+      "claim": "Atlas retrieves MCP tool and context-planning evidence for downstream coding agents.",
+      "whyItMatters": "The core product promise is giving agents grounded project context through MCP.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "agent-integration"
     },
     {
       "id": "mcp-tools-read-section-exact",
       "category": "mcp-tools",
       "query": "MCP read_section exact section query: read the CLI App Execution Model section for how runCli dispatches commands and returns structured results.",
       "expected": {
-        "pathIncludes": ["apps/cli/docs/index.md"],
-        "terms": ["Execution Model", "runCli", "structured"],
-        "tools": ["read_section"]
+        "pathIncludes": [
+          "apps/cli/docs/index.md"
+        ],
+        "terms": [
+          "Execution Model",
+          "runCli",
+          "structured"
+        ],
+        "tools": [
+          "read_section"
+        ]
       },
       "profile": "contributor",
       "feature": "mcp-read-section",
       "scenario": "exact-section-query",
-      "priority": "high"
+      "priority": "high",
+      "capability": "MCP integration",
+      "claim": "Atlas retrieves MCP tool and context-planning evidence for downstream coding agents.",
+      "whyItMatters": "The core product promise is giving agents grounded project context through MCP.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "agent-integration"
     },
     {
       "id": "mcp-tools-exact-path-route",
       "category": "mcp-tools",
       "query": "MCP exact path route: apps/cli/docs/index.md Search/query mcp local imported corpus",
       "expected": {
-        "pathIncludes": ["apps/cli/docs/index.md"],
-        "terms": ["Search/query", "mcp", "local imported corpus"],
-        "tools": ["find_docs", "read_section"]
+        "pathIncludes": [
+          "apps/cli/docs/index.md"
+        ],
+        "terms": [
+          "Search/query",
+          "mcp",
+          "local imported corpus"
+        ],
+        "tools": [
+          "find_docs",
+          "read_section"
+        ]
       },
       "profile": "contributor",
       "feature": "mcp-routing",
       "scenario": "exact-path-to-section-route",
-      "priority": "high"
+      "priority": "high",
+      "capability": "MCP integration",
+      "claim": "Atlas retrieves MCP tool and context-planning evidence for downstream coding agents.",
+      "whyItMatters": "The core product promise is giving agents grounded project context through MCP.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "agent-integration"
     },
     {
       "id": "mcp-tools-summary-first-then-section",
       "category": "mcp-tools",
       "query": "MCP multi-step task: first summarize Atlas MCP/server local docs from README, then read the Server and MCP usage section for /mcp and stdio commands.",
       "expected": {
-        "pathIncludes": ["README.md"],
-        "terms": ["Server and MCP usage", "/mcp", "atlas mcp"],
-        "tools": ["plan_context", "read_section"]
+        "pathIncludes": [
+          "README.md"
+        ],
+        "terms": [
+          "Server and MCP usage",
+          "/mcp",
+          "atlas mcp"
+        ],
+        "tools": [
+          "plan_context",
+          "read_section"
+        ]
       },
       "profile": "agent-integrator",
       "feature": "mcp-multistep",
       "scenario": "summary-first-then-section-read",
-      "priority": "high"
+      "priority": "high",
+      "capability": "MCP integration",
+      "claim": "Atlas retrieves MCP tool and context-planning evidence for downstream coding agents.",
+      "whyItMatters": "The core product promise is giving agents grounded project context through MCP.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "agent-integration"
     },
     {
       "id": "mcp-tools-broad-natural-language-plan",
       "category": "mcp-tools",
       "query": "I am wiring an agent to answer Atlas repository questions through MCP without cloning or fetching remote source; what local documentation context should it gather first?",
       "expected": {
-        "pathIncludes": ["README.md", "docs/retrieval-and-context.md"],
-        "terms": ["MCP", "without cloning", "remote source"],
-        "tools": ["plan_context"]
+        "pathIncludes": [
+          "README.md",
+          "docs/retrieval-and-context.md"
+        ],
+        "terms": [
+          "MCP",
+          "without cloning",
+          "remote source"
+        ],
+        "tools": [
+          "plan_context"
+        ]
       },
       "profile": "agent-integrator",
       "feature": "mcp-plan-context",
       "scenario": "broad-natural-language-task",
-      "priority": "high"
+      "priority": "high",
+      "capability": "MCP integration",
+      "claim": "Atlas retrieves MCP tool and context-planning evidence for downstream coding agents.",
+      "whyItMatters": "The core product promise is giving agents grounded project context through MCP.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "agent-integration"
     },
     {
       "id": "mcp-tools-diagnostics-omissions",
       "category": "mcp-tools",
       "query": "MCP diagnostics query: where are retrieval omission diagnostics such as budget authority freshness archive and redundancy documented?",
       "expected": {
-        "pathIncludes": ["packages/retrieval/docs/index.md", "docs/retrieval-and-context.md"],
-        "terms": ["omission diagnostics", "freshness", "redundancy"],
-        "tools": ["plan_context"]
+        "pathIncludes": [
+          "packages/retrieval/docs/index.md",
+          "docs/retrieval-and-context.md"
+        ],
+        "terms": [
+          "omission diagnostics",
+          "freshness",
+          "redundancy"
+        ],
+        "tools": [
+          "plan_context"
+        ]
       },
       "profile": "maintainer",
       "feature": "mcp-diagnostics",
       "scenario": "diagnostics-query-no-empty-result-not-representable",
-      "priority": "medium"
+      "priority": "medium",
+      "capability": "MCP integration",
+      "claim": "Atlas retrieves MCP tool and context-planning evidence for downstream coding agents.",
+      "whyItMatters": "The core product promise is giving agents grounded project context through MCP.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "agent-integration"
     },
     {
       "id": "mcp-tools-manifest-plan-context-route",
       "category": "mcp-tools",
       "query": "MCP adoption route: for an indexed repository prompt, should the agent read atlas://manifest and then call plan_context?",
       "expected": {
-        "pathIncludes": ["docs/runtime-surfaces.md", "packages/mcp/docs/index.md"],
-        "terms": ["atlas://manifest", "plan_context", "MCP"],
-        "tools": ["atlas://manifest", "plan_context"]
+        "pathIncludes": [
+          "docs/runtime-surfaces.md",
+          "packages/mcp/docs/index.md"
+        ],
+        "terms": [
+          "atlas://manifest",
+          "plan_context",
+          "MCP"
+        ],
+        "tools": [
+          "atlas://manifest",
+          "plan_context"
+        ]
       },
       "profile": "agent-integrator",
       "feature": "mcp-adoption",
       "scenario": "manifest-to-plan-context",
-      "priority": "high"
+      "priority": "high",
+      "capability": "Artifact/runtime trust",
+      "claim": "Atlas retrieves artifact freshness, manifest, checksum, and runtime behavior evidence.",
+      "whyItMatters": "Users need confidence that generated/imported knowledge artifacts are fresh and trustworthy.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "artifact-runtime-trust"
     },
     {
       "id": "mcp-tools-cli-stdio-launch",
       "category": "mcp-tools",
       "query": "MCP command source docs: how does the CLI start command-launched stdio MCP sessions by delegating to @atlas/mcp?",
       "expected": {
-        "pathIncludes": ["apps/cli/docs/index.md"],
-        "terms": ["stdio MCP sessions", "@atlas/mcp", "stable exit codes"],
-        "tools": ["find_docs"]
+        "pathIncludes": [
+          "apps/cli/docs/index.md"
+        ],
+        "terms": [
+          "stdio MCP sessions",
+          "@atlas/mcp",
+          "stable exit codes"
+        ],
+        "tools": [
+          "find_docs"
+        ]
       },
       "profile": "contributor",
       "feature": "mcp-cli-command",
       "scenario": "command-source-grounding",
-      "priority": "medium"
+      "priority": "medium",
+      "capability": "CLI workflow discovery",
+      "claim": "Atlas retrieves CLI workflow docs for command-line user journeys.",
+      "whyItMatters": "The CLI is the main local surface and must be discoverable from user-like queries.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "mcp-tools-streamable-http-route",
       "category": "mcp-tools",
       "query": "MCP server route docs: where is the Streamable HTTP /mcp bridge described for Atlas server runtime?",
       "expected": {
-        "pathIncludes": ["apps/server/docs/index.md", "packages/mcp/docs/index.md"],
-        "terms": ["/mcp", "server", "runtime"],
-        "tools": ["find_docs", "plan_context"]
+        "pathIncludes": [
+          "apps/server/docs/index.md",
+          "packages/mcp/docs/index.md"
+        ],
+        "terms": [
+          "/mcp",
+          "server",
+          "runtime"
+        ],
+        "tools": [
+          "find_docs",
+          "plan_context"
+        ]
       },
       "profile": "consumer",
       "feature": "mcp-http-transport",
       "scenario": "http-mcp-route",
-      "priority": "medium"
+      "priority": "medium",
+      "capability": "MCP integration",
+      "claim": "Atlas retrieves MCP tool and context-planning evidence for downstream coding agents.",
+      "whyItMatters": "The core product promise is giving agents grounded project context through MCP.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "agent-integration"
     },
     {
       "id": "mcp-tools-skill-artifact-access",
       "category": "mcp-tools",
       "query": "MCP skills query: how should agents use first-party skill docs and artifacts such as document-codebase through Atlas local docs?",
       "expected": {
-        "pathIncludes": ["skills/document-codebase/SKILL.md", "skills/atlas-contributor/SKILL.md"],
-        "terms": ["document-codebase", "Skill", "source truth"],
-        "tools": ["list_skills", "use_skill"]
+        "pathIncludes": [
+          "skills/document-codebase/SKILL.md",
+          "skills/atlas-contributor/SKILL.md"
+        ],
+        "terms": [
+          "document-codebase",
+          "Skill",
+          "source truth"
+        ],
+        "tools": [
+          "list_skills",
+          "use_skill"
+        ]
       },
       "profile": "agent-integrator",
       "feature": "mcp-skills",
       "scenario": "skill-artifact-access",
-      "priority": "medium"
+      "priority": "medium",
+      "capability": "Artifact/runtime trust",
+      "claim": "Atlas retrieves artifact freshness, manifest, checksum, and runtime behavior evidence.",
+      "whyItMatters": "Users need confidence that generated/imported knowledge artifacts are fresh and trustworthy.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "artifact-runtime-trust"
     },
     {
       "id": "mcp-tools-local-first-boundary",
       "category": "mcp-tools",
       "query": "MCP local-first boundary: do Atlas query-time search retrieval MCP and HTTP reads fetch remote source content or use local imported corpus data?",
       "expected": {
-        "pathIncludes": ["README.md", "docs/runtime-surfaces.md"],
-        "terms": ["Query-time search", "MCP", "local imported corpus"],
-        "tools": ["plan_context", "find_docs"]
+        "pathIncludes": [
+          "README.md",
+          "docs/runtime-surfaces.md"
+        ],
+        "terms": [
+          "Query-time search",
+          "MCP",
+          "local imported corpus"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "security-reviewer",
       "feature": "mcp-local-first",
       "scenario": "query-time-boundary",
-      "priority": "high"
+      "priority": "high",
+      "capability": "MCP integration",
+      "claim": "Atlas retrieves MCP tool and context-planning evidence for downstream coding agents.",
+      "whyItMatters": "The core product promise is giving agents grounded project context through MCP.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "agent-integration"
     }
   ]
 }

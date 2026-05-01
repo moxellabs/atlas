@@ -11,9 +11,21 @@
       "scenario": "query-time reads stay local-only",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["README.md"],
-        "terms": ["Query-time search", "do not fetch remote source content", "local"]
-      }
+        "pathIncludes": [
+          "README.md"
+        ],
+        "terms": [
+          "Query-time search",
+          "do not fetch remote source content",
+          "local"
+        ]
+      },
+      "capability": "Security/privacy boundaries",
+      "claim": "Atlas retrieves security evidence while avoiding unsafe or irrelevant secret-oriented sources.",
+      "whyItMatters": "Trust requires clear locality, credential, and sensitive-data boundaries.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "security-privacy"
     },
     {
       "id": "security-retrieval-local-corpus-no-credentials",
@@ -23,9 +35,21 @@
       "scenario": "retrieval planning avoids source adapters and credentials",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["docs/retrieval-and-context.md"],
-        "terms": ["store-backed", "does not fetch remote repositories", "read credentials"]
-      }
+        "pathIncludes": [
+          "docs/retrieval-and-context.md"
+        ],
+        "terms": [
+          "store-backed",
+          "does not fetch remote repositories",
+          "read credentials"
+        ]
+      },
+      "capability": "Security/privacy boundaries",
+      "claim": "Atlas retrieves security evidence while avoiding unsafe or irrelevant secret-oriented sources.",
+      "whyItMatters": "Trust requires clear locality, credential, and sensitive-data boundaries.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "security-privacy"
     },
     {
       "id": "security-no-upload-guarantee",
@@ -35,9 +59,21 @@
       "scenario": "no indexed corpus upload",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["docs/security.md"],
-        "terms": ["No Upload Guarantee", "does not upload indexed corpus content", "external services"]
-      }
+        "pathIncludes": [
+          "docs/security.md"
+        ],
+        "terms": [
+          "No Upload Guarantee",
+          "does not upload indexed corpus content",
+          "external services"
+        ]
+      },
+      "capability": "Security/privacy boundaries",
+      "claim": "Atlas retrieves security evidence while avoiding unsafe or irrelevant secret-oriented sources.",
+      "whyItMatters": "Trust requires clear locality, credential, and sensitive-data boundaries.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "security-privacy"
     },
     {
       "id": "security-credentials-not-written",
@@ -47,9 +83,22 @@
       "scenario": "credential values are referenced and not persisted",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["docs/security.md"],
-        "terms": ["GHES tokens", "GitHub CLI credentials", "must not be written", "MCP output"]
-      }
+        "pathIncludes": [
+          "docs/security.md"
+        ],
+        "terms": [
+          "GHES tokens",
+          "GitHub CLI credentials",
+          "must not be written",
+          "MCP output"
+        ]
+      },
+      "capability": "Security/privacy boundaries",
+      "claim": "Atlas retrieves security evidence while avoiding unsafe or irrelevant secret-oriented sources.",
+      "whyItMatters": "Trust requires clear locality, credential, and sensitive-data boundaries.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "security-privacy"
     },
     {
       "id": "security-secrets-by-env-name",
@@ -59,9 +108,20 @@
       "scenario": "configuration docs explain secret references",
       "priority": "p1",
       "expected": {
-        "pathIncludes": ["docs/configuration.md"],
-        "terms": ["Secrets should be referenced by environment variable name", "without printing token values"]
-      }
+        "pathIncludes": [
+          "docs/configuration.md"
+        ],
+        "terms": [
+          "Secrets should be referenced by environment variable name",
+          "without printing token values"
+        ]
+      },
+      "capability": "Security/privacy boundaries",
+      "claim": "Atlas retrieves security evidence while avoiding unsafe or irrelevant secret-oriented sources.",
+      "whyItMatters": "Trust requires clear locality, credential, and sensitive-data boundaries.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "security-privacy"
     },
     {
       "id": "security-git-first-auth-read-tokens",
@@ -71,9 +131,22 @@
       "scenario": "auth is explicit and read-scoped for artifact fetch",
       "priority": "p1",
       "expected": {
-        "pathIncludes": ["README.md", "docs/configuration.md"],
-        "terms": ["GitHub CLI or token env var only", "least-privilege read tokens", "not write scopes"]
-      }
+        "pathIncludes": [
+          "README.md",
+          "docs/configuration.md"
+        ],
+        "terms": [
+          "GitHub CLI or token env var only",
+          "least-privilege read tokens",
+          "not write scopes"
+        ]
+      },
+      "capability": "Artifact/runtime trust",
+      "claim": "Atlas retrieves artifact freshness, manifest, checksum, and runtime behavior evidence.",
+      "whyItMatters": "Users need confidence that generated/imported knowledge artifacts are fresh and trustworthy.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "artifact-runtime-trust"
     },
     {
       "id": "security-public-artifact-secret-path-safety",
@@ -83,9 +156,21 @@
       "scenario": "artifact metadata avoids secrets and machine paths",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["docs/ingestion-build-flow.md"],
-        "terms": ["Artifact JSON must not contain secrets", "absolute machine-local paths", "secret/path safety"]
-      }
+        "pathIncludes": [
+          "docs/ingestion-build-flow.md"
+        ],
+        "terms": [
+          "Artifact JSON must not contain secrets",
+          "absolute machine-local paths",
+          "secret/path safety"
+        ]
+      },
+      "capability": "Artifact/runtime trust",
+      "claim": "Atlas retrieves artifact freshness, manifest, checksum, and runtime behavior evidence.",
+      "whyItMatters": "Users need confidence that generated/imported knowledge artifacts are fresh and trustworthy.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "artifact-runtime-trust"
     },
     {
       "id": "security-public-private-profile-boundary",
@@ -95,10 +180,25 @@
       "scenario": "public profile excludes private/internal material",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["docs/configuration.md"],
-        "pathExcludes": ["docs/archive/"],
-        "terms": ["Public artifacts exclude", "internal", "credentials", "machine-local paths"]
-      }
+        "pathIncludes": [
+          "docs/configuration.md"
+        ],
+        "pathExcludes": [
+          "docs/archive/"
+        ],
+        "terms": [
+          "Public artifacts exclude",
+          "internal",
+          "credentials",
+          "machine-local paths"
+        ]
+      },
+      "capability": "Profile-aware retrieval",
+      "claim": "Atlas retrieves evidence matched to maintainer, consumer, operator, and agent-integrator perspectives.",
+      "whyItMatters": "Different roles need different evidence from the same corpus.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+forbidden-path",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "security-sanitized-troubleshooting",
@@ -108,9 +208,22 @@
       "scenario": "troubleshooting docs define safe sharing boundary",
       "priority": "p1",
       "expected": {
-        "pathIncludes": ["docs/troubleshooting.md"],
-        "terms": ["access tokens", "cookies", "private repository URLs", "redacts token-like context values"]
-      }
+        "pathIncludes": [
+          "docs/troubleshooting.md"
+        ],
+        "terms": [
+          "access tokens",
+          "cookies",
+          "private repository URLs",
+          "redacts token-like context values"
+        ]
+      },
+      "capability": "Security/privacy boundaries",
+      "claim": "Atlas retrieves security evidence while avoiding unsafe or irrelevant secret-oriented sources.",
+      "whyItMatters": "Trust requires clear locality, credential, and sensitive-data boundaries.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "security-privacy"
     }
   ]
 }

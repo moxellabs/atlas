@@ -13,8 +13,18 @@
       "expected": {
         "minRankedHits": 1,
         "confidence": "low",
-        "diagnosticsInclude": ["classification", "candidate-generation", "planning"]
-      }
+        "diagnosticsInclude": [
+          "classification",
+          "candidate-generation",
+          "planning"
+        ]
+      },
+      "capability": "Negative and edge behavior",
+      "claim": "Atlas abstains or stays bounded when queries should not retrieve misleading project evidence.",
+      "whyItMatters": "Reliable retrieval includes knowing when not to return context.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "diagnostics",
+      "riskArea": "abstention-edge-case"
     },
     {
       "id": "edge-non-existent-command",
@@ -24,9 +34,20 @@
       "scenario": "non-existent command queries land on CLI/runtime docs rather than fabricated command docs",
       "priority": "p1",
       "expected": {
-        "pathIncludes": ["apps/cli/docs/skills/add-cli-command/SKILL.md"],
-        "terms": ["command", "CLI"]
-      }
+        "pathIncludes": [
+          "apps/cli/docs/skills/add-cli-command/SKILL.md"
+        ],
+        "terms": [
+          "command",
+          "CLI"
+        ]
+      },
+      "capability": "Negative and edge behavior",
+      "claim": "Atlas abstains or stays bounded when queries should not retrieve misleading project evidence.",
+      "whyItMatters": "Reliable retrieval includes knowing when not to return context.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "abstention-edge-case"
     },
     {
       "id": "edge-ambiguous-shorthand",
@@ -36,9 +57,21 @@
       "scenario": "ambiguous repo shorthand guidance is retrievable",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["docs/configuration.md"],
-        "terms": ["ambiguous", "Use --host <host>", "full SSH/HTTPS URL"]
-      }
+        "pathIncludes": [
+          "docs/configuration.md"
+        ],
+        "terms": [
+          "ambiguous",
+          "Use --host <host>",
+          "full SSH/HTTPS URL"
+        ]
+      },
+      "capability": "Negative and edge behavior",
+      "claim": "Atlas abstains or stays bounded when queries should not retrieve misleading project evidence.",
+      "whyItMatters": "Reliable retrieval includes knowing when not to return context.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "abstention-edge-case"
     },
     {
       "id": "edge-typo-retrieval-context",
@@ -48,9 +81,20 @@
       "scenario": "typo-heavy retrieval/context query still lands on nearby retrieval docs",
       "priority": "p2",
       "expected": {
-        "pathIncludes": ["docs/retrieval-and-context.md"],
-        "terms": ["Token Budgets", "omission diagnostics"]
-      }
+        "pathIncludes": [
+          "docs/retrieval-and-context.md"
+        ],
+        "terms": [
+          "Token Budgets",
+          "omission diagnostics"
+        ]
+      },
+      "capability": "Negative and edge behavior",
+      "claim": "Atlas abstains or stays bounded when queries should not retrieve misleading project evidence.",
+      "whyItMatters": "Reliable retrieval includes knowing when not to return context.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "abstention-edge-case"
     },
     {
       "id": "edge-exact-path-security-doc",
@@ -60,9 +104,20 @@
       "scenario": "exact path lookup retrieves that document",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["docs/security.md"],
-        "terms": ["Local-First Security", "Credentials"]
-      }
+        "pathIncludes": [
+          "docs/security.md"
+        ],
+        "terms": [
+          "Local-First Security",
+          "Credentials"
+        ]
+      },
+      "capability": "Negative and edge behavior",
+      "claim": "Atlas abstains or stays bounded when queries should not retrieve misleading project evidence.",
+      "whyItMatters": "Reliable retrieval includes knowing when not to return context.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "abstention-edge-case"
     },
     {
       "id": "edge-slash-dot-symbol-artifact-path",
@@ -72,9 +127,23 @@
       "scenario": "slash/dot/symbol artifact path query retrieves artifact docs",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["README.md"],
-        "terms": [".moxel/atlas", "manifest.json", "corpus.db", "docs.index.json", "checksums.json"]
-      }
+        "pathIncludes": [
+          "README.md"
+        ],
+        "terms": [
+          ".moxel/atlas",
+          "manifest.json",
+          "corpus.db",
+          "docs.index.json",
+          "checksums.json"
+        ]
+      },
+      "capability": "Negative and edge behavior",
+      "claim": "Atlas abstains or stays bounded when queries should not retrieve misleading project evidence.",
+      "whyItMatters": "Reliable retrieval includes knowing when not to return context.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "abstention-edge-case"
     },
     {
       "id": "edge-long-query-security-boundaries",
@@ -84,9 +153,22 @@
       "scenario": "long compound query retrieves security boundary docs",
       "priority": "p1",
       "expected": {
-        "pathIncludes": ["README.md", "docs/security.md"],
-        "terms": ["do not fetch remote source content", "does not upload indexed corpus content", "Tokens must not be stored"]
-      }
+        "pathIncludes": [
+          "README.md",
+          "docs/security.md"
+        ],
+        "terms": [
+          "do not fetch remote source content",
+          "does not upload indexed corpus content",
+          "Tokens must not be stored"
+        ]
+      },
+      "capability": "Negative and edge behavior",
+      "claim": "Atlas abstains or stays bounded when queries should not retrieve misleading project evidence.",
+      "whyItMatters": "Reliable retrieval includes knowing when not to return context.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "abstention-edge-case"
     },
     {
       "id": "edge-small-budget-diagnostics-query",
@@ -96,9 +178,22 @@
       "scenario": "small-budget concepts retrieve budget and omission docs",
       "priority": "p1",
       "expected": {
-        "pathIncludes": ["docs/retrieval-and-context.md"],
-        "terms": ["budgetTokens", "usedTokens", "omission diagnostics", "budget"]
-      }
+        "pathIncludes": [
+          "docs/retrieval-and-context.md"
+        ],
+        "terms": [
+          "budgetTokens",
+          "usedTokens",
+          "omission diagnostics",
+          "budget"
+        ]
+      },
+      "capability": "Negative and edge behavior",
+      "claim": "Atlas abstains or stays bounded when queries should not retrieve misleading project evidence.",
+      "whyItMatters": "Reliable retrieval includes knowing when not to return context.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "abstention-edge-case"
     },
     {
       "id": "edge-generated-vendor-boundary",
@@ -108,9 +203,21 @@
       "scenario": "generated/vendor path edge case guidance is retrievable",
       "priority": "p1",
       "expected": {
-        "pathIncludes": ["docs/troubleshooting.md"],
-        "terms": ["Generated/vendor directories", "node_modules", "ignore-boundary regression"]
-      }
+        "pathIncludes": [
+          "docs/troubleshooting.md"
+        ],
+        "terms": [
+          "Generated/vendor directories",
+          "node_modules",
+          "ignore-boundary regression"
+        ]
+      },
+      "capability": "Negative and edge behavior",
+      "claim": "Atlas abstains or stays bounded when queries should not retrieve misleading project evidence.",
+      "whyItMatters": "Reliable retrieval includes knowing when not to return context.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "abstention-edge-case"
     },
     {
       "id": "edge-diagnostics-confidence-ambiguity",
@@ -121,9 +228,18 @@
       "priority": "p2",
       "expected": {
         "minRankedHits": 1,
-        "diagnosticsInclude": ["ranking", "planning"],
+        "diagnosticsInclude": [
+          "ranking",
+          "planning"
+        ],
         "confidence": "medium"
-      }
+      },
+      "capability": "Negative and edge behavior",
+      "claim": "Atlas abstains or stays bounded when queries should not retrieve misleading project evidence.",
+      "whyItMatters": "Reliable retrieval includes knowing when not to return context.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "diagnostics",
+      "riskArea": "abstention-edge-case"
     }
   ]
 }

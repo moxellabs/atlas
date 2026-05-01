@@ -12,9 +12,22 @@
       "scenario": "default public profile retrieves public overview metadata",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["README.md"],
-        "terms": ["visibility: public", "audience", "purpose", "local-first"]
-      }
+        "pathIncludes": [
+          "README.md"
+        ],
+        "terms": [
+          "visibility: public",
+          "audience",
+          "purpose",
+          "local-first"
+        ]
+      },
+      "capability": "Profile-aware retrieval",
+      "claim": "Atlas retrieves evidence matched to maintainer, consumer, operator, and agent-integrator perspectives.",
+      "whyItMatters": "Different roles need different evidence from the same corpus.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "profile-explicit-public-filter-example",
@@ -25,9 +38,22 @@
       "scenario": "explicit public filter examples are documented",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["docs/retrieval-and-context.md"],
-        "terms": ["--profile public", "--audience maintainer", "--purpose workflow", "--visibility public"]
-      }
+        "pathIncludes": [
+          "docs/retrieval-and-context.md"
+        ],
+        "terms": [
+          "--profile public",
+          "--audience maintainer",
+          "--purpose workflow",
+          "--visibility public"
+        ]
+      },
+      "capability": "Profile-aware retrieval",
+      "claim": "Atlas retrieves evidence matched to maintainer, consumer, operator, and agent-integrator perspectives.",
+      "whyItMatters": "Different roles need different evidence from the same corpus.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "profile-any-all-profiles-search",
@@ -38,9 +64,22 @@
       "scenario": "all/any profile behavior is explained on search help surface",
       "priority": "p1",
       "expected": {
-        "pathIncludes": ["docs/retrieval-and-context.md"],
-        "terms": ["profile", "audience", "purpose", "visibility"]
-      }
+        "pathIncludes": [
+          "docs/retrieval-and-context.md"
+        ],
+        "terms": [
+          "profile",
+          "audience",
+          "purpose",
+          "visibility"
+        ]
+      },
+      "capability": "Profile-aware retrieval",
+      "claim": "Atlas retrieves evidence matched to maintainer, consumer, operator, and agent-integrator perspectives.",
+      "whyItMatters": "Different roles need different evidence from the same corpus.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "profile-supported-metadata-values",
@@ -51,9 +90,23 @@
       "scenario": "configuration docs enumerate grounded metadata values",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["docs/configuration.md"],
-        "terms": ["supported `visibility` values", "consumer", "contributor", "maintainer", "internal"]
-      }
+        "pathIncludes": [
+          "docs/configuration.md"
+        ],
+        "terms": [
+          "supported `visibility` values",
+          "consumer",
+          "contributor",
+          "maintainer",
+          "internal"
+        ]
+      },
+      "capability": "Profile-aware retrieval",
+      "claim": "Atlas retrieves evidence matched to maintainer, consumer, operator, and agent-integrator perspectives.",
+      "whyItMatters": "Different roles need different evidence from the same corpus.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "profile-frontmatter-precedence",
@@ -64,9 +117,21 @@
       "scenario": "profile metadata precedence is grounded in configuration docs",
       "priority": "p1",
       "expected": {
-        "pathIncludes": ["docs/configuration.md"],
-        "terms": ["frontmatter > config rule > built-in default", "docs.metadata.rules", "docs.metadata.profiles"]
-      }
+        "pathIncludes": [
+          "docs/configuration.md"
+        ],
+        "terms": [
+          "frontmatter > config rule > built-in default",
+          "docs.metadata.rules",
+          "docs.metadata.profiles"
+        ]
+      },
+      "capability": "Profile-aware retrieval",
+      "claim": "Atlas retrieves evidence matched to maintainer, consumer, operator, and agent-integrator perspectives.",
+      "whyItMatters": "Different roles need different evidence from the same corpus.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "profile-public-artifact-excludes-internal",
@@ -77,10 +142,25 @@
       "scenario": "public profile artifact safety boundary",
       "priority": "p0",
       "expected": {
-        "pathIncludes": ["README.md"],
-        "pathExcludes": ["docs/archive/"],
-        "terms": ["public artifacts exclude", "visibility: internal", "credentials", "machine-local paths"]
-      }
+        "pathIncludes": [
+          "README.md"
+        ],
+        "pathExcludes": [
+          "docs/archive/"
+        ],
+        "terms": [
+          "public artifacts exclude",
+          "visibility: internal",
+          "credentials",
+          "machine-local paths"
+        ]
+      },
+      "capability": "Profile-aware retrieval",
+      "claim": "Atlas retrieves evidence matched to maintainer, consumer, operator, and agent-integrator perspectives.",
+      "whyItMatters": "Different roles need different evidence from the same corpus.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+forbidden-path",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "profile-built-in-defaults",
@@ -91,9 +171,23 @@
       "scenario": "built-in profile defaults are documented",
       "priority": "p1",
       "expected": {
-        "pathIncludes": ["docs/configuration.md"],
-        "terms": ["Built-in defaults", "README.md", "docs/**", "skills/**", "docs/archive/**"]
-      }
+        "pathIncludes": [
+          "docs/configuration.md"
+        ],
+        "terms": [
+          "Built-in defaults",
+          "README.md",
+          "docs/**",
+          "skills/**",
+          "docs/archive/**"
+        ]
+      },
+      "capability": "Profile-aware retrieval",
+      "claim": "Atlas retrieves evidence matched to maintainer, consumer, operator, and agent-integrator perspectives.",
+      "whyItMatters": "Different roles need different evidence from the same corpus.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding",
+      "riskArea": "workflow-retrieval"
     }
   ]
 }

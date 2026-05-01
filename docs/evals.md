@@ -13,7 +13,7 @@ Atlas keeps a lightweight evaluation harness for MCP and retrieval performance u
 
 - It runs against the local Atlas CLI and prefers the repo-local `.moxel/atlas/corpus.db` artifact when present.
 - It does not require model API keys for retrieval metrics.
-- It emits JSON plus a standalone HTML dashboard with summary cards, charts, grouped breakdowns, and case-level tables.
+- It emits JSON plus a standalone HTML evaluation report organized around capability claims, coverage, rank-aware retrieval metrics, representative cases, methodology, and limitations.
 - It has an optional model-judge metadata slot for a later answer-quality pass; setting model env vars records intent only and does not call a model today.
 
 ## Local commands
@@ -66,6 +66,7 @@ Each case contains:
 - `category`: report grouping used in charts and tables.
 - `query`: natural-language or keyword query passed to `atlas inspect retrieval`.
 - Optional metadata: `profile`, `feature`, `scenario`, and `priority`; these flow into JSON reports for filtering and public analysis.
+- Public-report metadata: `capability`, `claim`, `whyItMatters`, `expectedBehavior`, `coverageType`, and `riskArea`; these explain what the case is asserting and why the result matters to a reader.
 - `expected.pathIncludes`: path substrings that should appear in top retrieval results.
 - `expected.pathExcludes`: path substrings that must not appear in top retrieval results, useful for negative/edge cases.
 - `expected.terms`: terms expected somewhere in selected/ranked context payloads or retrieved local source text.
@@ -86,14 +87,32 @@ Path-substring expectations are used instead of generated document IDs so the su
 
 ## Interpreting metrics
 
-- Pass rate: fraction of cases that passed every deterministic expectation.
-- Path recall: fraction of expected path substrings found in top paths.
+- Pass rate: fraction of cases that passed every deterministic expectation. This is a gate, not the main public claim.
+- Path recall: fraction of expected path substrings found in the top retrieved paths considered by the case.
+- Path Recall@1 / @3 / @5: fraction of expected source paths that appear in the top 1, 3, or 5 retrieved paths. These are the main ranking-quality signals for whether the right evidence is near the top.
+- MRR: mean reciprocal rank of the first expected source path. Higher values mean expected evidence appears earlier.
 - Term recall: fraction of expected terms found in selected/ranked context payloads plus local source contents for retrieved paths.
+- No-result accuracy: fraction of no-result expectations that correctly abstained from returning ranked/selected evidence.
+- Forbidden-path accuracy: fraction of cases where excluded paths were not retrieved.
 - Non-empty context rate: fraction of cases where Atlas produced selected or ranked retrieval context. No-result cases can still pass when they explicitly expect no results.
-- Average latency: wall-clock CLI query time per case.
+- Median and P95 latency: wall-clock CLI query time per case.
 - Average ranked hits: mean ranked hit count.
 
 The report also groups metrics by category, profile, feature, and scenario so regressions can be mapped back to user workflows. Case priority is preserved per case in the detailed table.
+
+## Public report structure
+
+The HTML report is intentionally claims-first rather than pass-rate-first. It includes:
+
+- An executive summary of what Atlas retrieval/MCP behavior is being evaluated.
+- A definition of the eval unit: one user-like query against `atlas inspect retrieval` with deterministic expectations.
+- Capability claims and evidence, tying each feature group to cases, Recall@5, MRR, term recall, and why the workflow matters.
+- Coverage tables for capabilities, priorities, risk areas, and coverage types.
+- Representative passing cases and hardest passing cases, so a 100% pass run still shows concrete evidence and weak spots.
+- Failures/regressions with missing paths, missing terms, excluded-path violations, diagnostics, and top retrieved paths.
+- Methodology, metric definitions, limitations, and reproducibility metadata.
+
+The goal is to make the public page read like a lightweight research/benchmark report: what claim is being tested, what evidence supports it, what metric was used, what is not covered yet, and how to reproduce the run.
 
 ## Publishing and CI behavior
 

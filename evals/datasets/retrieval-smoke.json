@@ -8,14 +8,29 @@
       "category": "maintainer-workflow",
       "query": "How does a maintainer build and publish .moxel/atlas artifacts?",
       "expected": {
-        "pathIncludes": ["docs/ingestion-build-flow.md"],
-        "terms": ["atlas init", "atlas build", ".moxel/atlas"],
-        "tools": ["plan_context", "find_docs"]
+        "pathIncludes": [
+          "docs/ingestion-build-flow.md"
+        ],
+        "terms": [
+          "atlas init",
+          "atlas build",
+          ".moxel/atlas"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "maintainer",
       "feature": "artifact-build",
       "scenario": "build-and-publish-artifacts",
-      "priority": "p0"
+      "priority": "p0",
+      "capability": "Repository/artifact maintenance",
+      "claim": "Atlas retrieves maintainer evidence for building, verifying, and publishing repo knowledge artifacts.",
+      "whyItMatters": "Maintainers need reproducible artifact generation and verification before agents consume Atlas context.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "consumer-repo-add-import",
@@ -26,13 +41,26 @@
           "docs/ingestion-build-flow.md",
           "docs/runtime-surfaces.md"
         ],
-        "terms": ["repo add", "artifact", "without cloning"],
-        "tools": ["plan_context", "find_docs"]
+        "terms": [
+          "repo add",
+          "artifact",
+          "without cloning"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "consumer",
       "feature": "artifact-import",
       "scenario": "import-without-full-clone",
-      "priority": "p0"
+      "priority": "p0",
+      "capability": "Artifact consumption",
+      "claim": "Atlas retrieves consumer evidence for importing and using Atlas artifacts without unnecessary cloning.",
+      "whyItMatters": "Consumers should get project knowledge quickly with clear local runtime behavior.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "runtime-local-corpus",
@@ -43,13 +71,26 @@
           "packages/store/docs/index.md",
           "docs/runtime-surfaces.md"
         ],
-        "terms": ["~/.moxel/atlas/corpus.db", "local corpus", "MCP"],
-        "tools": ["plan_context", "find_docs"]
+        "terms": [
+          "~/.moxel/atlas/corpus.db",
+          "local corpus",
+          "MCP"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "operator",
       "feature": "local-runtime",
       "scenario": "locate-local-corpus",
-      "priority": "p0"
+      "priority": "p0",
+      "capability": "Runtime provenance",
+      "claim": "Atlas retrieves evidence about corpus storage, runtime surfaces, and local data flow.",
+      "whyItMatters": "Operators need to understand where data lives and which local artifacts power retrieval.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "artifact-runtime-trust"
     },
     {
       "id": "mcp-tools-overview",
@@ -60,27 +101,56 @@
           "docs/retrieval-and-context.md",
           "docs/runtime-surfaces.md"
         ],
-        "terms": ["find_docs", "plan_context", "read_section"],
-        "tools": ["plan_context", "find_docs"]
+        "terms": [
+          "find_docs",
+          "plan_context",
+          "read_section"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "agent-integrator",
       "feature": "mcp-tools",
       "scenario": "discover-retrieval-tools",
-      "priority": "p0"
+      "priority": "p0",
+      "capability": "MCP integration",
+      "claim": "Atlas retrieves MCP tool and context-planning evidence for downstream coding agents.",
+      "whyItMatters": "The core product promise is giving agents grounded project context through MCP.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "agent-integration"
     },
     {
       "id": "security-query-time-local",
       "category": "security",
       "query": "Does MCP fetch remote source content at query time or upload indexed corpus content?",
       "expected": {
-        "pathIncludes": ["docs/security.md", "README.md"],
-        "terms": ["local", "remote", "credentials"],
-        "tools": ["plan_context", "find_docs"]
+        "pathIncludes": [
+          "docs/security.md",
+          "README.md"
+        ],
+        "terms": [
+          "local",
+          "remote",
+          "credentials"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "security-reviewer",
       "feature": "security-privacy",
       "scenario": "verify-query-time-locality",
-      "priority": "p0"
+      "priority": "p0",
+      "capability": "Security/privacy boundaries",
+      "claim": "Atlas retrieves security evidence while avoiding unsafe or irrelevant secret-oriented sources.",
+      "whyItMatters": "Trust requires clear locality, credential, and sensitive-data boundaries.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "security-privacy"
     },
     {
       "id": "natural-language-broad",
@@ -91,97 +161,200 @@
           "skills/document-codebase/SKILL.md",
           "docs/runtime-surfaces.md"
         ],
-        "terms": ["repo add", "artifact", "runtime"],
-        "tools": ["plan_context", "find_docs"]
+        "terms": [
+          "repo add",
+          "artifact",
+          "runtime"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "agent-user",
       "feature": "query-robustness",
       "scenario": "natural-language-workflow-query",
-      "priority": "p1"
+      "priority": "p1",
+      "capability": "Query robustness",
+      "claim": "Atlas retrieves intended evidence across natural-language, keyword, typo, and synonym queries.",
+      "whyItMatters": "Developers and agents rarely use exact documentation phrasing.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "keyword-baseline-repo-add",
       "category": "query-robustness",
       "query": "repo add artifact import corpus",
       "expected": {
-        "pathIncludes": ["docs/ingestion-build-flow.md"],
-        "terms": ["repo add", "artifact", "corpus"],
-        "tools": ["plan_context", "find_docs"]
+        "pathIncludes": [
+          "docs/ingestion-build-flow.md"
+        ],
+        "terms": [
+          "repo add",
+          "artifact",
+          "corpus"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "agent-user",
       "feature": "query-robustness",
       "scenario": "keyword-baseline-query",
-      "priority": "p0"
+      "priority": "p0",
+      "capability": "Query robustness",
+      "claim": "Atlas retrieves intended evidence across natural-language, keyword, typo, and synonym queries.",
+      "whyItMatters": "Developers and agents rarely use exact documentation phrasing.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "inspect-retrieval-debugging",
       "category": "diagnostics",
       "query": "How can I inspect retrieval planning diagnostics for a query?",
       "expected": {
-        "pathIncludes": ["README.md", "apps/cli/docs/index.md"],
-        "terms": ["inspect retrieval", "--query"],
-        "tools": ["plan_context", "find_docs"]
+        "pathIncludes": [
+          "README.md",
+          "apps/cli/docs/index.md"
+        ],
+        "terms": [
+          "inspect retrieval",
+          "--query"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "maintainer",
       "feature": "diagnostics",
       "scenario": "inspect-retrieval-debugging",
-      "priority": "p1"
+      "priority": "p1",
+      "capability": "Diagnostics and observability",
+      "claim": "Atlas retrieves evidence for inspecting and debugging retrieval behavior.",
+      "whyItMatters": "Maintainers need actionable diagnostics when ranking or corpus behavior regresses.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "observability"
     },
     {
       "id": "exact-path-cli-docs",
       "category": "path-lookup",
       "query": "Open apps/cli/docs/index.md and summarize the CLI App commands section.",
       "expected": {
-        "pathIncludes": ["apps/cli/docs/index.md"],
-        "terms": ["CLI App", "Commands", "repo add"],
-        "tools": ["plan_context", "find_docs"]
+        "pathIncludes": [
+          "apps/cli/docs/index.md"
+        ],
+        "terms": [
+          "CLI App",
+          "Commands",
+          "repo add"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "agent-integrator",
       "feature": "exact-path-lookup",
       "scenario": "retrieve-cli-docs-by-path",
-      "priority": "p0"
+      "priority": "p0",
+      "capability": "Exact source lookup",
+      "claim": "Atlas retrieves a specific source path when the query names it directly.",
+      "whyItMatters": "Coding agents often ask for known files by path.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "typo-synonym-knowledge-bundle",
       "category": "query-robustness",
       "query": "artifakt knowledge bundle import no clone with atlas repo add",
       "expected": {
-        "pathIncludes": ["docs/ingestion-build-flow.md"],
-        "terms": ["knowledge bundle", "repo add", "without cloning"],
-        "tools": ["plan_context", "find_docs"]
+        "pathIncludes": [
+          "docs/ingestion-build-flow.md"
+        ],
+        "terms": [
+          "knowledge bundle",
+          "repo add",
+          "without cloning"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "consumer",
       "feature": "typo-synonym-query",
       "scenario": "misspelled-artifact-bundle-import",
-      "priority": "p1"
+      "priority": "p1",
+      "capability": "Query robustness",
+      "claim": "Atlas retrieves intended evidence across natural-language, keyword, typo, and synonym queries.",
+      "whyItMatters": "Developers and agents rarely use exact documentation phrasing.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "command-query-artifact-verify-fresh-ref",
       "category": "command-lookup",
       "query": "What docs explain the command atlas artifact verify --fresh --ref $(git rev-parse HEAD)?",
       "expected": {
-        "pathIncludes": ["docs/ingestion-build-flow.md"],
-        "terms": ["artifact verify --fresh", "--ref", "git rev-parse HEAD"],
-        "tools": ["plan_context", "find_docs"]
+        "pathIncludes": [
+          "docs/ingestion-build-flow.md"
+        ],
+        "terms": [
+          "artifact verify --fresh",
+          "--ref",
+          "git rev-parse HEAD"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "maintainer",
       "feature": "code-block-command-query",
       "scenario": "lookup-artifact-freshness-command",
-      "priority": "p0"
+      "priority": "p0",
+      "capability": "Command/documentation lookup",
+      "claim": "Atlas retrieves documentation for command-shaped queries copied from terminals or READMEs.",
+      "whyItMatters": "Developers search with exact command fragments during debugging and release work.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "workflow-retrieval"
     },
     {
       "id": "section-heading-artifact-only-repo-add-fetch",
       "category": "section-heading",
       "query": "Find the section heading Artifact-only repo add fetch and explain it.",
       "expected": {
-        "pathIncludes": ["docs/ingestion-build-flow.md"],
-        "terms": ["Artifact-only repo add fetch", "manifest.json", "checksums.json"],
-        "tools": ["plan_context", "find_docs"]
+        "pathIncludes": [
+          "docs/ingestion-build-flow.md"
+        ],
+        "terms": [
+          "Artifact-only repo add fetch",
+          "manifest.json",
+          "checksums.json"
+        ],
+        "tools": [
+          "plan_context",
+          "find_docs"
+        ]
       },
       "profile": "consumer",
       "feature": "section-heading-query",
       "scenario": "retrieve-artifact-only-fetch-section",
-      "priority": "p0"
+      "priority": "p0",
+      "capability": "Section-level lookup",
+      "claim": "Atlas retrieves documentation from section-heading style queries.",
+      "whyItMatters": "Agents need to land on specific conceptual sections, not just broad files.",
+      "expectedBehavior": "Retrieve the expected source paths and terms while satisfying any negative, diagnostic, confidence, and hit-count expectations.",
+      "coverageType": "source-recall+term-grounding+mcp-annotation",
+      "riskArea": "workflow-retrieval"
     }
   ]
 }
