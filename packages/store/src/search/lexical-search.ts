@@ -53,7 +53,8 @@ function runLexicalQuery(
 	params: Record<string, string | number>,
 ): LexicalSearchRow[] {
 	return db.all<LexicalSearchRow>(
-		`SELECT f.entity_type, f.entity_id, f.doc_id, f.section_id, f.chunk_id, f.repo_id, f.path, f.title, bm25(fts_entries) AS rank
+		`SELECT f.entity_type, f.entity_id, f.doc_id, f.section_id, f.chunk_id, f.repo_id, f.path, f.title,
+              bm25(fts_entries, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.8, 5.0, 3.5, 1.0) AS rank
        FROM fts_entries f
        JOIN documents d ON d.doc_id = f.doc_id
        WHERE ${clauses.join(" AND ")}
