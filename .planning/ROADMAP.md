@@ -54,6 +54,7 @@ Atlas v1.0 hardening is complete. The next milestone shifts Atlas from contribut
 - [x] **Phase 41: Production Onboarding UAT and Release Gate** - Add scripted production-like UAT to prevent regressions before release. (completed 2026-04-29)
 - [x] **Phase 42: Post-release Bug Hunt Remediation** - Fix prioritized bugs found after v0.1.3 across CLI runtime/env handling, mounted MCP identity/exports, repo removal, source checkout diagnostics, and store consistency.
 - [x] **Phase 43: Public Package and UX Surface Hardening** - Stop shipping raw docs/artifacts in npm, fix public artifact leaks, add HTTP metadata filters, finish MCP env identity propagation, harden custom identity-root lookup, release tag safety, and clean up public CLI/docs/runtime UX. Completed 2026-04-30.
+- [x] **Phase 44: Published Visual Evals Report** - Replace the static eval dump with a Moxel-branded, interactive, research-style retrieval eval report ready for GitHub publication. Completed 2026-05-01.
 
 ## Phase Details
 
@@ -151,7 +152,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in dependency order: 1 → 2 and 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37 → 38 → 39 → 40 → 41 → 42 → 43
+Phases execute in dependency order: 1 → 2 and 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34 → 35 → 36 → 37 → 38 → 39 → 40 → 41 → 42 → 43 → 44
 
 | Phase                                                        | Plans Complete | Status   | Completed  |
 | ------------------------------------------------------------ | -------------- | -------- | ---------- |
@@ -198,6 +199,7 @@ Phases execute in dependency order: 1 → 2 and 3 → 4 → 5 → 6 → 7 → 8 
 | 41. Production Onboarding UAT and Release Gate               | 1/1            | Complete | 2026-04-29 |
 | 42. Post-release Bug Hunt Remediation                        | 3/3            | Complete | 2026-04-29 |
 | 43. Public Package and UX Surface Hardening                  | 5/5            | Complete | 2026-04-30 |
+| 44. Published Visual Evals Report                            | 4/4            | Complete | 2026-05-01 |
 
 ### Phase 6: Retrieval and Context Quality
 
@@ -931,3 +933,31 @@ Plans:
 - [x] 43-03: Add HTTP metadata filters and MCP resource prefix env propagation.
 - [x] 43-04: Unify identity-root metadata lookup and harden release tag safety.
 - [x] 43-05: Clean up CLI help docs and runtime contract.
+
+### Phase 44: Published Visual Evals Report
+
+**Goal:** Replace the current duplicated static eval HTML with a Moxel-branded, interactive, research-style report that lets GitHub visitors understand Atlas retrieval quality, methodology, caveats, and reproducibility at a glance.
+**Description:** Turn deterministic retrieval eval output into a publishable visual research artifact: metric derivations, Moxel visual shell, interactive case explorer, coverage/rank/latency charts, docs, CI artifact publication, and regression tests.
+**Requirements:** EVAL-REPORT-DATA, EVAL-REPORT-VISUALS, EVAL-REPORT-INTERACTIONS, EVAL-REPORT-PUBLICATION
+**Depends on:** Phase 43
+**Plans:** 4/4 plans complete
+
+**Success Criteria** (what must be TRUE):
+
+1. Generated HTML is Moxel branded and visually aligned with the OpenAPI theme.
+2. Above-the-fold narrative explains what was evaluated, headline verdict, key metrics, and limitations.
+3. Report includes visual charts for Recall@k funnel, rank distribution, coverage quality, and latency.
+4. Interactive explorer supports filtering/search/sort/drilldown across cases, capabilities, risk areas, profiles, and priorities.
+5. Metrics include pass rate, path/term recall, Recall@1/3/5, MRR, expected-path precision/nDCG caveats, no-result accuracy, forbidden-path accuracy, latency, coverage, and weak-case summaries.
+6. Docs explain how to interpret the eval report and what it does not prove.
+7. CI/local eval generation produces publishable HTML and JSON artifacts.
+8. Tests prevent regression to an unbranded static data dump.
+
+Plans:
+
+- [x] 44-01: Add eval report metric model and interpretation data.
+- [x] 44-02: Build Moxel-branded visual eval report shell.
+- [x] 44-03: Add interactive report explorer and drilldowns.
+- [x] 44-04: Publish eval report and document interpretation workflow.
+
+**Completion notes:** Report JSON includes derived expected-path precision/nDCG, rank/latency buckets, grouped quality summaries, weakest cases, and narrative findings. Generated HTML uses Moxel dark theme, `moxel-atlas-eval-report-theme`, `data-eval-chart` sections, safe embedded JSON, vanilla JS explorer, copy controls, and static fallback. Docs explain metric interpretation, sparse-label caveats, artifact/Page publication, and pass-rate-vs-ranking headroom. Validation passed: `bun test tooling/scripts/eval-reporting.test.ts`, `bun run eval:full`, `bun run eval:ci`, `bun run typecheck`, `bun run lint`, `bun test`.

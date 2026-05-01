@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: active
-stopped_at: null
-last_updated: "2026-04-30T15:05:00.000Z"
-last_activity: 2026-04-30
+status: completed
+stopped_at: Phase 44 complete; all validation passed
+last_updated: "2026-05-01T05:20:00.000Z"
+last_activity: 2026-05-01
 progress:
-  total_phases: 43
-  completed_phases: 43
-  total_plans: 90
-  completed_plans: 90
+  total_phases: 44
+  completed_phases: 44
+  total_plans: 94
+  completed_plans: 94
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-26)
 
 **Core value:** Local-first documentation ingestion, compilation, retrieval planning, and MCP/server access for multi-repo engineering docs.
-**Current focus:** Phase 43 complete; v1.1 roadmap fully complete.
+**Current focus:** Phase 44 complete; publishable Moxel-branded eval report is implemented and validated.
 
 ## Current Position
 
-Phase: 43 of 43 (public package and UX surface hardening)
-Plan: 5 of 5
+Phase: 44 of 44 (published visual evals report)
+Plan: 4 of 4
 Status: Complete
-Last activity: 2026-04-30
+Last activity: 2026-05-01
 
 Progress: [██████████] 100%
 
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 90 / 90 planned
+- Total plans completed: 94 / 94 planned
 - Average duration: N/A
 - Total execution time: N/A
 
@@ -87,6 +87,7 @@ Progress: [██████████] 100%
 | 41. Production Onboarding UAT and Release Gate               | 1/1   | Complete |
 | 42. Post-release Bug Hunt Remediation                        | 3/3   | Complete |
 | 43. Public Package and UX Surface Hardening                  | 5/5   | Complete |
+| 44. Published Visual Evals Report                            | 4/4   | Complete |
 
 ## Accumulated Context
 
@@ -119,6 +120,8 @@ Progress: [██████████] 100%
 - Phase 34 added: Hard-cut migrate Atlas CLI to commander plus @clack/prompts and @clack/core for command parsing, help, typed options, and interactive flows
 - Phase 34 completed: Atlas CLI now uses commander for top-level and nested command help/dispatch, Clack-backed prompt primitives, preserved JSON/script behavior, and distribution smoke remains green.
 - Phase 35 added: Embedded enterprise CLI mount
+- Phase 44 added: Published Visual Evals Report - Build a Moxel-branded interactive research-style eval report for GitHub publication.
+- Phase 44 completed: report JSON now includes derived expected-path precision/nDCG, rank/latency buckets, quality group summaries, weakest cases, and narrative findings; HTML is Moxel-branded with charts, explorer controls, safe embedded JSON, static fallback, and reproducibility guidance; docs explain interpretation and CI artifact publication.
 
 ### Decisions
 
@@ -141,6 +144,7 @@ Decisions are logged in `.planning/PROJECT.md` Key Decisions table.
 - Phase 31 ready to execute after license decision: recommended `AGPL-3.0-or-later` plus `NOTICE` plus trademark guidance if protection matters most.
 - Phase 32 completed after Phase 31 public boundary/docs landed.
 - Phase 33 completed after Phase 32 CI landed: release package metadata, tarball smoke, release workflow, maintainer release docs, and public artifact refresh are done.
+- Phase 44 complete; all validation passed: targeted eval-report tests, `bun run eval:full`, `bun run eval:ci`, `bun run typecheck`, `bun run lint`, and `bun test`.
 
 ### Blockers/Concerns
 
@@ -161,6 +165,15 @@ Decisions are logged in `.planning/PROJECT.md` Key Decisions table.
 Last session: 2026-04-28
 Stopped at: Phase 41 complete; all phases complete
 Resume file: `.planning/ROADMAP.md`
+
+
+### Phase 44 Execution
+
+- Phase 44 completed: added derived rank-quality metrics (`expectedPathPrecisionAt1/3/5`, `expectedPathNdcgAt3/5`), rank buckets, latency buckets, weakest-case summaries, grouped quality summaries, and generated narrative findings.
+- Replaced static eval dump with standalone Moxel-branded research report using `moxel-atlas-eval-report-theme`, chart markers (`data-eval-chart`), coverage heatmap, recall/rank/latency visuals, safe embedded JSON, vanilla JS search/filter/sort/drilldown/copy explorer, and static appendix fallback.
+- Updated eval docs/README to explain expected-path precision/nDCG caveats, coverage heatmap interpretation, publication path, and why perfect pass rate can coexist with rank-quality headroom.
+- Regenerated local reports with `bun run eval:full`; generated artifacts remain under ignored `evals/reports/` and CI artifact path is verified by `bun run eval:ci`.
+- Verification passed: `bun test tooling/scripts/eval-reporting.test.ts`, `bun run eval:full`, `bun run eval:ci`, `bun run typecheck`, `bun run lint`, and `bun test`.
 
 ### Phase 41 Execution
 

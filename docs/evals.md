@@ -90,6 +90,8 @@ Path-substring expectations are used instead of generated document IDs so the su
 - Pass rate: fraction of cases that passed every deterministic expectation. This is a gate, not the main public claim.
 - Path recall: fraction of expected path substrings found in the top retrieved paths considered by the case.
 - Path Recall@1 / @3 / @5: fraction of expected source paths that appear in the top 1, 3, or 5 retrieved paths. These are the main ranking-quality signals for whether the right evidence is near the top.
+- Expected-path Precision@1 / @3 / @5: lower-bound proportion of top-k paths matching sparse expected labels. It is not true relevance precision because unlabeled but relevant docs can exist.
+- Expected-path nDCG@3 / @5: rank-sensitive binary relevance over the sparse expected path labels. Use it to compare whether known-good evidence moves earlier in the result list.
 - MRR: mean reciprocal rank of the first expected source path. Higher values mean expected evidence appears earlier.
 - Term recall: fraction of expected terms found in selected/ranked context payloads plus local source contents for retrieved paths.
 - No-result accuracy: fraction of no-result expectations that correctly abstained from returning ranked/selected evidence.
@@ -98,7 +100,9 @@ Path-substring expectations are used instead of generated document IDs so the su
 - Median and P95 latency: wall-clock CLI query time per case.
 - Average ranked hits: mean ranked hit count.
 
-The report also groups metrics by category, profile, feature, and scenario so regressions can be mapped back to user workflows. Case priority is preserved per case in the detailed table.
+The report also groups metrics by category, profile, feature, scenario, capability, risk area, priority, and coverage type so regressions can be mapped back to user workflows. The coverage heatmap is quality-first: weak Recall@5/MRR groups sort before high-count groups. Case priority is preserved per case in the explorer.
+
+A 100% pass rate can coexist with ranking headroom. Pass rate says deterministic gates were satisfied somewhere in the retrieved evidence; Recall@k, MRR, expected-path precision, and nDCG say how early known-good evidence appears. Treat perfect pass rate plus low Recall@1/Recall@5 as a successful safety/coverage run with ranking work still available.
 
 ## Public report structure
 
