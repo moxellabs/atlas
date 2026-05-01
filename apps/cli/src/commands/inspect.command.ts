@@ -40,9 +40,9 @@ export async function runInspectCommand(
 			case "freshness":
 				return inspectFreshness(context, artifacts);
 			case "repo":
-				return inspectRepo(context, artifacts, deps.config.config);
+				return await inspectRepo(context, artifacts, deps.config.config);
 			case "topology":
-				return inspectTopology(context, artifacts, deps.config.config);
+				return await inspectTopology(context, artifacts, deps.config.config);
 			case "retrieval":
 				return inspectRetrieval(context, deps);
 			case "doc":
