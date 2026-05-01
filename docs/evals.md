@@ -13,7 +13,7 @@ Atlas keeps a lightweight evaluation harness for MCP and retrieval performance u
 
 The harness is intentionally local-first and cheap by default:
 
-- It runs against the local Atlas CLI and imported corpus.
+- It runs against the local Atlas CLI and prefers the repo-local `.moxel/atlas/corpus.db` artifact when present, so maintainer evals reflect the built publishable bundle instead of stale user-home runtime state.
 - It does not require model API keys for retrieval metrics.
 - It emits JSON plus a standalone HTML report with summary cards, bar charts, category breakdowns, and case-level tables.
 - It leaves an optional model-judge slot for later answer-quality grading with a cheap model such as `grok-code-fast-1` through OpenRouter/xAI or another low-cost provider.
@@ -28,14 +28,7 @@ Before building a custom harness, we checked reusable open-source options:
 
 ## Quick start
 
-Ensure Atlas has a local corpus to query:
-
-```bash
-atlas setup
-atlas repo add moxellabs/atlas
-```
-
-From this repo checkout:
+From this repo checkout with `.moxel/atlas/corpus.db` present:
 
 ```bash
 bun run eval:mcp
@@ -96,11 +89,25 @@ If you need to evaluate an installed `atlas` binary rather than source checkout 
 bun tooling/scripts/mcp-retrieval-eval.ts --cli atlas
 ```
 
+If you need to evaluate a user-home imported corpus instead of the repo-local artifact:
+
+```bash
+bun tooling/scripts/mcp-retrieval-eval.ts --global
+```
+
+If you need to evaluate a specific runtime config:
+
+```bash
+bun tooling/scripts/mcp-retrieval-eval.ts --config ~/.moxel/atlas/config.yaml
+```
+
+The harness inspects the repo before scoring and fails fast when the corpus has fewer than 10 docs. Use `--min-docs 0` only for intentionally tiny fixtures.
+
 ## Interpreting metrics
 
 - Pass rate: case passed all deterministic expectations.
 - Path recall: fraction of expected path substrings found in top paths.
-- Term recall: fraction of expected terms found in selected/ranked context payloads.
+- Term recall: fraction of expected terms found in selected/ranked context payloads plus local source contents for retrieved paths, so document-level hits can be credited for terms that live in the retrieved document.
 - Non-empty context: whether Atlas produced any selected or ranked retrieval context.
 - Average latency: wall-clock CLI query time per case.
 - Average ranked hits: mean ranked hit count.
