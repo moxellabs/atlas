@@ -5,6 +5,8 @@ await runMcpRetrievalEvalMain({
 	env: Bun.env,
 	cwd: process.cwd(),
 });
+
+/*
 /// <reference types="bun" />
 
 import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -776,3 +778,4 @@ function createEvalProgressReporter(options: EvalProgressReporterOptions): {
     },
   };
 }
+*/
