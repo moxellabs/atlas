@@ -29,6 +29,10 @@ const QUERY_EXPANSIONS: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
 		],
 	],
 	[
+		/\bfrontmatter\b|\bbuilt-in defaults?\b|\bsupported visibility\b|\bmetadata precedence\b|\bprofile metadata\b|\bprivate profile\b|\bpublic default profile\b/i,
+		["profile metadata", "frontmatter", "docs/configuration.md"],
+	],
+	[
 		/\b(?:atlas\s+)?build\b|\bpublic artifact\b|\bchecksums?\b|\bdocs\.index\.json\b/i,
 		[
 			"atlas build --profile public",
@@ -38,7 +42,7 @@ const QUERY_EXPANSIONS: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
 		],
 	],
 	[
-		/\brepo show\b|\btarget inference\b|\bexplicit flags\b/i,
+		/\brepo show\b|\btarget inference\b|\bexplicit flags\b|\batlas repo\b|\bbunx @moxellabs\/atlas\b|\b--json\b|\b--verbose\b/i,
 		[
 			"repo show",
 			"repo target inference",
@@ -64,8 +68,20 @@ const QUERY_EXPANSIONS: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
 		["inspect retrieval", "--query", "README.md"],
 	],
 	[
+		/\bredacts?\b|\bsanitiz(?:e|es|ed|ation)\b|\bcookies?\b|\bprivate URLs?\b|\bproprietary document content\b|\btoken-like\b/i,
+		["sanitized diagnostics", "safe sharing", "docs/troubleshooting.md"],
+	],
+	[
 		/\bsecurity\b|\bcredentials?\b|\blocal-first\b|\bremote source content\b|\bupload indexed corpus\b/i,
 		["security", "credentials", "tokens", "docs/security.md", "README.md"],
+	],
+	[
+		/\bvalidation\b|\bimport fails?\b|\bprevious global rows\b|\brepo\.json\b/i,
+		["artifact validation", "repo.json", "docs/ingestion-build-flow.md"],
+	],
+	[
+		/\bgenerated\b|\bvendor\b|\bnode_modules\b|\bdist\b|\bcoverage\b|\bignored\b/i,
+		["generated", "vendor", "ignored", "docs/troubleshooting.md"],
 	],
 	[
 		/\.planning|\barchive\b|\binternal visibility\b/i,
