@@ -190,143 +190,247 @@ export function defaultCliConfig(cacheDir?: string): AtlasConfig {
 	};
 }
 
+type RepoConfigMode = "local-git" | "ghes-api";
+type RepoConfigPrompts = ReturnType<typeof createPrompts> | undefined;
+
+interface RepoConfigInput {
+	repoId?: string | undefined;
+	mode?: RepoConfigMode | undefined;
+	remote?: string | undefined;
+	localPath?: string | undefined;
+	ref?: string | undefined;
+	refMode?: "remote" | "current-checkout" | undefined;
+	baseUrl?: string | undefined;
+	owner?: string | undefined;
+	name?: string | undefined;
+	tokenEnvVar?: string | undefined;
+	packageGlobs: string[];
+	packageManifestFiles: string[];
+	template?: TopologyTemplate | undefined;
+	cacheDir: string;
+	nonInteractive: boolean;
+}
+
+interface RepoConfigResolutionContext {
+	cwd: string;
+	interactive: boolean;
+	prompts: RepoConfigPrompts;
+}
+
+interface RepoWorkspaceInput {
+	packageGlobs: string[];
+	packageManifestFiles: string[];
+	template: TopologyTemplate;
+}
+
 /** Creates a local-git repo entry from parsed flags or interactive defaults. */
 export async function resolveRepoConfigInput(
 	context: CliCommandContext,
-	input: {
-		repoId?: string | undefined;
-		mode?: "local-git" | "ghes-api" | undefined;
-		remote?: string | undefined;
-		localPath?: string | undefined;
-		ref?: string | undefined;
-		refMode?: "remote" | "current-checkout" | undefined;
-		baseUrl?: string | undefined;
-		owner?: string | undefined;
-		name?: string | undefined;
-		tokenEnvVar?: string | undefined;
-		packageGlobs: string[];
-		packageManifestFiles: string[];
-		template?: TopologyTemplate | undefined;
-		cacheDir: string;
-		nonInteractive: boolean;
-	},
+	input: RepoConfigInput,
 ): Promise<AtlasRepoConfig> {
+	const resolution = createRepoConfigResolutionContext(context, input);
+	const mode = await resolveRepoConfigMode(input, resolution);
+	const repoId = await resolveRepoConfigRepoId(input, resolution);
+	const workspace = resolveRepoWorkspaceInput(input);
+	return mode === "local-git"
+		? await resolveLocalGitRepoConfig(
+				context,
+				input,
+				resolution,
+				repoId,
+				workspace,
+			)
+		: await resolveGhesRepoConfig(input, resolution, repoId, workspace);
+}
+
+function createRepoConfigResolutionContext(
+	context: CliCommandContext,
+	input: RepoConfigInput,
+): RepoConfigResolutionContext {
 	const interactive = canPrompt() && !input.nonInteractive;
-	const prompts = interactive ? createPrompts() : undefined;
-	const mode = (input.mode ??
-		(interactive
-			? ((await prompts?.select("Choose repository mode", [
-					{ label: "Local Git", value: "local-git" },
-					{ label: "GitHub Enterprise API", value: "ghes-api" },
-				])) as "local-git" | "ghes-api")
-			: "local-git")) as "local-git" | "ghes-api";
+	return {
+		cwd: context.cwd,
+		interactive,
+		prompts: interactive ? createPrompts() : undefined,
+	};
+}
+
+async function resolveRepoConfigMode(
+	input: RepoConfigInput,
+	context: RepoConfigResolutionContext,
+): Promise<RepoConfigMode> {
+	if (input.mode !== undefined) {
+		return input.mode;
+	}
+	if (!context.interactive) {
+		return "local-git";
+	}
+	return (await context.prompts?.select("Choose repository mode", [
+		{ label: "Local Git", value: "local-git" },
+		{ label: "GitHub Enterprise API", value: "ghes-api" },
+	])) as RepoConfigMode;
+}
+
+async function resolveRepoConfigRepoId(
+	input: RepoConfigInput,
+	context: RepoConfigResolutionContext,
+): Promise<string> {
 	const repoId =
-		input.repoId ??
-		(interactive ? await prompts?.input("Repository ID") : undefined);
-	if (!repoId) {
+		input.repoId ?? (await promptIfInteractive(context, "Repository ID"));
+	if (repoId === undefined || repoId.length === 0) {
 		throw new CliError("Missing repository ID.", {
 			code: "CLI_REPO_ID_REQUIRED",
 			exitCode: EXIT_INPUT_ERROR,
 		});
 	}
-	const template = input.template ?? "mixed-monorepo";
+	return repoId;
+}
 
-	const packageGlobs =
-		input.packageGlobs.length > 0 ? input.packageGlobs : ["packages/*"];
-	const packageManifestFiles =
-		input.packageManifestFiles.length > 0
-			? input.packageManifestFiles
-			: ["package.json"];
-	if (mode === "local-git") {
-		const gitDefaults = await detectLocalGitDefaults(context.cwd);
-		const defaultRef = gitDefaults?.ref ?? "main";
-		const defaultRemote = gitDefaults?.remote;
-		const ref =
-			input.ref ??
-			(interactive ? await prompts?.input("Git ref", defaultRef) : defaultRef);
-		const defaultLocalPath = resolveCliPath(
-			repoCheckoutDir(input.cacheDir, repoId),
-			context.cwd,
-		);
-		const localPath =
-			input.localPath ??
-			(interactive
-				? await prompts?.input("Local checkout path", defaultLocalPath)
-				: defaultLocalPath);
-		const remote =
-			input.remote ??
-			(interactive
-				? await prompts?.input("Git remote URL", defaultRemote)
-				: defaultRemote);
-		if (!remote || !localPath || !ref) {
-			throw new CliError(
-				"Missing local-git remote. Use --remote, or run add-repo from inside a Git checkout so Atlas can infer one.",
-				{
-					code: "CLI_REMOTE_REQUIRED",
-					exitCode: EXIT_INPUT_ERROR,
-				},
-			);
-		}
-		const refMode = input.refMode ?? "remote";
-		return {
-			repoId,
-			mode,
-			git: {
-				remote,
-				localPath,
-				ref,
-				refMode,
-			},
-			workspace: {
-				packageGlobs,
-				packageManifestFiles,
-			},
-			topology: topologyTemplate(template),
-		};
-	}
+function resolveRepoWorkspaceInput(input: RepoConfigInput): RepoWorkspaceInput {
+	return {
+		packageGlobs:
+			input.packageGlobs.length > 0 ? input.packageGlobs : ["packages/*"],
+		packageManifestFiles:
+			input.packageManifestFiles.length > 0
+				? input.packageManifestFiles
+				: ["package.json"],
+		template: input.template ?? "mixed-monorepo",
+	};
+}
 
+async function resolveLocalGitRepoConfig(
+	cliContext: CliCommandContext,
+	input: RepoConfigInput,
+	context: RepoConfigResolutionContext,
+	repoId: string,
+	workspace: RepoWorkspaceInput,
+): Promise<AtlasRepoConfig> {
+	const gitDefaults = await detectLocalGitDefaults(cliContext.cwd);
+	const defaultRef = gitDefaults?.ref ?? "main";
+	const defaultLocalPath = resolveCliPath(
+		repoCheckoutDir(input.cacheDir, repoId),
+		cliContext.cwd,
+	);
 	const ref =
 		input.ref ??
-		(interactive ? await prompts?.input("GitHub ref", "main") : "main");
-	const baseUrl =
-		input.baseUrl ??
-		(interactive ? await prompts?.input("GHES API base URL") : undefined);
-	const owner =
-		input.owner ??
-		(interactive ? await prompts?.input("GHES owner") : undefined);
-	const name =
-		input.name ??
-		(interactive ? await prompts?.input("GHES repository name") : undefined);
-	if (!baseUrl || !owner || !name) {
-		throw new CliError(
-			"Missing GHES repository fields. Use --base-url, --owner, and --name in non-interactive mode.",
-			{
-				code: "CLI_GHES_FIELDS_REQUIRED",
-				exitCode: EXIT_INPUT_ERROR,
-			},
-		);
-	}
-	const ghesRef = ref ?? "main";
-	const ghesBaseUrl = baseUrl;
-	const ghesOwner = owner;
-	const ghesName = name;
+		(await promptIfInteractive(context, "Git ref", defaultRef)) ??
+		defaultRef;
+	const localPath =
+		input.localPath ??
+		(await promptIfInteractive(
+			context,
+			"Local checkout path",
+			defaultLocalPath,
+		)) ??
+		defaultLocalPath;
+	const remote =
+		input.remote ??
+		(await promptIfInteractive(
+			context,
+			"Git remote URL",
+			gitDefaults?.remote,
+		)) ??
+		gitDefaults?.remote;
+	const git = requireLocalGitFields(remote, localPath, ref);
 	return {
 		repoId,
-		mode,
+		mode: "local-git",
+		git: { ...git, refMode: input.refMode ?? "remote" },
+		workspace: repoWorkspaceConfig(workspace),
+		topology: topologyTemplate(workspace.template),
+	};
+}
+
+async function resolveGhesRepoConfig(
+	input: RepoConfigInput,
+	context: RepoConfigResolutionContext,
+	repoId: string,
+	workspace: RepoWorkspaceInput,
+): Promise<AtlasRepoConfig> {
+	const ref =
+		input.ref ??
+		(await promptIfInteractive(context, "GitHub ref", "main")) ??
+		"main";
+	const baseUrl =
+		input.baseUrl ?? (await promptIfInteractive(context, "GHES API base URL"));
+	const owner =
+		input.owner ?? (await promptIfInteractive(context, "GHES owner"));
+	const name =
+		input.name ?? (await promptIfInteractive(context, "GHES repository name"));
+	const ghes = requireGhesFields(baseUrl, owner, name);
+	return {
+		repoId,
+		mode: "ghes-api",
 		github: {
-			baseUrl: ghesBaseUrl,
-			owner: ghesOwner,
-			name: ghesName,
-			ref: ghesRef,
+			...ghes,
+			ref,
 			...(input.tokenEnvVar === undefined
 				? {}
 				: { tokenEnvVar: input.tokenEnvVar }),
 		},
-		workspace: {
-			packageGlobs,
-			packageManifestFiles,
-		},
-		topology: topologyTemplate(template),
+		workspace: repoWorkspaceConfig(workspace),
+		topology: topologyTemplate(workspace.template),
+	};
+}
+
+async function promptIfInteractive(
+	context: RepoConfigResolutionContext,
+	message: string,
+	defaultValue?: string | undefined,
+): Promise<string | undefined> {
+	return context.interactive
+		? await context.prompts?.input(message, defaultValue)
+		: undefined;
+}
+
+function requireLocalGitFields(
+	remote: string | undefined,
+	localPath: string | undefined,
+	ref: string | undefined,
+): { remote: string; localPath: string; ref: string } {
+	if (
+		remote === undefined ||
+		remote.length === 0 ||
+		localPath === undefined ||
+		localPath.length === 0 ||
+		ref === undefined ||
+		ref.length === 0
+	) {
+		throw new CliError(
+			"Missing local-git remote. Use --remote, or run add-repo from inside a Git checkout so Atlas can infer one.",
+			{ code: "CLI_REMOTE_REQUIRED", exitCode: EXIT_INPUT_ERROR },
+		);
+	}
+	return { remote, localPath, ref };
+}
+
+function requireGhesFields(
+	baseUrl: string | undefined,
+	owner: string | undefined,
+	name: string | undefined,
+): { baseUrl: string; owner: string; name: string } {
+	if (
+		baseUrl === undefined ||
+		baseUrl.length === 0 ||
+		owner === undefined ||
+		owner.length === 0 ||
+		name === undefined ||
+		name.length === 0
+	) {
+		throw new CliError(
+			"Missing GHES repository fields. Use --base-url, --owner, and --name in non-interactive mode.",
+			{ code: "CLI_GHES_FIELDS_REQUIRED", exitCode: EXIT_INPUT_ERROR },
+		);
+	}
+	return { baseUrl, owner, name };
+}
+
+function repoWorkspaceConfig(
+	input: RepoWorkspaceInput,
+): AtlasRepoConfig["workspace"] {
+	return {
+		packageGlobs: input.packageGlobs,
+		packageManifestFiles: input.packageManifestFiles,
 	};
 }
 
