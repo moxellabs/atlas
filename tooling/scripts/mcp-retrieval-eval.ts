@@ -11,6 +11,7 @@ import {
   printTerminalSummary,
   renderHtml,
   type CaseResult,
+  type ReportThresholdInput,
   type RuntimeInfo,
 } from "./eval-reporting";
 
@@ -31,6 +32,7 @@ const minDocs = parseInteger(
   "min-docs",
 );
 const useGlobal = args.global === "true" || args["use-global"] === "true";
+const thresholds = parseThresholds(args);
 
 const dataset = await loadEvalDataset(datasetPath);
 let tempConfigDir: string | undefined;
@@ -141,12 +143,16 @@ try {
   const report = buildReport(
     dataset,
     results,
-    runtime,
+    {
+      ...runtime,
+      datasetPath,
+    },
     Object.fromEntries(
       Object.entries({ provider: modelProvider, model }).filter(
         ([, value]) => value !== undefined,
       ),
     ) as { provider?: string; model?: string },
+    thresholds,
   );
   await mkdir(dirname(outPath), { recursive: true });
   await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`);
@@ -155,6 +161,17 @@ try {
   console.log(`Wrote ${outPath}`);
   console.log(`Wrote ${htmlPath}`);
   printTerminalSummary(report);
+  if (report.thresholds !== undefined && !report.thresholds.passed) {
+    throw new Error(
+      `Eval threshold gate(s) failed: ${report.thresholds.results
+        .filter((result) => !result.passed)
+        .map(
+          (result) =>
+            `${result.label} ${percent(result.actual)} < ${percent(result.minimum)}`,
+        )
+        .join(", ")}`,
+    );
+  }
 } finally {
   if (tempConfigDir !== undefined) {
     await rm(tempConfigDir, { recursive: true, force: true });
@@ -176,6 +193,35 @@ function parseArgs(values: string[]): Record<string, string | undefined> {
     }
   }
   return parsed;
+}
+
+function parseThresholds(args: Record<string, string | undefined>): ReportThresholdInput {
+  return Object.fromEntries(
+    Object.entries({
+      minPassRate: parseOptionalRate(args["min-pass-rate"], "min-pass-rate"),
+      minPathRecall: parseOptionalRate(args["min-path-recall"], "min-path-recall"),
+      minTermRecall: parseOptionalRate(args["min-term-recall"], "min-term-recall"),
+      minNonEmptyContextRate: parseOptionalRate(
+        args["min-non-empty-context-rate"],
+        "min-non-empty-context-rate",
+      ),
+    }).filter(([, value]) => value !== undefined),
+  ) as ReportThresholdInput;
+}
+
+function parseOptionalRate(value: string | undefined, label: string): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
+    throw new Error(`--${label} must be a number between 0 and 1`);
+  }
+  return parsed;
+}
+
+function percent(value: number): string {
+  return `${Math.round(value * 100)}%`;
 }
 
 function splitCommand(command: string): string[] {
