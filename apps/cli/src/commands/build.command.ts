@@ -63,23 +63,78 @@ function filterPublicArtifactCorpus(db: StoreDatabase): void {
 	);
 }
 
+interface BuildCommandInput {
+	repoId?: string | undefined;
+	force: boolean;
+	mode?: string | undefined;
+	docIds: string[];
+	packageId?: string | undefined;
+	moduleId?: string | undefined;
+	config?: string | undefined;
+	profile: string;
+	selection?:
+		| { docIds?: string[]; packageId?: string; moduleId?: string }
+		| undefined;
+	selectorCount: number;
+}
+
+type BuildDependencies = Awaited<ReturnType<typeof loadDependenciesFromGlobal>>;
+type BuildTargetResolution = Awaited<ReturnType<typeof resolveRepoTarget>>;
+
 /** Delegates build orchestration to shared indexer service or repo-local artifact mode. */
 export async function runBuildCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const options = parseOptions(context.argv);
+	const parsed = parseBuildCommandInput(context.argv);
+	const repoLocal = await resolveRepoLocalBuildMetadata(context, parsed);
+	const deps =
+		repoLocal === undefined
+			? await loadDependenciesFromGlobal(context, parsed.config)
+			: undefined;
+	const targetResolution = await resolveBuildTarget(
+		context,
+		parsed,
+		deps,
+		repoLocal,
+	);
+	const effectiveRepoId =
+		parsed.repoId ?? repoLocal?.metadata.repoId ?? targetResolution?.repoId;
+	assertBuildTarget(parsed, effectiveRepoId);
+
+	if (repoLocal !== undefined && effectiveRepoId !== undefined) {
+		return runRepoLocalBuild(context, repoLocal, {
+			repoId: effectiveRepoId,
+			force: shouldForceBuild(parsed),
+			profile: parsed.profile,
+			...(parsed.selection === undefined
+				? {}
+				: { selection: parsed.selection }),
+		});
+	}
+	return runGlobalBuild(
+		context,
+		requireBuildDependencies(deps),
+		parsed,
+		effectiveRepoId,
+		targetResolution,
+	);
+}
+
+function parseBuildCommandInput(argv: readonly string[]): BuildCommandInput {
+	const options = parseOptions(argv);
+	const docIds = readStringListOption(options, "doc-id");
 	const parsed = {
 		repoId: readStringOption(options, "repo"),
 		force: readBooleanOption(options, "force"),
 		mode: readStringOption(options, "mode"),
-		docIds: readStringListOption(options, "doc-id"),
+		docIds,
 		packageId: readStringOption(options, "package-id"),
 		moduleId: readStringOption(options, "module-id"),
 		config: readStringOption(options, "config"),
 		profile: readStringOption(options, "profile") ?? "public",
 	};
 	const selectorCount = [
-		parsed.docIds.length > 0,
+		docIds.length > 0,
 		parsed.packageId !== undefined,
 		parsed.moduleId !== undefined,
 	].filter(Boolean).length;
@@ -89,107 +144,109 @@ export async function runBuildCommand(
 			{ code: "CLI_INVALID_BUILD_SELECTOR", exitCode: EXIT_INPUT_ERROR },
 		);
 	}
-	const repoLocal =
-		parsed.config === undefined && parsed.repoId === undefined
-			? await findRepoArtifactMetadata(context)
-			: undefined;
-	const deps =
-		repoLocal === undefined
-			? await loadDependenciesFromGlobal(context, parsed.config)
-			: undefined;
-	let targetResolution:
-		| Awaited<ReturnType<typeof resolveRepoTarget>>
-		| undefined;
-	if (repoLocal === undefined && deps !== undefined) {
-		try {
-			targetResolution = await resolveRepoTarget(context, {
-				config: deps.config.config,
-				...(parsed.repoId === undefined ? {} : { explicit: parsed.repoId }),
-				command: "build",
-				nonInteractive: context.argv.includes("--non-interactive"),
-				allowSingleConfigured: selectorCount > 0,
-			});
-		} catch (error) {
-			if (selectorCount > 0 || parsed.repoId !== undefined) throw error;
-			if (
-				!(error instanceof CliError) ||
-				error.code !== "CLI_REPO_TARGET_REQUIRED"
-			)
-				throw error;
-		}
+	return { ...parsed, selectorCount, selection: buildSelection(parsed) };
+}
+
+function buildSelection(
+	input: Pick<BuildCommandInput, "docIds" | "packageId" | "moduleId">,
+): BuildCommandInput["selection"] {
+	if (
+		input.docIds.length === 0 &&
+		input.packageId === undefined &&
+		input.moduleId === undefined
+	) {
+		return undefined;
 	}
-	const effectiveRepoId =
-		parsed.repoId ?? repoLocal?.metadata.repoId ?? targetResolution?.repoId;
-	if (selectorCount > 0 && effectiveRepoId === undefined) {
+	return {
+		...(input.docIds.length === 0 ? {} : { docIds: input.docIds }),
+		...(input.packageId === undefined ? {} : { packageId: input.packageId }),
+		...(input.moduleId === undefined ? {} : { moduleId: input.moduleId }),
+	};
+}
+
+function resolveRepoLocalBuildMetadata(
+	context: CliCommandContext,
+	input: BuildCommandInput,
+): Promise<RepoLocalMetadata | undefined> {
+	return input.config === undefined && input.repoId === undefined
+		? findRepoArtifactMetadata(context)
+		: Promise.resolve(undefined);
+}
+
+async function resolveBuildTarget(
+	context: CliCommandContext,
+	input: BuildCommandInput,
+	deps: BuildDependencies | undefined,
+	repoLocal: RepoLocalMetadata | undefined,
+): Promise<BuildTargetResolution | undefined> {
+	if (repoLocal !== undefined || deps === undefined) return undefined;
+	try {
+		return await resolveRepoTarget(context, {
+			config: deps.config.config,
+			...(input.repoId === undefined ? {} : { explicit: input.repoId }),
+			command: "build",
+			nonInteractive: context.argv.includes("--non-interactive"),
+			allowSingleConfigured: input.selectorCount > 0,
+		});
+	} catch (error) {
+		if (input.selectorCount > 0 || input.repoId !== undefined) throw error;
+		if (
+			!(error instanceof CliError) ||
+			error.code !== "CLI_REPO_TARGET_REQUIRED"
+		)
+			throw error;
+		return undefined;
+	}
+}
+
+function assertBuildTarget(
+	input: BuildCommandInput,
+	effectiveRepoId: string | undefined,
+): void {
+	if (input.selectorCount > 0 && effectiveRepoId === undefined) {
 		throw new CliError(
 			"Targeted build selectors require a repo target. Use --repo, run from a configured checkout, or pass a unique bare repo name.",
-			{
-				code: "CLI_REPO_REQUIRED",
-				exitCode: EXIT_INPUT_ERROR,
-			},
+			{ code: "CLI_REPO_REQUIRED", exitCode: EXIT_INPUT_ERROR },
 		);
 	}
-	if (repoLocal !== undefined && effectiveRepoId !== undefined) {
-		return runRepoLocalBuild(context, repoLocal, {
-			repoId: effectiveRepoId,
-			force: parsed.force || parsed.mode === "full",
-			profile: parsed.profile,
-			selection:
-				selectorCount === 0
-					? undefined
-					: {
-							...(parsed.docIds.length === 0 ? {} : { docIds: parsed.docIds }),
-							...(parsed.packageId === undefined
-								? {}
-								: { packageId: parsed.packageId }),
-							...(parsed.moduleId === undefined
-								? {}
-								: { moduleId: parsed.moduleId }),
-						},
-		});
-	}
+}
 
+function shouldForceBuild(input: BuildCommandInput): boolean {
+	return input.force || input.mode === "full";
+}
+
+function requireBuildDependencies(
+	deps: BuildDependencies | undefined,
+): BuildDependencies {
 	if (deps === undefined) {
 		throw new CliError("Build dependencies unavailable.", {
 			code: "CLI_BUILD_DEPENDENCIES_UNAVAILABLE",
 			exitCode: EXIT_INPUT_ERROR,
 		});
 	}
+	return deps;
+}
+
+async function runGlobalBuild(
+	context: CliCommandContext,
+	deps: BuildDependencies,
+	input: BuildCommandInput,
+	effectiveRepoId: string | undefined,
+	targetResolution: BuildTargetResolution | undefined,
+): Promise<CliCommandResult> {
 	try {
 		const report = effectiveRepoId
 			? await deps.indexer.buildRepo(effectiveRepoId, {
-					force: parsed.force || parsed.mode === "full",
-					...(selectorCount === 0
+					force: shouldForceBuild(input),
+					...(input.selection === undefined
 						? {}
-						: {
-								selection: {
-									...(parsed.docIds.length === 0
-										? {}
-										: { docIds: parsed.docIds }),
-									...(parsed.packageId === undefined
-										? {}
-										: { packageId: parsed.packageId }),
-									...(parsed.moduleId === undefined
-										? {}
-										: { moduleId: parsed.moduleId }),
-								},
-							}),
+						: { selection: input.selection }),
 				})
 			: await deps.indexer.buildAll({
 					all: true,
-					force: parsed.force || parsed.mode === "full",
+					force: shouldForceBuild(input),
 				});
-		const exitCode = reportExitCode(report);
-		if (exitCode !== 0) {
-			throw new CliError(
-				buildFailureLines(report, context.output.verbose).join("\n"),
-				{
-					code: "CLI_BUILD_FAILED",
-					exitCode,
-					details: report,
-				},
-			);
-		}
+		throwIfBuildFailed(report, context.output.verbose);
 		const data =
 			targetResolution === undefined ? report : { ...report, targetResolution };
 		return await renderSuccess(context, "build", data, [
@@ -202,6 +259,26 @@ export async function runBuildCommand(
 		]);
 	} finally {
 		deps.close();
+	}
+}
+
+function throwIfBuildFailed(
+	report: Parameters<typeof reportExitCode>[0],
+	verbose: boolean,
+): void {
+	const exitCode = reportExitCode(report);
+	if (exitCode !== 0) {
+		throw new CliError(
+			buildFailureLines(
+				report as Parameters<typeof buildFailureLines>[0],
+				verbose,
+			).join("\n"),
+			{
+				code: "CLI_BUILD_FAILED",
+				exitCode,
+				details: report,
+			},
+		);
 	}
 }
 
