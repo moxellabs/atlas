@@ -129,6 +129,8 @@ export interface RankingFactors {
 	tokenEfficiency: number;
 	/** Freshness contribution for the owning repository. */
 	freshness: number;
+	/** Exact path, heading, or canonical-doc evidence contribution. */
+	evidenceMatch: number;
 	/** Redundancy subtraction. */
 	redundancyPenalty: number;
 }

@@ -218,11 +218,10 @@ function buildChunkSearchText(document: CanonicalDocument, chunk: CorpusChunk): 
 		skillId: chunk.skillId ?? document.metadata.skillId,
 		docKind: chunk.kind,
 		authority: chunk.authority,
-		title: document.title,
 		headingPath: chunk.headingPath,
 	}).text;
 
-	return `${header} | path: ${document.path}\n\n${chunk.text}`;
+	return `${header}\n\n${chunk.text}`;
 }
 
 async function readSkillArtifacts(

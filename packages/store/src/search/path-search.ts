@@ -1,9 +1,10 @@
-import { StoreSearchError } from "../errors";
+import { normalizeRepoPath } from "@atlas/topology";
 import {
 	type DocumentRow,
 	documentRowSelect,
 	mapDocumentRow,
 } from "../docs/document-row";
+import { StoreSearchError } from "../errors";
 import type {
 	DocumentRecord,
 	PathSearchOptions,
@@ -49,7 +50,7 @@ function baseSelect(): string {
 }
 
 function pathPatternFor(path: string, mode: PathSearchOptions["mode"]): string {
-	const escaped = escapeLike(path);
+	const escaped = escapeLike(normalizeRepoPath(path));
 	if (mode === "exact") {
 		return escaped;
 	}

@@ -429,7 +429,13 @@ function gatherCandidates(
 		if (deduped.length < Math.min(context.candidateLimit, 3)) {
 			return dedupeCandidates([
 				...deduped,
-				...broadFallbackCandidates(db, docRepo, summaryRepo, context, deduped.length),
+				...broadFallbackCandidates(
+					db,
+					docRepo,
+					summaryRepo,
+					context,
+					deduped.length,
+				),
 			]);
 		}
 		return deduped;
@@ -456,16 +462,22 @@ function broadFallbackCandidates(
 	if (terms.length === 0) {
 		return [];
 	}
-	const documents = context.repoId === undefined
-		? new RepoRepository(db).list().flatMap((repo) => docRepo.listByRepo(repo.repoId))
-		: docRepo.listByRepo(context.repoId);
+	const documents =
+		context.repoId === undefined
+			? new RepoRepository(db)
+					.list()
+					.flatMap((repo) => docRepo.listByRepo(repo.repoId))
+			: docRepo.listByRepo(context.repoId);
 	const scored = documents
 		.map((document) => ({
 			document,
 			score: broadDocumentScore(document, summaryRepo, terms),
 		}))
 		.filter((item) => item.score > 0)
-		.sort((a, b) => b.score - a.score || a.document.path.localeCompare(b.document.path))
+		.sort(
+			(a, b) =>
+				b.score - a.score || a.document.path.localeCompare(b.document.path),
+		)
 		.slice(0, Math.max(0, context.candidateLimit - existingCount));
 	const candidates: RetrievalCandidate[] = [];
 	for (const { document, score } of scored) {
@@ -478,7 +490,9 @@ function broadFallbackCandidates(
 				context.countTokens,
 			),
 		);
-		candidates.push(...documentSummaries(docRepo, summaryRepo, document.docId, 0.34));
+		candidates.push(
+			...documentSummaries(docRepo, summaryRepo, document.docId, 0.34),
+		);
 	}
 	return candidates;
 }

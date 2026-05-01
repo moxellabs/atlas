@@ -1,4 +1,5 @@
 import type { FileEntry } from "@atlas/core";
+import { normalizeRepoPath } from "@atlas/topology";
 
 import type { GhesClient } from "../client/ghes-client";
 import { GhesTreeReadError } from "../errors";
@@ -127,7 +128,7 @@ function validateTreeResponse(value: GhesTreeResponse): void {
 }
 
 function normalizeTreePath(path: string): string {
-	return path.replaceAll("\\", "/").replace(/^\/+/, "");
+	return normalizeRepoPath(path);
 }
 
 function hasIgnoredDirectory(path: string): boolean {

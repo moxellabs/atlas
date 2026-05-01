@@ -26,5 +26,6 @@ export { inferModuleScope } from "./rules/infer-module-scope";
 export type { ModuleScopeInference } from "./rules/infer-module-scope";
 export { inferPackageScope } from "./rules/infer-package-scope";
 export type { PackageScopeInference } from "./rules/infer-package-scope";
+export { normalizeRepoPath } from "./path-utils";
 export { inferSkillScope, isSkillPath } from "./rules/infer-skill-scope";
 export type { SkillScopeInference } from "./rules/infer-skill-scope";

@@ -85,12 +85,8 @@ function shouldExpand(
 	if (needsConcreteEvidence(query)) {
 		return true;
 	}
-	if (
-		queryKind === "overview" &&
-		state.selected.length > 0 &&
-		state.usedTokens <= state.budgetTokens * 0.55
-	) {
-		return false;
+	if (queryKind === "overview" && state.selected.length > 0) {
+		return state.usedTokens <= state.budgetTokens * 0.82;
 	}
 	return true;
 }
@@ -182,9 +178,10 @@ function defaultTargetExpansionPriority(
 	targetType: RankedHit["targetType"],
 ): number {
 	return targetTypePriority(targetType, {
-		section: 4,
-		chunk: 4,
+		section: 5,
+		chunk: 5,
 		document: 3,
+		skill: 2,
 		fallback: 1,
 	});
 }
