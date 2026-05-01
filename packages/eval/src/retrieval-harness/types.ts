@@ -46,7 +46,10 @@ export interface CaseResult extends EvalCaseMetadata {
 	category: string;
 	query: string;
 	passed: boolean;
+	/** Retrieval engine wall-clock time measured inside inspect retrieval. */
 	latencyMs: number;
+	/** Full spawned CLI round-trip time for this eval case. */
+	cliLatencyMs?: number;
 	selectedCount: number;
 	rankedCount: number;
 	confidence?: string;
@@ -263,6 +266,9 @@ export interface Report {
 		averageLatencyMs: number;
 		medianLatencyMs: number;
 		p95LatencyMs: number;
+		averageCliLatencyMs: number;
+		medianCliLatencyMs: number;
+		p95CliLatencyMs: number;
 		averageRankedHits: number;
 		pathRecallAt1: number;
 		pathRecallAt3: number;
@@ -316,4 +322,3 @@ export interface Report {
 	byScenario: ReportGroup;
 	cases: CaseResult[];
 }
-

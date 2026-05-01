@@ -1,7 +1,11 @@
-import { moxelBandedFieldScript } from "./moxel-theme";
-
-import { classifyHealth, severityBadge, worstHealth, type HealthLevel, type HealthMetric } from "../health";
-import { HEALTH_THRESHOLDS } from "../health";
+import {
+	classifyHealth,
+	HEALTH_THRESHOLDS,
+	type HealthLevel,
+	type HealthMetric,
+	severityBadge,
+	worstHealth,
+} from "../health";
 import { METRIC_GLOSSARY } from "../metric-glossary";
 import type {
 	CaseResult,
@@ -14,6 +18,7 @@ import type {
 } from "../types";
 import { renderReportCss } from "./css";
 import { renderExplorerScript } from "./explorer-script";
+import { moxelBandedFieldScript } from "./moxel-theme";
 
 export function renderHtml(report: Report): string {
 	return `<!doctype html>
@@ -118,18 +123,37 @@ function renderInfoButton(metric: HealthMetric): string {
 
 function renderAtAGlance(report: Report): string {
 	const radarMetrics: Array<[string, number, HealthLevel]> = [
-		["Pass", report.metrics.passRate, classifyHealth("passRate", report.metrics.passRate)],
-		["R@5", report.metrics.pathRecallAt5, classifyHealth("pathRecallAt5", report.metrics.pathRecallAt5)],
+		[
+			"Pass",
+			report.metrics.passRate,
+			classifyHealth("passRate", report.metrics.passRate),
+		],
+		[
+			"R@5",
+			report.metrics.pathRecallAt5,
+			classifyHealth("pathRecallAt5", report.metrics.pathRecallAt5),
+		],
 		["MRR", report.metrics.mrr, classifyHealth("mrr", report.metrics.mrr)],
-		["Abstain", report.metrics.noResultAccuracy, classifyHealth("noResultAccuracy", report.metrics.noResultAccuracy)],
+		[
+			"Abstain",
+			report.metrics.noResultAccuracy,
+			classifyHealth("noResultAccuracy", report.metrics.noResultAccuracy),
+		],
 		[
 			"Forbidden",
 			report.metrics.forbiddenPathAccuracy,
-			classifyHealth("forbiddenPathAccuracy", report.metrics.forbiddenPathAccuracy),
+			classifyHealth(
+				"forbiddenPathAccuracy",
+				report.metrics.forbiddenPathAccuracy,
+			),
 		],
-		["Terms", report.metrics.termRecall, classifyHealth("termRecall", report.metrics.termRecall)],
+		[
+			"Terms",
+			report.metrics.termRecall,
+			classifyHealth("termRecall", report.metrics.termRecall),
+		],
 	];
-	return `<section class="panel" data-eval-chart="at-a-glance" data-health="${escapeHtml(report.narrative.severity)}"><div class="case-head"><div><div class="eyebrow">At a glance</div><h2>Metric constellation${renderInfoButton("mrr")}</h2></div></div>${renderRadarSvg(radarMetrics)}<p class="chart-caption">Each axis is a metric scaled to 0–1. Fill color tracks the worst axis; outer ring is target.</p></section>`;
+	return `<section class="panel" data-eval-chart="at-a-glance" data-health="${escapeHtml(report.narrative.severity)}"><div class="case-head"><div><div class="eyebrow">At a glance</div><h2>Metric constellation${renderInfoButton("mrr")}</h2></div></div><div class="chart-frame chart-frame--radar">${renderRadarSvg(radarMetrics)}</div><p class="chart-caption">Each axis is a metric scaled to 0–1. Fill color tracks the worst axis; outer ring is target.</p></section>`;
 }
 
 function renderInterpretation(report: Report): string {
@@ -139,9 +163,16 @@ function renderInterpretation(report: Report): string {
 			(finding) =>
 				`<li class="finding" data-health="${escapeHtml(finding.severity)}"><span class="finding-label">${escapeHtml(finding.label)}${renderInfoButton(finding.metric)}</span><span class="finding-value" data-health="${escapeHtml(finding.severity)}">${escapeHtml(finding.value)}</span><span class="tag" data-health="${escapeHtml(finding.severity)}">${escapeHtml(finding.severity)}</span><span class="finding-msg">${escapeHtml(finding.message)}</span></li>`,
 		)
-		.join("")}</ul>${report.narrative.attentionAreas.length === 0 ? "" : `<h3>Attention areas</h3><ul class="attention-list">${report.narrative.attentionAreas
-		.map((area) => `<li data-health="${escapeHtml(area.severity)}">${escapeHtml(area.message)}</li>`)
-		.join("")}</ul>`}<p class="muted">${report.narrative.caveats.map(escapeHtml).join(" ")}</p></section>`;
+		.join("")}</ul>${
+		report.narrative.attentionAreas.length === 0
+			? ""
+			: `<h3>Attention areas</h3><ul class="attention-list">${report.narrative.attentionAreas
+					.map(
+						(area) =>
+							`<li data-health="${escapeHtml(area.severity)}">${escapeHtml(area.message)}</li>`,
+					)
+					.join("")}</ul>`
+	}<p class="muted">${report.narrative.caveats.map(escapeHtml).join(" ")}</p></section>`;
 }
 
 function renderCharts(report: Report): string {
@@ -149,28 +180,50 @@ function renderCharts(report: Report): string {
 		["Recall@1", report.metrics.pathRecallAt1, "pathRecallAt1"],
 		["Recall@3", report.metrics.pathRecallAt3, "pathRecallAt3"],
 		["Recall@5", report.metrics.pathRecallAt5, "pathRecallAt5"],
-		["Expected-path P@5", report.metrics.expectedPathPrecisionAt5, "expectedPathPrecisionAt5"],
-		["Expected-path nDCG@5", report.metrics.expectedPathNdcgAt5, "expectedPathNdcgAt5"],
+		[
+			"Expected-path P@5",
+			report.metrics.expectedPathPrecisionAt5,
+			"expectedPathPrecisionAt5",
+		],
+		[
+			"Expected-path nDCG@5",
+			report.metrics.expectedPathNdcgAt5,
+			"expectedPathNdcgAt5",
+		],
 	];
 	const recallSeverity = worstHealth(
 		recallBars.map(([, value, metric]) => classifyHealth(metric, value)),
 	);
 	const rankBucketsHealth = rankBucketHealth(report.quality.rankBuckets);
 	const rankBucketSeverity = worstBucketSeverity(rankBucketsHealth);
-	const latencyBucketsHealth = latencyBucketHealth(report.quality.latencyBuckets);
+	const latencyBucketsHealth = latencyBucketHealth(
+		report.quality.latencyBuckets,
+	);
 	const latencyBucketSeverity = worstBucketSeverity(latencyBucketsHealth);
-	const latencyHealth = classifyHealth("p95LatencyMs", report.metrics.p95LatencyMs);
+	const latencyHealth = classifyHealth(
+		"p95LatencyMs",
+		report.metrics.p95LatencyMs,
+	);
 	const recallLine: Array<[string, number, HealthLevel]> = recallBars.map(
 		([label, value, metric]) => [label, value, classifyHealth(metric, value)],
 	);
 	return `<section class="chart-grid"><article class="panel chart-panel" data-eval-chart="recall-funnel" data-health="${escapeHtml(recallSeverity)}"><h2>Recall and sparse-label rank quality${renderInfoButton("pathRecallAt5")}</h2>${renderLineSvg(recallLine)}<p class="chart-caption">Recall@k asks: did known-good paths appear by rank k? Expected-path precision/nDCG are sparse-label lower bounds, not full relevance judgments.</p><div class="bars">${recallBars
-		.map(([label, value, metric]) => renderProgress(label, value, classifyHealth(metric, value)))
-		.join("")}</div></article><article class="panel chart-panel" data-eval-chart="rank-buckets" data-health="${escapeHtml(rankBucketSeverity)}"><h2>First expected path rank${renderInfoButton("mrr")}</h2>${renderBucketSvg(report.quality.rankBuckets, "cases", rankBucketsHealth)}<p class="chart-caption">Lower ranks are better. Missing/no-label bucket includes abstain cases or cases without a first expected path.</p></article><article class="panel chart-panel" data-eval-chart="latency-buckets" data-health="${escapeHtml(latencyBucketSeverity)}"><h2>Latency distribution${renderInfoButton("p95LatencyMs")}</h2>${renderBucketSvg(report.quality.latencyBuckets, "cases", latencyBucketsHealth)}<p class="chart-caption">Local CLI wall-clock runtime per eval case. p95: ${Math.round(report.metrics.p95LatencyMs)}ms (${escapeHtml(latencyHealth)}), median: ${Math.round(report.metrics.medianLatencyMs)}ms.</p></article><article class="panel chart-panel" data-eval-chart="safety-bars" data-health="${escapeHtml(worstHealth([
-		classifyHealth("noResultAccuracy", report.metrics.noResultAccuracy),
-		classifyHealth("forbiddenPathAccuracy", report.metrics.forbiddenPathAccuracy),
-		classifyHealth("termRecall", report.metrics.termRecall),
-		classifyHealth("nonEmptyContextRate", report.metrics.nonEmptyContextRate),
-	]))}"><h2>Safety and context${renderInfoButton("forbiddenPathAccuracy")}</h2><p class="chart-caption">Abstain and forbidden-path accuracy track whether Atlas refuses to leak. Term recall and non-empty context track whether it found anything useful at all.</p><div class="bars">${safetyBars(report).join("")}</div></article></section>`;
+		.map(([label, value, metric]) =>
+			renderProgress(label, value, classifyHealth(metric, value)),
+		)
+		.join(
+			"",
+		)}</div></article><article class="panel chart-panel" data-eval-chart="rank-buckets" data-health="${escapeHtml(rankBucketSeverity)}"><h2>First expected path rank${renderInfoButton("mrr")}</h2>${renderBucketSvg(report.quality.rankBuckets, "cases", rankBucketsHealth)}<p class="chart-caption">Lower ranks are better. Missing/no-label bucket includes abstain cases or cases without a first expected path.</p></article><article class="panel chart-panel" data-eval-chart="latency-buckets" data-health="${escapeHtml(latencyBucketSeverity)}"><h2>Retrieval latency distribution${renderInfoButton("p95LatencyMs")}</h2>${renderBucketSvg(report.quality.latencyBuckets, "cases", latencyBucketsHealth)}<p class="chart-caption">Retrieval engine time only. p95: ${Math.round(report.metrics.p95LatencyMs)}ms (${escapeHtml(latencyHealth)}), median: ${Math.round(report.metrics.medianLatencyMs)}ms. Spawned CLI round-trip p95: ${Math.round(report.metrics.p95CliLatencyMs)}ms.</p></article><article class="panel chart-panel" data-eval-chart="safety-bars" data-health="${escapeHtml(
+		worstHealth([
+			classifyHealth("noResultAccuracy", report.metrics.noResultAccuracy),
+			classifyHealth(
+				"forbiddenPathAccuracy",
+				report.metrics.forbiddenPathAccuracy,
+			),
+			classifyHealth("termRecall", report.metrics.termRecall),
+			classifyHealth("nonEmptyContextRate", report.metrics.nonEmptyContextRate),
+		]),
+	)}"><h2>Safety and context${renderInfoButton("forbiddenPathAccuracy")}</h2><p class="chart-caption">Abstain and forbidden-path accuracy track whether Atlas refuses to leak. Term recall and non-empty context track whether it found anything useful at all.</p><div class="bars">${safetyBars(report).join("")}</div></article></section>`;
 }
 
 function rankBucketHealth(buckets: RankBucket[]): HealthLevel[] {
@@ -211,7 +264,10 @@ function safetyBars(report: Report): string[] {
 		renderProgress(
 			"Forbidden-path accuracy",
 			report.metrics.forbiddenPathAccuracy,
-			classifyHealth("forbiddenPathAccuracy", report.metrics.forbiddenPathAccuracy),
+			classifyHealth(
+				"forbiddenPathAccuracy",
+				report.metrics.forbiddenPathAccuracy,
+			),
 		),
 		renderProgress(
 			"Term recall",
@@ -261,14 +317,21 @@ function renderHeatmap(group: Record<string, QualityGroupSummary>): string {
 
 function renderExplorer(report: Report): string {
 	const categories = optionList(unique(report.cases.map((c) => c.category)));
-	const profiles = optionList(unique(report.cases.map((c) => c.profile ?? "unknown")));
-	const risks = optionList(unique(report.cases.map((c) => c.riskArea ?? "unknown")));
+	const profiles = optionList(
+		unique(report.cases.map((c) => c.profile ?? "unknown")),
+	);
+	const risks = optionList(
+		unique(report.cases.map((c) => c.riskArea ?? "unknown")),
+	);
 	return `<section class="panel" id="case-explorer"><div class="eyebrow">Case explorer</div><h2>Filter failed expectations, rank gaps, and source paths.</h2><div class="controls" role="search"><div class="control"><label for="case-search">Search cases, paths, query text</label><input id="case-search" type="search" placeholder="mcp, privacy, docs/evals.md, case id" /></div><div class="control"><label for="filter-category">Category</label><select id="filter-category"><option value="">All</option>${categories}</select></div><div class="control"><label for="filter-profile">Profile</label><select id="filter-profile"><option value="">All</option>${profiles}</select></div><div class="control"><label for="filter-risk">Risk</label><select id="filter-risk"><option value="">All</option>${risks}</select></div><div class="control"><label for="case-sort">Sort</label><select id="case-sort"><option value="weakest">Weakest rank</option><option value="recallAt5">Recall@5</option><option value="mrr">MRR</option><option value="latency">Latency</option><option value="ranked">Ranked hits</option><option value="id">Case ID</option></select></div><button id="clear-filters" type="button">Clear</button></div><p class="muted"><span id="visible-count">${report.cases.length}</span> of ${report.cases.length} cases visible. List is contained so report does not become one huge scroll dump.</p><div id="empty-state" class="empty">No cases match filters. Clear filters to reset.</div><div id="case-list" class="case-list">${report.cases.map(renderCaseCard).join("")}</div></section>`;
 }
 
 function optionList(values: string[]): string {
 	return values
-		.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
+		.map(
+			(value) =>
+				`<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`,
+		)
 		.join("");
 }
 
@@ -284,7 +347,10 @@ function renderCaseCard(testCase: CaseResult): string {
 			? "pass · rank headroom"
 			: "pass";
 	const summary = caseSummary(testCase);
-	const recallHealth = classifyHealth("pathRecallAt5", testCase.retrieval.recallAt5);
+	const recallHealth = classifyHealth(
+		"pathRecallAt5",
+		testCase.retrieval.recallAt5,
+	);
 	const mrrHealth = classifyHealth("mrr", testCase.retrieval.reciprocalRank);
 	const latencyHealth = classifyHealth("p95LatencyMs", testCase.latencyMs);
 	return `<article class="case-card" data-case-card data-health="${escapeHtml(health)}" data-id="${escapeHtml(testCase.id)}" data-category="${escapeHtml(testCase.category)}" data-profile="${escapeHtml(testCase.profile ?? "unknown")}" data-risk="${escapeHtml(testCase.riskArea ?? "unknown")}" data-recall="${testCase.retrieval.recallAt5}" data-mrr="${testCase.retrieval.reciprocalRank}" data-latency="${testCase.latencyMs}" data-ranked="${testCase.rankedCount}" data-search="${escapeHtml(caseSearchText(testCase))}"><div class="case-head"><h3 class="case-title">${escapeHtml(testCase.id)} · <span class="tag" data-health="${escapeHtml(health)}">${escapeHtml(status)}</span></h3><button type="button" class="copy-case" data-copy-id="${escapeHtml(testCase.id)}">Copy JSON</button></div>${renderMetadataPills(testCase)}<p class="case-summary">${escapeHtml(summary)}</p><div class="scoreline"><span class="tag">R@1 ${percent(testCase.retrieval.recallAt1)}</span><span class="tag" data-health="${escapeHtml(recallHealth)}">R@5 ${percent(testCase.retrieval.recallAt5)}</span><span class="tag" data-health="${escapeHtml(mrrHealth)}">MRR ${testCase.retrieval.reciprocalRank.toFixed(2)}</span><span class="tag">Rank ${testCase.retrieval.bestExpectedPathRank ?? "missing"}</span><span class="tag" data-health="${escapeHtml(latencyHealth)}">${testCase.latencyMs}ms</span><span class="tag">Diversity ${testCase.retrieval.topPathDiversity}/5</span></div><details><summary>Open evidence</summary><p><b>Query:</b> ${escapeHtml(testCase.query)}</p><div class="cols"><div><b>Expected behavior</b><pre>${escapeHtml(testCase.expectedBehavior ?? "Required paths/terms present; forbidden paths absent; no-result behavior correct when expected.")}</pre></div><div><b>Top paths</b><pre>${escapeHtml(formatList(testCase.topPaths.slice(0, 10)))}</pre></div><div><b>Missing fields</b><pre>${escapeHtml(JSON.stringify(testCase.missing, null, 2))}</pre></div><div><b>Diagnostics</b><pre>${escapeHtml(summarizeDiagnostics(testCase.diagnostics))}</pre></div></div></details></article>`;
@@ -294,7 +360,10 @@ function caseHealth(testCase: CaseResult): HealthLevel {
 	if (!testCase.passed) return "bad";
 	if (testCase.retrieval.recallAt5 < 0.5) return "bad";
 	if (testCase.retrieval.recallAt5 < 1) return "warn";
-	if (testCase.retrieval.bestExpectedPathRank !== undefined && testCase.retrieval.bestExpectedPathRank > 3)
+	if (
+		testCase.retrieval.bestExpectedPathRank !== undefined &&
+		testCase.retrieval.bestExpectedPathRank > 3
+	)
 		return "warn";
 	return "good";
 }
@@ -334,12 +403,15 @@ function renderMetadataPills(testCase: CaseResult): string {
 		["priority", testCase.priority ?? "unknown"],
 	];
 	return `<div class="pillrow">${metadata
-		.map(([label, value]) => `<span class="pill">${escapeHtml(label)}: ${escapeHtml(value)}</span>`)
+		.map(
+			([label, value]) =>
+				`<span class="pill">${escapeHtml(label)}: ${escapeHtml(value)}</span>`,
+		)
 		.join("")}</div>`;
 }
 
 function renderMethodology(report: Report): string {
-	return `<details class="panel section-details"><summary><div><div class="eyebrow">Methodology</div><strong>Metric definitions and limitations</strong></div><span class="tag">expand</span></summary><h3>Eval unit</h3><p class="muted">One user-like query against <code>atlas inspect retrieval</code>. Pass means every deterministic expectation passed: required paths, terms, exclusions, diagnostics, confidence, hit bounds, and no-result behavior.</p><h3>Metrics</h3><ul><li><b>Recall@k:</b> fraction of expected path substrings found in top-k paths.</li><li><b>Expected-path Precision@k:</b> lower-bound proportion of top-k paths matching sparse expected labels; unlabeled relevant docs may exist.</li><li><b>Expected-path nDCG@k:</b> rank-sensitive binary relevance over sparse expected paths.</li><li><b>MRR:</b> reciprocal rank of first expected path, averaged across cases.</li><li><b>Rank distance:</b> per-case <code>bestExpectedPathRank - 1</code>, averaged; lower is better.</li><li><b>Top-path diversity:</b> distinct parent directory count among top-5 retrieved paths.</li><li><b>Latency:</b> local wall-clock CLI query time. Median ${Math.round(report.metrics.medianLatencyMs)}ms; p95 ${Math.round(report.metrics.p95LatencyMs)}ms.</li></ul><h3>Limitations</h3><ul>${report.narrative.caveats.map((caveat) => `<li>${escapeHtml(caveat)}</li>`).join("")}</ul></details>`;
+	return `<details class="panel section-details"><summary><div><div class="eyebrow">Methodology</div><strong>Metric definitions and limitations</strong></div><span class="tag">expand</span></summary><h3>Eval unit</h3><p class="muted">One user-like query against <code>atlas inspect retrieval</code>. Pass means every deterministic expectation passed: required paths, terms, exclusions, diagnostics, confidence, hit bounds, and no-result behavior.</p><h3>Metrics</h3><ul><li><b>Recall@k:</b> fraction of expected path substrings found in top-k paths.</li><li><b>Expected-path Precision@k:</b> lower-bound proportion of top-k paths matching sparse expected labels; unlabeled relevant docs may exist.</li><li><b>Expected-path nDCG@k:</b> rank-sensitive binary relevance over sparse expected paths.</li><li><b>MRR:</b> reciprocal rank of first expected path, averaged across cases.</li><li><b>Rank distance:</b> per-case <code>bestExpectedPathRank - 1</code>, averaged; lower is better.</li><li><b>Top-path diversity:</b> distinct parent directory count among top-5 retrieved paths.</li><li><b>Retrieval latency:</b> engine time inside inspect retrieval. Median ${Math.round(report.metrics.medianLatencyMs)}ms; p95 ${Math.round(report.metrics.p95LatencyMs)}ms.</li><li><b>CLI round-trip:</b> spawned per-case eval command including startup and JSON IO. Median ${Math.round(report.metrics.medianCliLatencyMs)}ms; p95 ${Math.round(report.metrics.p95CliLatencyMs)}ms.</li></ul><h3>Limitations</h3><ul>${report.narrative.caveats.map((caveat) => `<li>${escapeHtml(caveat)}</li>`).join("")}</ul></details>`;
 }
 
 function renderReproducibility(report: Report): string {
@@ -355,8 +427,13 @@ function renderReproducibility(report: Report): string {
 		["Indexed revision", report.runtime.indexedRevision ?? "unknown"],
 	];
 	return `<details class="panel section-details"><summary><div><div class="eyebrow">Reproducibility</div><strong><code>${escapeHtml(command)}</code></strong></div><button type="button" data-copy-text="${escapeHtml(command)}">Copy</button></summary><p class="muted">Local-first command and runtime metadata.</p><div class="heatmap">${items
-		.map(([label, value]) => `<div class="heat" style="--heat:.08"><span class="label">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`)
-		.join("")}</div><p><a href="mcp-retrieval-report.json">Machine-readable JSON report</a> · <a href="../../docs/evals.md">Interpretation guide</a></p></details>`;
+		.map(
+			([label, value]) =>
+				`<div class="heat" style="--heat:.08"><span class="label">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`,
+		)
+		.join(
+			"",
+		)}</div><p><a href="mcp-retrieval-report.json">Machine-readable JSON report</a> · <a href="../../docs/evals.md">Interpretation guide</a></p></details>`;
 }
 
 function renderResearchNotes(report: Report): string {
@@ -400,6 +477,7 @@ function reportClientData(report: Report): unknown {
 			missing: testCase.missing,
 			topPaths: testCase.topPaths.slice(0, 12),
 			latencyMs: testCase.latencyMs,
+			cliLatencyMs: testCase.cliLatencyMs,
 			rankedCount: testCase.rankedCount,
 		})),
 	};
@@ -407,7 +485,11 @@ function reportClientData(report: Report): unknown {
 
 function safeJson(value: unknown): string {
 	return JSON.stringify(value)
-		.replace(/[<>&]/g, (char) => ({ "<": "\\u003c", ">": "\\u003e", "&": "\\u0026" })[char] ?? char)
+		.replace(
+			/[<>&]/g,
+			(char) =>
+				({ "<": "\\u003c", ">": "\\u003e", "&": "\\u0026" })[char] ?? char,
+		)
 		.replace(/\u2028/g, "\\u2028")
 		.replace(/\u2029/g, "\\u2029");
 }
@@ -417,25 +499,32 @@ function formatList(values: string[]): string {
 }
 
 function summarizeDiagnostics(diagnostics: unknown[]): string {
-	return diagnostics.length === 0 ? "None" : JSON.stringify(diagnostics.slice(0, 5), null, 2);
+	return diagnostics.length === 0
+		? "None"
+		: JSON.stringify(diagnostics.slice(0, 5), null, 2);
 }
 
 function renderLineSvg(metrics: Array<[string, number, HealthLevel]>): string {
 	const width = 360;
 	const height = 200;
 	const padding = 28;
-	const xStep = metrics.length <= 1 ? 1 : (width - padding * 2) / (metrics.length - 1);
+	const xStep =
+		metrics.length <= 1 ? 1 : (width - padding * 2) / (metrics.length - 1);
 	const points = metrics
 		.map(([, value], index) => {
 			const x = padding + xStep * index;
-			const y = padding + (height - padding * 2) * (1 - Math.max(0, Math.min(1, value)));
+			const y =
+				padding +
+				(height - padding * 2) * (1 - Math.max(0, Math.min(1, value)));
 			return `${round(x)},${round(y)}`;
 		})
 		.join(" ");
-	return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Recall line chart"><defs><linearGradient id="line" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#35f0ff"/><stop offset="1" stop-color="#6df2d6"/></linearGradient></defs><rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="18" fill="rgba(0,3,10,.18)" stroke="rgba(70,215,255,.15)"/><polyline points="${points}" fill="none" stroke="url(#line)" stroke-width="3"/><g>${metrics
+	return `<div class="chart-frame"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Recall line chart"><defs><linearGradient id="line" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#35f0ff"/><stop offset="1" stop-color="#6df2d6"/></linearGradient></defs><polyline points="${points}" fill="none" stroke="url(#line)" stroke-width="3"/><g>${metrics
 		.map(([label, value, health], index) => {
 			const x = padding + xStep * index;
-			const y = padding + (height - padding * 2) * (1 - Math.max(0, Math.min(1, value)));
+			const y =
+				padding +
+				(height - padding * 2) * (1 - Math.max(0, Math.min(1, value)));
 			const color = colorFor(health);
 			return `<circle cx="${round(x)}" cy="${round(y)}" r="5" fill="${color}" stroke="#030711" stroke-width="1.5"><title>${escapeHtml(label)} ${percent(value)} (${escapeHtml(health)})</title></circle>`;
 		})
@@ -444,7 +533,7 @@ function renderLineSvg(metrics: Array<[string, number, HealthLevel]>): string {
 			const x = padding + xStep * index;
 			return `<text x="${round(x)}" y="${height - 10}" text-anchor="middle" fill="rgba(245,248,255,.76)" font-size="11" font-weight="800">${escapeHtml(label)}</text>`;
 		})
-		.join("")}</g></svg>`;
+		.join("")}</g></svg></div>`;
 }
 
 function renderBucketSvg(
@@ -457,38 +546,56 @@ function renderBucketSvg(
 	const padding = 28;
 	const barWidth = Math.floor((width - padding * 2) / buckets.length) - 10;
 	const maxCount = Math.max(1, ...buckets.map((b) => b.count));
-	return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Bucket chart"><rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="18" fill="rgba(0,3,10,.18)" stroke="rgba(70,215,255,.15)"/><g>${buckets
+	return `<div class="chart-frame"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Bucket chart"><g>${buckets
 		.map((bucket, index) => {
 			const x = padding + index * (barWidth + 10);
-			const barHeight = Math.round(((height - padding * 2 - 22) * bucket.count) / maxCount);
+			const barHeight = Math.round(
+				((height - padding * 2 - 22) * bucket.count) / maxCount,
+			);
 			const y = height - padding - 22 - barHeight;
 			const color = colorFor(health[index] ?? "good");
 			return `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="10" fill="${color}" fill-opacity=".28" stroke="${color}" stroke-width="2"/><text x="${x + barWidth / 2}" y="${height - padding - 6}" text-anchor="middle" fill="rgba(245,248,255,.76)" font-size="11" font-weight="800">${escapeHtml(bucket.label)}</text><text x="${x + barWidth / 2}" y="${y - 6}" text-anchor="middle" fill="rgba(245,248,255,.82)" font-size="11" font-weight="800">${bucket.count}</text><title>${escapeHtml(bucket.label)}: ${bucket.count} ${escapeHtml(axisLabel)}</title>`;
 		})
-		.join("")}</g></svg>`;
+		.join("")}</g></svg></div>`;
 }
 
 function renderRadarSvg(metrics: Array<[string, number, HealthLevel]>): string {
 	const size = 320;
 	const center = size / 2;
 	const radius = 110;
-	const angleFor = (index: number) => (Math.PI * 2 * index) / metrics.length - Math.PI / 2;
+	const angleFor = (index: number) =>
+		(Math.PI * 2 * index) / metrics.length - Math.PI / 2;
 	const point = (index: number, value: number) => {
 		const angle = angleFor(index);
 		const r = radius * Math.max(0, Math.min(1, value));
-		return [round(center + Math.cos(angle) * r), round(center + Math.sin(angle) * r)] as const;
+		return [
+			round(center + Math.cos(angle) * r),
+			round(center + Math.sin(angle) * r),
+		] as const;
 	};
 	const outer = metrics.map((_, index) => point(index, 1));
-	const poly = metrics.map(([, value], index) => point(index, value).join(",")).join(" ");
+	const poly = metrics
+		.map(([, value], index) => point(index, value).join(","))
+		.join(" ");
 	const overall = worstHealth(metrics.map(([, , health]) => health ?? "good"));
 	const fillColor = colorFor(overall);
-	return `<svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Metric radar chart"><rect x="1" y="1" width="${size - 2}" height="${size - 2}" rx="20" fill="rgba(0,3,10,.22)" stroke="rgba(70,215,255,.15)"/>${[0.25, 0.5, 0.75, 1]
-		.map((level) => `<polygon points="${metrics.map((_, index) => point(index, level).join(",")).join(" ")}" fill="none" stroke="rgba(70,215,255,.13)"/>`)
+	return `<svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Metric radar chart">${[
+		0.25, 0.5, 0.75, 1,
+	]
+		.map(
+			(level) =>
+				`<polygon points="${metrics.map((_, index) => point(index, level).join(",")).join(" ")}" fill="none" stroke="rgba(70,215,255,.13)"/>`,
+		)
 		.join("")}${outer
-		.map(([x, y]) => `<line x1="${center}" y1="${center}" x2="${x}" y2="${y}" stroke="rgba(70,215,255,.1)"/>`)
-		.join("")}<polygon points="${poly}" fill="${fillColor}" fill-opacity=".28" stroke="${fillColor}" stroke-width="2.5"/>${metrics
+		.map(
+			([x, y]) =>
+				`<line x1="${center}" y1="${center}" x2="${x}" y2="${y}" stroke="rgba(70,215,255,.1)"/>`,
+		)
+		.join(
+			"",
+		)}<polygon points="${poly}" fill="${fillColor}" fill-opacity=".28" stroke="${fillColor}" stroke-width="2.5"/>${metrics
 		.map(([label, value, health], index) => {
-			const [x, y] = point(index, 1.14);
+			const [x, y] = point(index, 1.1);
 			const axisColor = colorFor(health ?? "good");
 			const [dotX, dotY] = point(index, value);
 			return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="rgba(245,248,255,.82)" font-size="11" font-weight="800">${escapeHtml(label)}</text><circle cx="${dotX}" cy="${dotY}" r="4" fill="${axisColor}" stroke="#030711" stroke-width="1.5"/><title>${escapeHtml(label)} ${percent(value)} (${escapeHtml(health ?? "good")})</title>`;
@@ -496,7 +603,11 @@ function renderRadarSvg(metrics: Array<[string, number, HealthLevel]>): string {
 		.join("")}</svg>`;
 }
 
-function renderProgress(label: string, value: number, health?: HealthLevel): string {
+function renderProgress(
+	label: string,
+	value: number,
+	health?: HealthLevel,
+): string {
 	const width = Math.max(0, Math.min(100, Math.round(value * 100)));
 	const healthAttr = health ? ` data-health="${escapeHtml(health)}"` : "";
 	return `<div class="bar"><span>${escapeHtml(label)}</span><div class="track"><div class="fill"${healthAttr} style="width:${width}%"></div></div><strong>${percent(value)}</strong></div>`;
@@ -531,4 +642,3 @@ function escapeHtml(value: string): string {
 		.replace(/>/g, "&gt;")
 		.replace(/"/g, "&quot;");
 }
-
