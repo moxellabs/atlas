@@ -1,0 +1,152 @@
+{
+  "$schema": "https://unpkg.com/fallow/config-schema.json",
+  "entry": [
+    "apps/cli/src/commander.ts",
+    "tooling/scripts/public-artifact-guard.ts"
+  ],
+  "dynamicallyLoaded": [
+    "tooling/scripts/bootstrap.ts",
+    "tooling/eslint/base.cjs"
+  ],
+  "ignorePatterns": [
+    "**/*.test.ts",
+    "**/*.test-helpers.ts",
+    "**/*.spec.ts"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "ignoreExports": [
+    {
+      "file": "apps/cli/src/commander.ts",
+      "exports": [
+        "createAtlasCommand",
+        "attachAtlas"
+      ]
+    },
+    {
+      "file": "packages/eval/src/retrieval-harness/index.ts",
+      "exports": [
+        "*"
+      ]
+    },
+    {
+      "file": "packages/config/src/atlas-config.schema.ts",
+      "exports": [
+        "*"
+      ]
+    },
+    {
+      "file": "packages/source-git/src/git/parse-git-output.ts",
+      "exports": [
+        "parseNullDelimitedPaths"
+      ]
+    },
+    {
+      "file": "packages/source-git/src/git/spawn-git.ts",
+      "exports": [
+        "spawnGitOrThrow"
+      ]
+    },
+    {
+      "file": "apps/server/src/schemas/context.schema.ts",
+      "exports": [
+        "PlanContextBody"
+      ]
+    },
+    {
+      "file": "apps/server/src/schemas/docs.schema.ts",
+      "exports": [
+        "ReadSectionByHeadingQuery"
+      ]
+    },
+    {
+      "file": "apps/server/src/schemas/repo.schema.ts",
+      "exports": [
+        "ListSkillsQuery",
+        "InspectRetrievalQuery"
+      ]
+    },
+    {
+      "file": "apps/server/src/schemas/search.schema.ts",
+      "exports": [
+        "FindScopesBody",
+        "FindDocsBody"
+      ]
+    },
+    {
+      "file": "apps/server/src/services/dependencies.ts",
+      "exports": [
+        "AtlasStoreClient"
+      ]
+    }
+  ],
+  "usedClassMembers": [
+    "detect",
+    "discoverPackages",
+    "discoverModules",
+    "classifyDocs",
+    "classifySkills",
+    "info",
+    "success",
+    "warn",
+    "debug",
+    "jsonSuccess",
+    "sync",
+    "build",
+    "handle",
+    "findScopes",
+    "findDocs",
+    "inspect",
+    "diagnostics",
+    "getRepoDetail",
+    "listManifests",
+    "listFreshness",
+    "listSkills",
+    "getSkill",
+    "getDocumentOutline",
+    "getDocumentSection",
+    "code",
+    "getRevision",
+    "readFile",
+    "diffPaths",
+    "baseUrl",
+    "updateCache",
+    "upsert",
+    "replaceForDocument",
+    "listByDocument",
+    "getById",
+    "listByModule",
+    "deleteForDocument",
+    "replaceCanonicalDocument",
+    "listByKind",
+    "delete",
+    "replaceForTarget",
+    "deleteForTarget",
+    "recordPartialBuild",
+    "clearPartialBuild",
+    "list",
+    "replaceForRepo",
+    "get",
+    "getArtifact",
+    "summarizeArtifacts",
+    "listAll",
+    "decode"
+  ],
+  "duplicates": {
+    "ignore": [
+      "**/*.test.ts",
+      "**/*.test-helpers.ts"
+    ],
+    "ignoreImports": true,
+    "threshold": 20.0,
+    "minTokens": 3000
+  },
+  "health": {
+    "ignore": [
+      "**/*.test.ts",
+      "**/*.test-helpers.ts"
+    ],
+    "maxCyclomatic": 100,
+    "maxCognitive": 100,
+    "maxCrap": 10000.0
+  }
+}

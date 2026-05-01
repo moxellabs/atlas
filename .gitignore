@@ -60,3 +60,4 @@ atlas.config.yml
 *.tmp
 *.temp
 .gitkeep
+.fallow

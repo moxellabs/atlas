@@ -1,4 +1,5 @@
-import type { Authority, DocKind } from "../enums";
+import type { Authority } from "../enums/authority.enum";
+import type { DocKind } from "../enums/doc-kind.enum";
 import type { DocScope } from "./topology.types";
 
 export type AtlasDocVisibility = "public" | "internal";

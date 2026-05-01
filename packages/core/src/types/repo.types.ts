@@ -1,4 +1,4 @@
-import type { SourceMode } from "../enums";
+import type { SourceMode } from "../enums/source-mode.enum";
 import type { SourceChange } from "./change.types";
 import type {
 	AtlasDocAudience,

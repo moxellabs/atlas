@@ -559,22 +559,6 @@ export async function removeRepoFolder(
 	return true;
 }
 
-/** Builds human-readable repo list rows. */
-export function repoRows(db: AtlasCliDependencies["db"]) {
-	const repos = new RepoRepository(db).list();
-	const manifests = new ManifestRepository(db);
-	return repos.map((repo) => {
-		const manifest = manifests.get(repo.repoId);
-		return {
-			repoId: repo.repoId,
-			mode: repo.mode,
-			revision: repo.revision,
-			indexedRevision: manifest?.indexedRevision ?? "",
-			fresh: manifest?.indexedRevision === repo.revision,
-		};
-	});
-}
-
 /** Builds a human-readable store listing. */
 export function renderRows(
 	rows: Array<Record<string, string | number | boolean | undefined>>,

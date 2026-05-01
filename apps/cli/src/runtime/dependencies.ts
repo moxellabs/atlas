@@ -185,23 +185,8 @@ export function managedRepoCacheRoot(cacheDir: string): string {
 	return join(resolveHome(cacheDir), "repos");
 }
 
-export function repoInternalRoot(cacheDir: string, repoId: string): string {
-	return join(resolveHome(cacheDir), "repos", repoId, ".atlas");
-}
-
-export function repoArtifactStorageDir(
-	cacheDir: string,
-	repoId: string,
-): string {
-	return join(repoInternalRoot(cacheDir, repoId), "artifact");
-}
-
 export function repoCheckoutDir(cacheDir: string, repoId: string): string {
 	return join(resolveHome(cacheDir), "checkouts", repoId);
-}
-
-export function repoTmpDir(cacheDir: string, repoId: string): string {
-	return join(repoInternalRoot(cacheDir, repoId), "tmp");
 }
 
 function resolveHome(path: string): string {

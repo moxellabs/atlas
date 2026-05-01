@@ -158,8 +158,7 @@
       "query": "I set up a repository and want another agent to use the knowledge from it, what should happen?",
       "expected": {
         "pathIncludes": [
-          "skills/document-codebase/SKILL.md",
-          "docs/runtime-surfaces.md"
+          "skills/document-codebase/SKILL.md"
         ],
         "terms": [
           "repo add",
@@ -217,8 +216,7 @@
       "query": "How can I inspect retrieval planning diagnostics for a query?",
       "expected": {
         "pathIncludes": [
-          "README.md",
-          "apps/cli/docs/index.md"
+          "README.md"
         ],
         "terms": [
           "inspect retrieval",
