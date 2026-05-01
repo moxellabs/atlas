@@ -8,8 +8,8 @@
       "category": "mcp-tools",
       "query": "MCP find_docs overview: what Atlas docs explain finding docs and planning context over the local corpus?",
       "expected": {
-        "pathIncludes": ["README.md", "apps/cli/docs/index.md"],
-        "terms": ["MCP", "local corpus", "Search/query"],
+        "pathIncludes": ["packages/mcp/docs/index.md", "docs/retrieval-and-context.md"],
+        "terms": ["find_docs", "plan_context", "local corpus"],
         "tools": ["find_docs"]
       },
       "profile": "consumer",
@@ -22,8 +22,8 @@
       "category": "mcp-tools",
       "query": "MCP plan_context detail query: explain Atlas local-first retrieval planning, token budgets, selected evidence, and provenance for agents.",
       "expected": {
-        "pathIncludes": ["README.md", "docs/self-indexing.md"],
-        "terms": ["retrieval planner", "local-first", "public self-indexed artifact"],
+        "pathIncludes": ["packages/retrieval/docs/index.md", "docs/retrieval-and-context.md"],
+        "terms": ["token budgets", "provenance", "local-first"],
         "tools": ["plan_context"]
       },
       "profile": "agent-integrator",
@@ -78,8 +78,8 @@
       "category": "mcp-tools",
       "query": "I am wiring an agent to answer Atlas repository questions through MCP without cloning or fetching remote source; what local documentation context should it gather first?",
       "expected": {
-        "pathIncludes": ["README.md", "docs/self-indexing.md"],
-        "terms": ["MCP", "without cloning", "local"],
+        "pathIncludes": ["README.md", "docs/retrieval-and-context.md"],
+        "terms": ["MCP", "without cloning", "remote source"],
         "tools": ["plan_context"]
       },
       "profile": "agent-integrator",
@@ -92,8 +92,8 @@
       "category": "mcp-tools",
       "query": "MCP diagnostics query: where are retrieval omission diagnostics such as budget authority freshness archive and redundancy documented?",
       "expected": {
-        "pathIncludes": ["docs/self-indexing.md", "README.md"],
-        "terms": ["self-indexed artifact", "retrieval", "MCP"],
+        "pathIncludes": ["packages/retrieval/docs/index.md", "docs/retrieval-and-context.md"],
+        "terms": ["omission diagnostics", "freshness", "redundancy"],
         "tools": ["plan_context"]
       },
       "profile": "maintainer",
@@ -106,8 +106,8 @@
       "category": "mcp-tools",
       "query": "MCP adoption route: for an indexed repository prompt, should the agent read atlas://manifest and then call plan_context?",
       "expected": {
-        "pathIncludes": ["docs/self-indexing.md", "README.md"],
-        "terms": ["self-indexed artifact", "local corpus", "MCP"],
+        "pathIncludes": ["docs/runtime-surfaces.md", "packages/mcp/docs/index.md"],
+        "terms": ["atlas://manifest", "plan_context", "MCP"],
         "tools": ["atlas://manifest", "plan_context"]
       },
       "profile": "agent-integrator",
@@ -134,7 +134,7 @@
       "category": "mcp-tools",
       "query": "MCP server route docs: where is the Streamable HTTP /mcp bridge described for Atlas server runtime?",
       "expected": {
-        "pathIncludes": ["README.md", "apps/cli/docs/index.md"],
+        "pathIncludes": ["apps/server/docs/index.md", "packages/mcp/docs/index.md"],
         "terms": ["/mcp", "server", "runtime"],
         "tools": ["find_docs", "plan_context"]
       },
@@ -148,8 +148,8 @@
       "category": "mcp-tools",
       "query": "MCP skills query: how should agents use first-party skill docs and artifacts such as document-codebase through Atlas local docs?",
       "expected": {
-        "pathIncludes": ["skills/document-codebase/SKILL.md", "README.md"],
-        "terms": ["document-codebase", "Skill", "local searchable docs"],
+        "pathIncludes": ["skills/document-codebase/SKILL.md", "skills/atlas-contributor/SKILL.md"],
+        "terms": ["document-codebase", "Skill", "source truth"],
         "tools": ["list_skills", "use_skill"]
       },
       "profile": "agent-integrator",
@@ -162,7 +162,7 @@
       "category": "mcp-tools",
       "query": "MCP local-first boundary: do Atlas query-time search retrieval MCP and HTTP reads fetch remote source content or use local imported corpus data?",
       "expected": {
-        "pathIncludes": ["README.md", "docs/self-indexing.md"],
+        "pathIncludes": ["README.md", "docs/runtime-surfaces.md"],
         "terms": ["Query-time search", "MCP", "local imported corpus"],
         "tools": ["plan_context", "find_docs"]
       },
