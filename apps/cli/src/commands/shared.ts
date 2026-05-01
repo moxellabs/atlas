@@ -691,19 +691,25 @@ export function inspectRetrievalPlan(
 	repoId?: string,
 	budgetTokens = 1200,
 ) {
+	const startedAt = performance.now();
 	const classification = deps.retrieval.classifyQuery(query);
+	const scopes = deps.retrieval.inferScopes({
+		query,
+		classification,
+		...(repoId === undefined ? {} : { repoId }),
+	});
+	const plan = deps.retrieval.planContext({
+		query,
+		...(repoId === undefined ? {} : { repoId }),
+		budgetTokens,
+	});
 	return {
 		classification,
-		scopes: deps.retrieval.inferScopes({
-			query,
-			classification,
-			...(repoId === undefined ? {} : { repoId }),
-		}),
-		plan: deps.retrieval.planContext({
-			query,
-			...(repoId === undefined ? {} : { repoId }),
-			budgetTokens,
-		}),
+		scopes,
+		plan,
+		timings: {
+			retrievalLatencyMs: Math.round(performance.now() - startedAt),
+		},
 	};
 }
 

@@ -1,5 +1,5 @@
-import type { Report } from "./types";
 import { severityBadge } from "./health";
+import type { Report } from "./types";
 
 export function printTerminalSummary(report: Report): void {
 	console.log("");
@@ -14,7 +14,8 @@ export function printTerminalSummary(report: Report): void {
 		console.log(`${finding.label}: ${finding.value} [${finding.severity}]`);
 	}
 	console.log(`Average ranked hits: ${report.metrics.averageRankedHits}`);
-	console.log(`Median latency: ${report.metrics.medianLatencyMs}ms`);
+	console.log(`Median retrieval latency: ${report.metrics.medianLatencyMs}ms`);
+	console.log(`Median CLI round-trip: ${report.metrics.medianCliLatencyMs}ms`);
 	if (report.deltas !== undefined && report.deltas.entries.length > 0) {
 		console.log("");
 		console.log("Baseline deltas:");
@@ -26,7 +27,9 @@ export function printTerminalSummary(report: Report): void {
 	}
 	if (report.thresholds !== undefined) {
 		console.log("");
-		console.log(`Thresholds: ${report.thresholds.passed ? "passed" : "failed"}`);
+		console.log(
+			`Thresholds: ${report.thresholds.passed ? "passed" : "failed"}`,
+		);
 		for (const threshold of report.thresholds.results) {
 			console.log(
 				`- ${threshold.label}: ${formatThresholdComparison(threshold)} ${threshold.passed ? "✓" : "✗"}`,
@@ -49,7 +52,9 @@ export function printTerminalSummary(report: Report): void {
 			`- ${testCase.id}: selected=${testCase.selectedCount}, ranked=${testCase.rankedCount}, path=${percent(testCase.scores.pathRecall)}, terms=${percent(testCase.scores.termRecall)}`,
 		);
 		if (testCase.missing.pathIncludes.length > 0) {
-			console.log(`  missing paths: ${testCase.missing.pathIncludes.join(", ")}`);
+			console.log(
+				`  missing paths: ${testCase.missing.pathIncludes.join(", ")}`,
+			);
 		}
 		if (testCase.missing.terms.length > 0) {
 			console.log(`  missing terms: ${testCase.missing.terms.join(", ")}`);
@@ -99,4 +104,3 @@ function formatThresholdComparison(result: {
 function percent(value: number): string {
 	return `${Math.round(value * 100)}%`;
 }
-

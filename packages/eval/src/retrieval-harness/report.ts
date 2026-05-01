@@ -61,6 +61,9 @@ export function buildReport(
 	const rankDistances = cases
 		.map((result) => result.retrieval.rankDistance)
 		.filter((value): value is number => value !== undefined);
+	const cliLatencies = cases.map(
+		(result) => result.cliLatencyMs ?? result.latencyMs,
+	);
 	const metrics = {
 		passRate: rate(cases, (result) => result.passed),
 		pathRecall: average(cases.map((result) => result.scores.pathRecall)),
@@ -75,6 +78,9 @@ export function buildReport(
 			cases.map((result) => result.latencyMs),
 			0.95,
 		),
+		averageCliLatencyMs: average(cliLatencies),
+		medianCliLatencyMs: percentile(cliLatencies, 0.5),
+		p95CliLatencyMs: percentile(cliLatencies, 0.95),
 		averageRankedHits: average(cases.map((result) => result.rankedCount)),
 		pathRecallAt1: average(cases.map((result) => result.retrieval.recallAt1)),
 		pathRecallAt3: average(cases.map((result) => result.retrieval.recallAt3)),

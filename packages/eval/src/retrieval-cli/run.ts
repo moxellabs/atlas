@@ -148,9 +148,14 @@ export async function runMcpRetrievalEvalMain(input: {
 					],
 					input.cwd,
 				);
-				const latencyMs = Math.round(performance.now() - startedAt);
+				const cliLatencyMs = Math.round(performance.now() - startedAt);
 				const data = isRecord(output.data) ? output.data : output;
 				const plan = isRecord(data.plan) ? data.plan : data;
+				const timings = isRecord(data.timings) ? data.timings : {};
+				const latencyMs =
+					typeof timings.retrievalLatencyMs === "number"
+						? Math.round(timings.retrievalLatencyMs)
+						: cliLatencyMs;
 				const rankedHits = asArray(plan.rankedHits);
 				const selected = asArray(plan.selected);
 				const contextPacket = isRecord(plan.contextPacket)
@@ -194,6 +199,7 @@ export async function runMcpRetrievalEvalMain(input: {
 					...caseMetadata(testCase),
 					passed: expectationResult.passed,
 					latencyMs,
+					cliLatencyMs,
 					selectedCount: selected.length,
 					rankedCount: rankedHits.length,
 					...(confidence === undefined ? {} : { confidence }),

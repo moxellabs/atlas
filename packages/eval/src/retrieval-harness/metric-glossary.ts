@@ -95,20 +95,20 @@ export const METRIC_GLOSSARY: Record<HealthMetric, MetricGlossaryEntry> = {
 		targets: "",
 	},
 	p95LatencyMs: {
-		label: "p95 latency",
+		label: "p95 retrieval latency",
 		short:
-			"95th-percentile wall-clock time of the local CLI retrieval call, per case.",
-		long: "Measured end-to-end inside the eval harness. Includes CLI process spawn on each case; a long-lived server process would be faster.",
+			"95th-percentile retrieval-engine time measured inside atlas inspect retrieval, per case.",
+		long: "Measured inside the CLI command around query classification, scope inference, and context planning. It excludes per-case CLI process spawn, stdout capture, expectation scoring, and HTML/report generation.",
 		interpretation:
-			"Red means the slowest tail is dragging; often corpus-size sensitive. Amber on this page is fine for local dev; CI gate is looser.",
+			"Red means actual retrieval planning has a slow tail; compare CLI round-trip metrics in the report notes before optimizing startup overhead.",
 		targets: "",
 	},
 	averageLatencyMs: {
-		label: "Avg latency",
-		short: "Arithmetic mean of per-case retrieval latency.",
-		long: "Pair with p95 to see whether slowness is uniform or tail-heavy.",
+		label: "Avg retrieval latency",
+		short: "Arithmetic mean of per-case retrieval-engine latency.",
+		long: "Pair with p95 to see whether retrieval slowness is uniform or tail-heavy. CLI round-trip can be much higher because the eval spawns a fresh CLI per case.",
 		interpretation:
-			"Red average usually tracks cold-start overhead or an oversized corpus window.",
+			"Red average usually tracks retrieval query work or an oversized corpus window, not CLI cold-start overhead.",
 		targets: "",
 	},
 	noResultAccuracy: {
