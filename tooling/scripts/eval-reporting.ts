@@ -67,12 +67,41 @@ export interface RuntimeInfo {
   cli: string;
   configPath?: string;
   corpusDbPath?: string;
+  datasetPath?: string;
   repoId?: string;
   repoRevision?: string;
   indexedRevision?: string;
   docCount?: number;
   source: "repo-local-artifact" | "explicit-config" | "cli-default";
 }
+
+export interface ReportThresholdInput {
+  minPassRate?: number;
+  minPathRecall?: number;
+  minTermRecall?: number;
+  minNonEmptyContextRate?: number;
+}
+
+export interface ReportThresholdResult {
+  metric: keyof Report["metrics"];
+  label: string;
+  actual: number;
+  minimum: number;
+  passed: boolean;
+}
+
+type ReportGroup = Record<
+  string,
+  {
+    total: number;
+    passed: number;
+    passRate: number;
+    pathRecall: number;
+    termRecall: number;
+    nonEmptyContextRate: number;
+    averageLatencyMs: number;
+  }
+>;
 
 export interface ExpectationInput {
   testCase: EvalCase;
@@ -183,16 +212,14 @@ export interface Report {
     averageLatencyMs: number;
     averageRankedHits: number;
   };
-  byCategory: Record<
-    string,
-    {
-      total: number;
-      passed: number;
-      pathRecall: number;
-      termRecall: number;
-      averageLatencyMs: number;
-    }
-  >;
+  thresholds?: {
+    passed: boolean;
+    results: ReportThresholdResult[];
+  };
+  byCategory: ReportGroup;
+  byProfile: ReportGroup;
+  byFeature: ReportGroup;
+  byScenario: ReportGroup;
   cases: CaseResult[];
 }
 
@@ -272,8 +299,21 @@ export function buildReport(
   cases: CaseResult[],
   runtime: RuntimeInfo,
   judge: { provider?: string; model?: string },
+  thresholds: ReportThresholdInput = {},
 ): Report {
   const passedCases = cases.filter((result) => result.passed).length;
+  const metrics = {
+    passRate: rate(cases, (result) => result.passed),
+    pathRecall: average(cases.map((result) => result.scores.pathRecall)),
+    termRecall: average(cases.map((result) => result.scores.termRecall)),
+    nonEmptyContextRate: rate(
+      cases,
+      (result) => result.scores.nonEmptyContext,
+    ),
+    averageLatencyMs: average(cases.map((result) => result.latencyMs)),
+    averageRankedHits: average(cases.map((result) => result.rankedCount)),
+  };
+  const thresholdResults = evaluateThresholds(metrics, thresholds);
   return {
     dataset: dataset.name,
     ...(dataset.description === undefined
@@ -296,18 +336,19 @@ export function buildReport(
     totalCases: cases.length,
     passedCases,
     failedCases: cases.length - passedCases,
-    metrics: {
-      passRate: rate(cases, (result) => result.passed),
-      pathRecall: average(cases.map((result) => result.scores.pathRecall)),
-      termRecall: average(cases.map((result) => result.scores.termRecall)),
-      nonEmptyContextRate: rate(
-        cases,
-        (result) => result.scores.nonEmptyContext,
-      ),
-      averageLatencyMs: average(cases.map((result) => result.latencyMs)),
-      averageRankedHits: average(cases.map((result) => result.rankedCount)),
-    },
-    byCategory: byCategory(cases),
+    metrics,
+    ...(thresholdResults.length === 0
+      ? {}
+      : {
+          thresholds: {
+            passed: thresholdResults.every((result) => result.passed),
+            results: thresholdResults,
+          },
+        }),
+    byCategory: byGroup(cases, (result) => result.category),
+    byProfile: byGroup(cases, (result) => result.profile),
+    byFeature: byGroup(cases, (result) => result.feature),
+    byScenario: byGroup(cases, (result) => result.scenario),
     cases,
   };
 }
@@ -327,6 +368,14 @@ export function printTerminalSummary(report: Report): void {
   );
   console.log(`Average ranked hits: ${report.metrics.averageRankedHits}`);
   console.log(`Average latency: ${report.metrics.averageLatencyMs}ms`);
+  if (report.thresholds !== undefined) {
+    console.log(`Thresholds: ${report.thresholds.passed ? "passed" : "failed"}`);
+    for (const threshold of report.thresholds.results) {
+      console.log(
+        `- ${threshold.label}: ${percent(threshold.actual)} >= ${percent(threshold.minimum)} ${threshold.passed ? "✓" : "✗"}`,
+      );
+    }
+  }
 
   const failed = report.cases.filter((testCase) => !testCase.passed);
   if (failed.length === 0) {
@@ -371,37 +420,31 @@ export function printTerminalSummary(report: Report): void {
 }
 
 export function renderHtml(report: Report): string {
-  const categoryRows = Object.entries(report.byCategory)
-    .map(
-      ([category, value]) =>
-        `<tr><td>${escapeHtml(category)}</td><td>${value.passed}/${value.total}</td><td>${percent(value.pathRecall)}</td><td>${percent(value.termRecall)}</td><td>${value.averageLatencyMs}ms</td></tr>`,
-    )
-    .join("\n");
-  const caseRows = report.cases
-    .map(
-      (testCase) =>
-        `<tr><td>${testCase.passed ? "✅" : "❌"}</td><td>${escapeHtml(testCase.id)}</td><td>${escapeHtml(testCase.category)}</td><td>${percent(testCase.scores.pathRecall)}</td><td>${percent(testCase.scores.termRecall)}</td><td>${testCase.latencyMs}ms</td><td>${testCase.rankedCount}</td><td>${escapeHtml(testCase.topPaths.slice(0, 3).join(", "))}</td></tr>`,
-    )
-    .join("\n");
-  const bars = [
-    ["Pass rate", report.metrics.passRate],
-    ["Path recall", report.metrics.pathRecall],
-    ["Term recall", report.metrics.termRecall],
-    ["Non-empty context", report.metrics.nonEmptyContextRate],
-  ]
-    .map(([label, raw]) => {
-      const value = Number(raw);
-      return `<div class="bar"><span>${label}</span><strong>${percent(value)}</strong><i style="width:${Math.round(value * 100)}%"></i></div>`;
-    })
-    .join("\n");
-  const runtime = [
-    `source=${report.runtime.source}`,
-    `corpus=${report.runtime.corpusDbPath ?? "CLI default"}`,
-    `docs=${report.runtime.docCount ?? "unknown"}`,
-    ...(report.runtime.indexedRevision === undefined
+  const failed = report.cases.filter((testCase) => !testCase.passed);
+  const runtimeItems: Array<[string, string]> = [
+    ["Dataset", report.dataset],
+    ["Generated", report.generatedAt],
+    ["Runtime source", report.runtime.source],
+    ["CLI", report.runtime.cli],
+    ["Corpus", report.runtime.corpusDbPath ?? "CLI default"],
+    ["Docs", String(report.runtime.docCount ?? "unknown")],
+  ];
+  if (report.runtime.repoId !== undefined) {
+    runtimeItems.push(["Repo", report.runtime.repoId]);
+  }
+  if (report.runtime.repoRevision !== undefined) {
+    runtimeItems.push(["Repo revision", report.runtime.repoRevision]);
+  }
+  if (report.runtime.indexedRevision !== undefined) {
+    runtimeItems.push(["Indexed revision", report.runtime.indexedRevision]);
+  }
+  const links = [
+    `<a href="../../docs/evals.md">docs/evals.md</a>`,
+    ...(report.runtime.datasetPath === undefined
       ? []
-      : [`indexed=${report.runtime.indexedRevision}`]),
-  ].join(" · ");
+      : [`<code>${escapeHtml(report.runtime.datasetPath)}</code>`]),
+  ];
+  const thresholdStatus = report.thresholds?.passed ?? true;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -409,41 +452,194 @@ export function renderHtml(report: Report): string {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Atlas MCP Retrieval Eval</title>
 <style>
-:root{color-scheme:dark;--bg:#07111f;--panel:#0d1d33;--line:#1b3658;--text:#e6f1ff;--muted:#91a4bd;--cyan:#09ecdc;--green:#6ee7b7;--red:#fb7185}body{margin:0;background:radial-gradient(circle at top,#10294a,#07111f 55%);font:15px/1.5 Inter,ui-sans-serif,system-ui;color:var(--text)}main{max-width:1180px;margin:0 auto;padding:42px 24px}.hero{border:1px solid var(--line);background:rgba(13,29,51,.82);border-radius:24px;padding:28px;box-shadow:0 30px 80px #0008}h1{font-size:44px;margin:0 0 4px}.muted{color:var(--muted)}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0}.card{background:#09182b;border:1px solid var(--line);border-radius:16px;padding:18px}.card b{font-size:28px;color:var(--cyan)}.bar{position:relative;background:#081629;border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:12px;overflow:hidden}.bar i{position:absolute;inset:auto auto 0 0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--green))}.bar span,.bar strong{position:relative;z-index:1}.bar strong{float:right}table{width:100%;border-collapse:collapse;margin-top:18px;background:#081629;border-radius:16px;overflow:hidden}th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}th{color:var(--cyan);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.section{margin-top:28px}.note{border-left:3px solid var(--cyan);padding:10px 14px;background:#081629;border-radius:10px}@media(max-width:800px){.cards{grid-template-columns:1fr 1fr}h1{font-size:34px}}
+:root{color-scheme:light dark;--bg:#f6f8fa;--panel:#fff;--panel2:#f6f8fa;--line:#d0d7de;--text:#1f2328;--muted:#656d76;--accent:#0969da;--ok:#1a7f37;--bad:#cf222e;--warn:#9a6700;--shadow:0 16px 45px #1f232814}@media(prefers-color-scheme:dark){:root{--bg:#0d1117;--panel:#161b22;--panel2:#0d1117;--line:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#2f81f7;--ok:#3fb950;--bad:#f85149;--warn:#d29922;--shadow:0 18px 55px #0008}}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top left,color-mix(in srgb,var(--accent) 18%,transparent),transparent 34%),var(--bg);color:var(--text);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}main{max-width:1200px;margin:0 auto;padding:32px 18px 48px}.hero,.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}.hero{padding:28px;margin-bottom:18px}.eyebrow{color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:12px}h1{font-size:38px;line-height:1.1;margin:8px 0}.muted{color:var(--muted)}a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:18px}.meta div,.chip{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px}.meta b,.chip b{display:block;font-size:12px;color:var(--muted);font-weight:600}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}.card span{color:var(--muted)}.card strong{display:block;font-size:28px;margin-top:4px}.ok{color:var(--ok)}.bad{color:var(--bad)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel{padding:18px;margin-top:16px;overflow:hidden}.bars{display:grid;gap:10px}.bar{display:grid;grid-template-columns:170px 1fr 52px;align-items:center;gap:10px}.track{height:10px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--ok));border-radius:999px}.fill.fail{background:linear-gradient(90deg,var(--bad),var(--warn))}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-top:1px solid var(--line);padding:9px 10px;text-align:left;vertical-align:top}th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:var(--panel2)}code,pre{font-family:ui-monospace,SFMono-Regular,SFMono,Consolas,"Liberation Mono",monospace}code{font-size:12px}.details{display:grid;gap:12px}.case{border:1px solid var(--line);border-radius:14px;background:var(--panel2);padding:14px}.case h3{margin:0 0 6px}.pills{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.pill{border:1px solid var(--line);border-radius:999px;padding:3px 8px;color:var(--muted);font-size:12px}.cols{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}pre{white-space:pre-wrap;margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;max-height:220px;overflow:auto}.notes{display:grid;gap:10px}.note{border-left:3px solid var(--accent);background:var(--panel2);border-radius:10px;padding:10px 12px}@media(max-width:850px){.cards,.grid,.cols{grid-template-columns:1fr}.bar{grid-template-columns:1fr}.bar strong{text-align:left}h1{font-size:30px}}
 </style>
 </head>
 <body><main>
-<section class="hero"><h1>Atlas MCP Retrieval Eval</h1><p class="muted">${escapeHtml(report.description ?? report.dataset)} · generated ${escapeHtml(report.generatedAt)}</p>
-<p class="note">Runtime: ${escapeHtml(runtime)}</p>
-<div class="cards"><div class="card"><span>Passed</span><br><b>${report.passedCases}/${report.totalCases}</b></div><div class="card"><span>Path recall</span><br><b>${percent(report.metrics.pathRecall)}</b></div><div class="card"><span>Term recall</span><br><b>${percent(report.metrics.termRecall)}</b></div><div class="card"><span>Avg latency</span><br><b>${report.metrics.averageLatencyMs}ms</b></div></div>
-${bars}
-<p class="note">Judge model: ${report.modelJudge.enabled ? `${escapeHtml(report.modelJudge.provider ?? "")} / ${escapeHtml(report.modelJudge.model ?? "")}` : "disabled"}. ${escapeHtml(report.modelJudge.note)}</p></section>
-<section class="section"><h2>Category breakdown</h2><table><thead><tr><th>Category</th><th>Passed</th><th>Path recall</th><th>Term recall</th><th>Avg latency</th></tr></thead><tbody>${categoryRows}</tbody></table></section>
-<section class="section"><h2>Cases</h2><table><thead><tr><th>Pass</th><th>ID</th><th>Category</th><th>Path</th><th>Terms</th><th>Latency</th><th>Ranked</th><th>Top paths</th></tr></thead><tbody>${caseRows}</tbody></table></section>
-<section class="section"><h2>Reuse research</h2>${report.researchNotes.map((note) => `<p class="note">${escapeHtml(note)}</p>`).join("\n")}</section>
+<section class="hero">
+  <div class="eyebrow">Atlas eval dashboard</div>
+  <h1>${escapeHtml(report.dataset)}</h1>
+  <p class="muted">${escapeHtml(report.description ?? "Deterministic MCP retrieval evaluation")} · ${report.passedCases}/${report.totalCases} cases passing · thresholds <span class="${thresholdStatus ? "ok" : "bad"}">${thresholdStatus ? "passing" : "failing"}</span></p>
+  <p class="muted">References: ${links.join(" · ")}</p>
+  <div class="meta">${runtimeItems.map(([label, value]) => `<div><b>${escapeHtml(label)}</b>${escapeHtml(value)}</div>`).join("\n")}</div>
+</section>
+<section class="cards">
+  ${scoreCard("Pass rate", percent(report.metrics.passRate), report.metrics.passRate === 1 ? "ok" : "bad")}
+  ${scoreCard("Path recall", percent(report.metrics.pathRecall), "")}
+  ${scoreCard("Term recall", percent(report.metrics.termRecall), "")}
+  ${scoreCard("Avg latency", `${report.metrics.averageLatencyMs}ms`, "")}
+</section>
+<section class="grid">
+  <div class="panel"><h2>Core scores</h2><div class="bars">${metricBars(report).join("\n")}</div></div>
+  <div class="panel"><h2>Threshold gates</h2>${renderThresholds(report)}</div>
+</section>
+${renderGroupSection("Category", report.byCategory)}
+${renderGroupSection("Profile", report.byProfile)}
+${renderGroupSection("Feature", report.byFeature)}
+${renderGroupSection("Scenario", report.byScenario)}
+<section class="panel"><h2>Failures (${failed.length})</h2>${renderFailures(failed)}</section>
+<section class="panel"><h2>All cases</h2><table><thead><tr><th>Status</th><th>ID</th><th>Metadata</th><th>Scores</th><th>Hits</th><th>Top paths</th></tr></thead><tbody>${report.cases.map(renderCaseRow).join("\n")}</tbody></table></section>
+<section class="panel"><h2>Reuse research</h2><div class="notes">${report.researchNotes.map((note) => `<p class="note">${escapeHtml(note)}</p>`).join("\n")}</div></section>
 </main></body></html>`;
 }
 
-function byCategory(cases: CaseResult[]): Report["byCategory"] {
+function scoreCard(label: string, value: string, className: string): string {
+  return `<div class="card"><span>${escapeHtml(label)}</span><strong class="${className}">${escapeHtml(value)}</strong></div>`;
+}
+
+function metricBars(report: Report): string[] {
+  return [
+    ["Pass rate", report.metrics.passRate],
+    ["Path recall", report.metrics.pathRecall],
+    ["Term recall", report.metrics.termRecall],
+    ["Non-empty context", report.metrics.nonEmptyContextRate],
+  ].map(([label, value]) => renderProgress(String(label), Number(value)));
+}
+
+function renderProgress(label: string, value: number, failed = false): string {
+  return `<div class="bar"><span>${escapeHtml(label)}</span><div class="track"><div class="fill ${failed ? "fail" : ""}" style="width:${Math.max(0, Math.min(100, Math.round(value * 100)))}%"></div></div><strong>${percent(value)}</strong></div>`;
+}
+
+function renderThresholds(report: Report): string {
+  if (report.thresholds === undefined) {
+    return `<p class="muted">No threshold gates supplied. Local evals report scores without failing on gates by default.</p>`;
+  }
+  return `<div class="bars">${report.thresholds.results
+    .map((threshold) =>
+      renderProgress(
+        `${threshold.passed ? "✓" : "✗"} ${threshold.label} ≥ ${percent(threshold.minimum)}`,
+        threshold.actual,
+        !threshold.passed,
+      ),
+    )
+    .join("\n")}</div>`;
+}
+
+function renderGroupSection(title: string, group: ReportGroup): string {
+  return `<section class="panel"><h2>${escapeHtml(title)} breakdown</h2><table><thead><tr><th>${escapeHtml(title)}</th><th>Passed</th><th>Pass rate</th><th>Path recall</th><th>Term recall</th><th>Non-empty</th><th>Avg latency</th></tr></thead><tbody>${Object.entries(
+    group,
+  )
+    .map(
+      ([name, value]) =>
+        `<tr><td>${escapeHtml(name)}</td><td>${value.passed}/${value.total}</td><td>${percent(value.passRate)}</td><td>${percent(value.pathRecall)}</td><td>${percent(value.termRecall)}</td><td>${percent(value.nonEmptyContextRate)}</td><td>${value.averageLatencyMs}ms</td></tr>`,
+    )
+    .join("\n")}</tbody></table></section>`;
+}
+
+function renderFailures(failed: CaseResult[]): string {
+  if (failed.length === 0) {
+    return `<p class="muted">No failed cases. All deterministic expectations passed.</p>`;
+  }
+  return `<div class="details">${failed.map(renderFailure).join("\n")}</div>`;
+}
+
+function renderFailure(testCase: CaseResult): string {
+  const missingOther = [
+    ...testCase.missing.pathExcludes.map((value) => `Excluded path present: ${value}`),
+    ...testCase.missing.diagnosticsInclude.map((value) => `Missing diagnostic: ${value}`),
+    ...testCase.missing.rankedHits,
+    ...testCase.missing.confidence,
+    ...testCase.missing.noResults,
+  ];
+  return `<article class="case"><h3>${escapeHtml(testCase.id)}</h3>${renderMetadataPills(testCase)}<p><b>Query:</b> ${escapeHtml(testCase.query)}</p><div class="cols"><div><b>Missing paths</b><pre>${escapeHtml(formatList(testCase.missing.pathIncludes))}</pre></div><div><b>Missing terms</b><pre>${escapeHtml(formatList(testCase.missing.terms))}</pre></div><div><b>Other expectation gaps</b><pre>${escapeHtml(formatList(missingOther))}</pre></div><div><b>Top paths</b><pre>${escapeHtml(formatList(testCase.topPaths.slice(0, 10)))}</pre></div></div><p class="muted">Scores: path ${percent(testCase.scores.pathRecall)}, terms ${percent(testCase.scores.termRecall)}, non-empty context ${testCase.scores.nonEmptyContext ? "yes" : "no"}; selected ${testCase.selectedCount}, ranked ${testCase.rankedCount}, latency ${testCase.latencyMs}ms.</p><b>Diagnostics summary</b><pre>${escapeHtml(summarizeDiagnostics(testCase.diagnostics))}</pre></article>`;
+}
+
+function renderCaseRow(testCase: CaseResult): string {
+  return `<tr><td>${testCase.passed ? "✅ pass" : "❌ fail"}</td><td><code>${escapeHtml(testCase.id)}</code></td><td>${renderMetadataPills(testCase)}</td><td>path ${percent(testCase.scores.pathRecall)}<br>terms ${percent(testCase.scores.termRecall)}<br>context ${testCase.scores.nonEmptyContext ? "yes" : "no"}</td><td>selected ${testCase.selectedCount}<br>ranked ${testCase.rankedCount}<br>${testCase.latencyMs}ms</td><td>${escapeHtml(testCase.topPaths.slice(0, 4).join("\n"))}</td></tr>`;
+}
+
+function renderMetadataPills(testCase: CaseResult): string {
+  const metadata: Array<[string, string]> = [
+    ["category", testCase.category],
+    ["profile", testCase.profile ?? "unknown"],
+    ["feature", testCase.feature ?? "unknown"],
+    ["scenario", testCase.scenario ?? "unknown"],
+  ];
+  if (testCase.priority !== undefined) {
+    metadata.push(["priority", testCase.priority]);
+  }
+  return `<div class="pills">${metadata.map(([label, value]) => `<span class="pill">${escapeHtml(label)}: ${escapeHtml(value)}</span>`).join("")}</div>`;
+}
+
+function formatList(values: string[]): string {
+  return values.length === 0 ? "None" : values.join("\n");
+}
+
+function summarizeDiagnostics(diagnostics: unknown[]): string {
+  if (diagnostics.length === 0) {
+    return "None";
+  }
+  return JSON.stringify(diagnostics.slice(0, 5), null, 2);
+}
+
+function byGroup(
+  cases: CaseResult[],
+  keyFor: (result: CaseResult) => string | undefined,
+): ReportGroup {
   const groups = new Map<string, CaseResult[]>();
   for (const result of cases) {
-    groups.set(result.category, [
-      ...(groups.get(result.category) ?? []),
-      result,
-    ]);
+    const key = normalizeGroupKey(keyFor(result));
+    groups.set(key, [...(groups.get(key) ?? []), result]);
   }
   return Object.fromEntries(
-    [...groups.entries()].map(([category, grouped]) => [
-      category,
-      {
-        total: grouped.length,
-        passed: grouped.filter((result) => result.passed).length,
-        pathRecall: average(grouped.map((result) => result.scores.pathRecall)),
-        termRecall: average(grouped.map((result) => result.scores.termRecall)),
-        averageLatencyMs: average(grouped.map((result) => result.latencyMs)),
-      },
-    ]),
+    [...groups.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([group, grouped]) => [
+        group,
+        {
+          total: grouped.length,
+          passed: grouped.filter((result) => result.passed).length,
+          passRate: rate(grouped, (result) => result.passed),
+          pathRecall: average(grouped.map((result) => result.scores.pathRecall)),
+          termRecall: average(grouped.map((result) => result.scores.termRecall)),
+          nonEmptyContextRate: rate(
+            grouped,
+            (result) => result.scores.nonEmptyContext,
+          ),
+          averageLatencyMs: average(grouped.map((result) => result.latencyMs)),
+        },
+      ]),
   );
+}
+
+function normalizeGroupKey(value: string | undefined): string {
+  const trimmed = value?.trim();
+  return trimmed === undefined || trimmed.length === 0 ? "unknown" : trimmed;
+}
+
+function evaluateThresholds(
+  metrics: Report["metrics"],
+  thresholds: ReportThresholdInput,
+): ReportThresholdResult[] {
+  return [
+    thresholdResult("passRate", "Pass rate", metrics.passRate, thresholds.minPassRate),
+    thresholdResult("pathRecall", "Path recall", metrics.pathRecall, thresholds.minPathRecall),
+    thresholdResult("termRecall", "Term recall", metrics.termRecall, thresholds.minTermRecall),
+    thresholdResult(
+      "nonEmptyContextRate",
+      "Non-empty context",
+      metrics.nonEmptyContextRate,
+      thresholds.minNonEmptyContextRate,
+    ),
+  ].filter((result): result is ReportThresholdResult => result !== undefined);
+}
+
+function thresholdResult(
+  metric: ReportThresholdResult["metric"],
+  label: string,
+  actual: number,
+  minimum: number | undefined,
+): ReportThresholdResult | undefined {
+  if (minimum === undefined) {
+    return undefined;
+  }
+  return {
+    metric,
+    label,
+    actual,
+    minimum,
+    passed: actual >= minimum,
+  };
 }
 
 function average(values: number[]): number {
@@ -477,5 +673,6 @@ function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }

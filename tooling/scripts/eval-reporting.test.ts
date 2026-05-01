@@ -81,9 +81,96 @@ describe("eval reporting", () => {
     expect(report.byCategory.a).toEqual({
       total: 2,
       passed: 1,
+      passRate: 0.5,
       pathRecall: 0.75,
       termRecall: 0.5,
+      nonEmptyContextRate: 0.5,
       averageLatencyMs: 20,
+    });
+  });
+
+  test("aggregates profile feature and scenario groups with unknown fallback", () => {
+    const report = buildReport(
+      { name: "dataset", cases: [] },
+      [
+        result({
+          id: "one",
+          category: "a",
+          profile: "maintainer",
+          feature: "install",
+          scenario: "happy-path",
+        }),
+        result({
+          id: "two",
+          category: "b",
+          passed: false,
+          feature: "install",
+          scores: {
+            pathRecall: 0,
+            termRecall: 0.5,
+            nonEmptyContext: false,
+          },
+        }),
+      ],
+      { cli: "bun run cli", source: "cli-default" },
+      {},
+    );
+
+    expect(report.byProfile.maintainer?.passed).toBe(1);
+    expect(report.byProfile.unknown).toMatchObject({
+      total: 1,
+      passed: 0,
+      passRate: 0,
+    });
+    expect(report.byFeature.install).toMatchObject({
+      total: 2,
+      passed: 1,
+      pathRecall: 0.5,
+      termRecall: 0.75,
+      nonEmptyContextRate: 0.5,
+    });
+    expect(report.byScenario["happy-path"]?.total).toBe(1);
+    expect(report.byScenario.unknown?.total).toBe(1);
+  });
+
+  test("includes optional threshold results without applying gates by default", () => {
+    const base = buildReport(
+      { name: "dataset", cases: [] },
+      [result({ id: "one", category: "a" })],
+      { cli: "bun run cli", source: "cli-default" },
+      {},
+    );
+    expect(base.thresholds).toBeUndefined();
+
+    const report = buildReport(
+      { name: "dataset", cases: [] },
+      [
+        result({ id: "one", category: "a" }),
+        result({ id: "two", category: "a", passed: false }),
+      ],
+      { cli: "bun run cli", source: "cli-default" },
+      {},
+      { minPassRate: 0.75, minPathRecall: 1 },
+    );
+
+    expect(report.thresholds).toEqual({
+      passed: false,
+      results: [
+        {
+          metric: "passRate",
+          label: "Pass rate",
+          actual: 0.5,
+          minimum: 0.75,
+          passed: false,
+        },
+        {
+          metric: "pathRecall",
+          label: "Path recall",
+          actual: 1,
+          minimum: 1,
+          passed: true,
+        },
+      ],
     });
   });
 
