@@ -588,7 +588,6 @@ ${renderGroupSection("Scenario", report.byScenario)}
 <section class="panel"><h2>Limitations and next evals</h2>${renderLimitations()}</section>
 <section class="panel"><h2>Reproducibility</h2><div class="meta">${runtimeItems.map(([label, value]) => `<div><b>${escapeHtml(label)}</b>${escapeHtml(value)}</div>`).join("\n")}</div></section>
 <section class="panel"><h2>All cases</h2><table><thead><tr><th>Status</th><th>ID</th><th>Claim</th><th>Scores</th><th>Evidence</th></tr></thead><tbody>${report.cases.map(renderCaseRow).join("\n")}</tbody></table></section>
-<section class="panel"><h2>External eval framing used</h2><div class="notes">${report.researchNotes.map((note) => `<p class="note">${escapeHtml(note)}</p>`).join("\n")}</div></section>
 </main></body></html>`;
 }
 
