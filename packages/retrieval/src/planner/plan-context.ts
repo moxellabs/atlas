@@ -34,6 +34,7 @@ import {
 	RetrievalDependencyError,
 } from "../errors";
 import { buildAmbiguityResult } from "../presenters/ambiguity-result";
+import { expandQuery } from "../query/expand-query";
 import { rankCandidates } from "../ranking/rank-candidates";
 import { inferScopes } from "../scopes/infer-scopes";
 import type {
@@ -328,7 +329,8 @@ function gatherCandidates(
 		const docRepo = new DocRepository(db);
 		const summaryRepo = new SummaryRepository(db);
 		const candidates: RetrievalCandidate[] = [];
-		const lexicalQuery = toLexicalQuery(context.query);
+		const expandedQuery = expandQuery(context.query);
+		const lexicalQuery = toLexicalQuery(expandedQuery);
 
 		if (lexicalQuery.length > 0) {
 			for (const hit of lexicalSearch(db, {

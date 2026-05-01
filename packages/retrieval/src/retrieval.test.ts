@@ -27,6 +27,7 @@ import {
 import { classifyQuery } from "./classify/classify-query";
 import { finalizeContext } from "./planner/finalize-context";
 import { planContext } from "./planner/plan-context";
+import { expandQuery } from "./query/expand-query";
 import { authorityWeight } from "./ranking/authority-weight";
 import { localityWeight } from "./ranking/locality-weight";
 import { rankCandidates } from "./ranking/rank-candidates";
@@ -391,6 +392,28 @@ describe("retrieval", () => {
 		).toBe(true);
 	});
 
+	test("expands Atlas query vocabulary for lexical candidate generation", () => {
+		expect(expandQuery("How do I publish artifacts?"))
+			.toContain(".moxel/atlas");
+		expect(expandQuery("How does MCP work?"))
+			.toContain("model context protocol");
+		expect(expandQuery("repo import without checkout"))
+			.toContain("repo add");
+		expect(expandQuery("inspect corpus search"))
+			.toContain("SQLite");
+
+		const plan = planContext({
+			db: store,
+			repoId,
+			query: "How do I publish artifacts?",
+			budgetTokens: 220,
+		});
+
+		expect(
+			plan.rankedHits.some((hit) => hit.provenance.docId === repoDocId),
+		).toBe(true);
+	});
+
 	test("surfaces low-confidence ambiguity for no-result queries", () => {
 		const plan = planContext({
 			db: store,
@@ -497,7 +520,7 @@ function seedStore(store: AtlasStoreClient): void {
 			sections: [
 				{
 					heading: ["Architecture"],
-					text: "Auth architecture coordinates login and session modules.",
+					text: "Auth architecture coordinates login and session modules. Maintainers build release outputs as public corpus artifacts under .moxel/atlas.",
 					packageId: undefined,
 					moduleId: undefined,
 				},
