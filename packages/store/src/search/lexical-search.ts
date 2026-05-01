@@ -27,15 +27,16 @@ export function lexicalSearch(
 			params.$repoId = options.repoId;
 		}
 		appendMetadataFilterSql(options.filters, "d.", clauses, params);
-		const rows = db.all<LexicalSearchRow>(
-			`SELECT f.entity_type, f.entity_id, f.doc_id, f.section_id, f.chunk_id, f.repo_id, f.path, f.title, bm25(fts_entries) AS rank
-       FROM fts_entries f
-       JOIN documents d ON d.doc_id = f.doc_id
-       WHERE ${clauses.join(" AND ")}
-       ORDER BY rank, f.path, f.entity_type, f.entity_id
-       LIMIT $limit`,
-			params,
-		);
+		let rows = runLexicalQuery(db, clauses, params);
+		if (rows.length < Math.min(limit, 3)) {
+			const fallbackQuery = toFallbackFtsQuery(options.query);
+			if (fallbackQuery !== undefined && fallbackQuery !== params.$query) {
+				rows = mergeRows(
+					rows,
+					runLexicalQuery(db, clauses, { ...params, $query: fallbackQuery }),
+				).slice(0, limit);
+			}
+		}
 		return rows.map(mapLexicalRow);
 	} catch (error) {
 		throw new StoreSearchError("Lexical search failed.", {
@@ -46,12 +47,69 @@ export function lexicalSearch(
 	}
 }
 
+function runLexicalQuery(
+	db: StoreDatabase,
+	clauses: readonly string[],
+	params: Record<string, string | number>,
+): LexicalSearchRow[] {
+	return db.all<LexicalSearchRow>(
+		`SELECT f.entity_type, f.entity_id, f.doc_id, f.section_id, f.chunk_id, f.repo_id, f.path, f.title, bm25(fts_entries) AS rank
+       FROM fts_entries f
+       JOIN documents d ON d.doc_id = f.doc_id
+       WHERE ${clauses.join(" AND ")}
+       ORDER BY rank, f.path, f.entity_type, f.entity_id
+       LIMIT $limit`,
+		params,
+	);
+}
+
 function toFtsQuery(query: string): string {
-	return query
-		.trim()
-		.split(/\s+/)
-		.map((term) => `"${term.replaceAll('"', '""')}"`)
+	return ftsTerms(query)
+		.map((term) => `"${escapeFtsPhrase(term)}"`)
 		.join(" ");
+}
+
+function toFallbackFtsQuery(query: string): string | undefined {
+	const terms = uniqueTerms(ftsTerms(query)).filter((term) => term.length >= 2);
+	if (terms.length < 2) {
+		return undefined;
+	}
+	return terms.map((term) => `"${escapeFtsPhrase(term)}"`).join(" OR ");
+}
+
+function ftsTerms(query: string): string[] {
+	return query.trim().split(/\s+/).filter((term) => term.length > 0);
+}
+
+function uniqueTerms(terms: readonly string[]): string[] {
+	const seen = new Set<string>();
+	const unique: string[] = [];
+	for (const term of terms) {
+		const key = term.toLowerCase();
+		if (!seen.has(key)) {
+			seen.add(key);
+			unique.push(term);
+		}
+	}
+	return unique;
+}
+
+function escapeFtsPhrase(term: string): string {
+	return term.replaceAll('"', '""');
+}
+
+function mergeRows(
+	primary: readonly LexicalSearchRow[],
+	fallback: readonly LexicalSearchRow[],
+): LexicalSearchRow[] {
+	const byKey = new Map<string, LexicalSearchRow>();
+	for (const row of [...primary, ...fallback]) {
+		const key = `${row.entity_type}:${row.entity_id}`;
+		if (!byKey.has(key)) {
+			byKey.set(key, row);
+		}
+	}
+	return [...byKey.values()];
 }
 
 interface LexicalSearchRow {

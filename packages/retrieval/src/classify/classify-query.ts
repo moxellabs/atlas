@@ -97,6 +97,11 @@ export function classifyQuery(query: string): QueryClassification {
     rationale.push("Query looks like a short identifier or symbol.");
   }
 
+  if (scores.has("exact-lookup") && looksLikeNaturalLanguagePathMention(trimmed, scores)) {
+    scores.set("exact-lookup", 1);
+    rationale.push("Softened path-like exact lookup signal inside a natural-language query.");
+  }
+
   if (matchedSignals.length === 0) {
     return {
       query,
@@ -152,4 +157,14 @@ function confidenceFor(topScore: number, totalScore: number): QueryClassificatio
 
 function looksLikeShortIdentifier(query: string): boolean {
   return /^[\w@./:-]{2,80}$/.test(query) && !/\s/.test(query);
+}
+
+function looksLikeNaturalLanguagePathMention(
+  query: string,
+  scores: ReadonlyMap<QueryKind, number>
+): boolean {
+  if (!/\s/.test(query) || scores.has("location")) {
+    return false;
+  }
+  return scores.has("usage") || scores.has("overview") || scores.has("troubleshooting") || scores.has("diff") || scores.has("compare");
 }

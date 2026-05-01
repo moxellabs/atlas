@@ -421,7 +421,14 @@ function gatherCandidates(
 			}
 		}
 
-		return dedupeCandidates(candidates);
+		const deduped = dedupeCandidates(candidates);
+		if (deduped.length < Math.min(context.candidateLimit, 3)) {
+			return dedupeCandidates([
+				...deduped,
+				...broadFallbackCandidates(db, docRepo, summaryRepo, context, deduped.length),
+			]);
+		}
+		return deduped;
 	} catch (error) {
 		throw new RetrievalDependencyError(
 			"Candidate generation failed while reading store search artifacts.",
@@ -432,6 +439,65 @@ function gatherCandidates(
 			},
 		);
 	}
+}
+
+function broadFallbackCandidates(
+	db: StoreDatabase,
+	docRepo: DocRepository,
+	summaryRepo: SummaryRepository,
+	context: GatherContext,
+	existingCount: number,
+): RetrievalCandidate[] {
+	const terms = queryTerms(context.query);
+	if (terms.length === 0) {
+		return [];
+	}
+	const documents = context.repoId === undefined
+		? new RepoRepository(db).list().flatMap((repo) => docRepo.listByRepo(repo.repoId))
+		: docRepo.listByRepo(context.repoId);
+	const scored = documents
+		.map((document) => ({
+			document,
+			score: broadDocumentScore(document, summaryRepo, terms),
+		}))
+		.filter((item) => item.score > 0)
+		.sort((a, b) => b.score - a.score || a.document.path.localeCompare(b.document.path))
+		.slice(0, Math.max(0, context.candidateLimit - existingCount));
+	const candidates: RetrievalCandidate[] = [];
+	for (const { document, score } of scored) {
+		candidates.push(
+			documentCandidate(
+				document,
+				"summary",
+				Number((0.36 + Math.min(score, 6) * 0.06).toFixed(3)),
+				["Matched broad fallback over document metadata and summaries."],
+				context.countTokens,
+			),
+		);
+		candidates.push(...documentSummaries(docRepo, summaryRepo, document.docId, 0.34));
+	}
+	return candidates;
+}
+
+function broadDocumentScore(
+	document: DocumentRecord,
+	summaryRepo: SummaryRepository,
+	terms: readonly string[],
+): number {
+	const summaries = summaryRepo.listForTarget("document", document.docId);
+	const weightedText = [
+		(document.title ?? "").repeat(3),
+		document.path.repeat(2),
+		document.description ?? "",
+		document.tags.join(" ").repeat(2),
+		summaries.map((summary) => summary.text).join(" "),
+	]
+		.join("\n")
+		.toLowerCase();
+	return terms.reduce(
+		(score, term) => score + (weightedText.includes(term) ? 1 : 0),
+		0,
+	);
 }
 
 function candidateFromLexicalHit(input: {
@@ -660,12 +726,15 @@ function lexicalRankToScore(rank: number): number {
 }
 
 function toLexicalQuery(query: string): string {
+	return queryTerms(query).slice(0, 12).join(" ");
+}
+
+function queryTerms(query: string): string[] {
 	return query
 		.replace(/[`"'()[\]{}:*^~+-]/g, " ")
 		.split(/[^a-z0-9_]+/i)
-		.filter((term) => term.length >= 2 && !STOPWORDS.has(term.toLowerCase()))
-		.slice(0, 12)
-		.join(" ");
+		.map((term) => term.toLowerCase())
+		.filter((term) => term.length >= 2 && !STOPWORDS.has(term));
 }
 
 const STOPWORDS = new Set([

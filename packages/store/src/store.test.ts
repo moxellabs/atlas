@@ -416,6 +416,13 @@ describe("store integration", () => {
 				docId,
 			}),
 		]);
+		expect(lexicalSearch(store, { query: "rotation imaginary", repoId })).toEqual([
+			expect.objectContaining({
+				entityType: "chunk",
+				chunkId: chunk.chunkId,
+				docId,
+			}),
+		]);
 		expect(new ChunkRepository(store).getById(chunk.chunkId)).toMatchObject({
 			chunkId: chunk.chunkId,
 			docId,
