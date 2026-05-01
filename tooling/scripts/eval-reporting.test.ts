@@ -9,6 +9,7 @@ import {
 	caseMetadata,
 	evaluateExpectations,
 	loadEvalDataset,
+	renderHtml,
 } from "./eval-reporting";
 
 function result(
@@ -52,6 +53,18 @@ function result(
 		...(input.feature === undefined ? {} : { feature: input.feature }),
 		...(input.scenario === undefined ? {} : { scenario: input.scenario }),
 		...(input.priority === undefined ? {} : { priority: input.priority }),
+		...(input.capability === undefined ? {} : { capability: input.capability }),
+		...(input.claim === undefined ? {} : { claim: input.claim }),
+		...(input.whyItMatters === undefined
+			? {}
+			: { whyItMatters: input.whyItMatters }),
+		...(input.expectedBehavior === undefined
+			? {}
+			: { expectedBehavior: input.expectedBehavior }),
+		...(input.coverageType === undefined
+			? {}
+			: { coverageType: input.coverageType }),
+		...(input.riskArea === undefined ? {} : { riskArea: input.riskArea }),
 	};
 }
 
@@ -85,18 +98,18 @@ describe("eval reporting", () => {
 		expect(report.metrics.pathRecall).toBe(0.75);
 		expect(report.metrics.termRecall).toBe(0.5);
 		expect(report.metrics.nonEmptyContextRate).toBe(0.5);
-    expect(report.metrics.averageLatencyMs).toBe(20);
-    expect(report.metrics.medianLatencyMs).toBe(10);
-    expect(report.metrics.p95LatencyMs).toBe(30);
-    expect(report.metrics.averageRankedHits).toBe(3);
-    expect(report.metrics.pathRecallAt1).toBe(1);
-    expect(report.metrics.pathRecallAt3).toBe(1);
-    expect(report.metrics.pathRecallAt5).toBe(1);
-    expect(report.metrics.mrr).toBe(1);
-    expect(report.metrics.noResultAccuracy).toBe(1);
-    expect(report.metrics.forbiddenPathAccuracy).toBe(1);
-    expect(report.coverage.capabilities).toEqual({ a: 2 });
-    expect(report.byCategory.a).toEqual({
+		expect(report.metrics.averageLatencyMs).toBe(20);
+		expect(report.metrics.medianLatencyMs).toBe(10);
+		expect(report.metrics.p95LatencyMs).toBe(30);
+		expect(report.metrics.averageRankedHits).toBe(3);
+		expect(report.metrics.pathRecallAt1).toBe(1);
+		expect(report.metrics.pathRecallAt3).toBe(1);
+		expect(report.metrics.pathRecallAt5).toBe(1);
+		expect(report.metrics.mrr).toBe(1);
+		expect(report.metrics.noResultAccuracy).toBe(1);
+		expect(report.metrics.forbiddenPathAccuracy).toBe(1);
+		expect(report.coverage.capabilities).toEqual({ a: 2 });
+		expect(report.byCategory.a).toEqual({
 			total: 2,
 			passed: 1,
 			passRate: 0.5,
@@ -151,6 +164,122 @@ describe("eval reporting", () => {
 		});
 		expect(report.byScenario["happy-path"]?.total).toBe(1);
 		expect(report.byScenario.unknown?.total).toBe(1);
+	});
+
+	test("derives sparse-label rank quality and narrative metrics", () => {
+		const report = buildReport(
+			{ name: "dataset", cases: [] },
+			[
+				result({ id: "rank-one", category: "rank", topPaths: ["docs/a.md"] }),
+				result({
+					id: "rank-four",
+					category: "rank",
+					latencyMs: 600,
+					retrieval: {
+						expectedPathRanks: [4],
+						bestExpectedPathRank: 4,
+						recallAt1: 0,
+						recallAt3: 0,
+						recallAt5: 1,
+						reciprocalRank: 0.25,
+						noResultCorrect: true,
+						forbiddenPathCorrect: true,
+					},
+				}),
+				result({
+					id: "missing",
+					category: "rank",
+					latencyMs: 1100,
+					retrieval: {
+						expectedPathRanks: [],
+						recallAt1: 0,
+						recallAt3: 0,
+						recallAt5: 0,
+						reciprocalRank: 0,
+						noResultCorrect: true,
+						forbiddenPathCorrect: true,
+					},
+					missing: {
+						pathIncludes: ["docs/missing.md"],
+						pathExcludes: [],
+						terms: [],
+						diagnosticsInclude: [],
+						rankedHits: [],
+						confidence: [],
+						noResults: [],
+					},
+				}),
+				result({
+					id: "no-result",
+					category: "edge",
+					selectedCount: 0,
+					rankedCount: 0,
+					scores: { pathRecall: 1, termRecall: 1, nonEmptyContext: false },
+					retrieval: {
+						expectedPathRanks: [],
+						recallAt1: 1,
+						recallAt3: 1,
+						recallAt5: 1,
+						reciprocalRank: 0,
+						noResultCorrect: true,
+						forbiddenPathCorrect: true,
+					},
+				}),
+			],
+			{ cli: "bun run cli", source: "cli-default" },
+			{},
+		);
+
+		expect(report.metrics.expectedPathPrecisionAt1).toBe(0.25);
+		expect(report.metrics.expectedPathPrecisionAt3).toBe(0.0833);
+		expect(report.metrics.expectedPathPrecisionAt5).toBe(0.1);
+		expect(report.metrics.expectedPathNdcgAt3).toBe(0.25);
+		expect(report.metrics.expectedPathNdcgAt5).toBe(0.3577);
+		expect(report.quality.rankBuckets.map((bucket) => bucket.count)).toEqual([
+			1, 0, 1, 0, 0, 2,
+		]);
+		expect(report.quality.latencyBuckets.map((bucket) => bucket.count)).toEqual(
+			[2, 0, 1, 1],
+		);
+		expect(report.narrative.caveats.join(" ")).toContain("Perfect pass rate");
+	});
+
+	test("renders Moxel report markers, explorer controls, and safe embedded JSON", () => {
+		const report = buildReport(
+			{ name: "dataset <script>", cases: [] },
+			[
+				result({
+					id: "case-danger",
+					category: "security",
+					query: "<script>alert(1)</script>",
+					claim: "Claim <img src=x>",
+					riskArea: "privacy",
+					topPaths: ["docs/<unsafe>.md"],
+				}),
+			],
+			{ cli: "bun run cli", source: "cli-default" },
+			{},
+		);
+
+		const html = renderHtml(report);
+
+		expect(html).toContain("moxel-atlas-eval-report-theme");
+		expect(html).toContain("MOXEL ATLAS EVALS");
+		expect(html).toContain('id="banded-field"');
+		expect(html).toContain('data-eval-chart="recall-funnel"');
+		expect(html).toContain('data-eval-chart="metric-radar"');
+		expect(html).toContain('id="case-explorer"');
+		expect(html).toContain('id="case-search"');
+		expect(html).toContain(
+			'id="atlas-eval-report-data" type="application/json"',
+		);
+		expect(html).toContain("Methodology factsheet");
+		expect(html).toContain("Reproducibility");
+		expect(html).toContain("Collapsed by default");
+		expect(html).toContain("Atlas finds the required docs");
+		expect(html).not.toContain("Grounded project evidence for agent workflows");
+		expect(html).toContain("\\u003cscript");
+		expect(html).not.toContain("<script>alert(1)</script>");
 	});
 
 	test("includes optional threshold results without applying gates by default", () => {

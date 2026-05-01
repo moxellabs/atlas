@@ -26,6 +26,8 @@ Full-suite reports are written to:
 - `evals/reports/mcp-retrieval-report.json`
 - `evals/reports/mcp-retrieval-report.html`
 
+The HTML report is a standalone Moxel-branded research page with embedded charts and vanilla-JS case explorer. It needs no external CDN, React, or Vite. The JSON report is the machine-readable source for derived metrics such as expected-path precision/nDCG, rank buckets, latency buckets, weak cases, and narrative findings.
+
 These files are generated output and may change on every run because they include timestamps and runtime metadata. `evals/reports/` is ignored so local dashboard output is not committed accidentally.
 
 ## Dataset layout
