@@ -390,6 +390,7 @@ describe("store integration", () => {
 			headingPath: ["Session"],
 			ordinal: 0,
 			text: "Session token rotation is supported.",
+			searchText: "contextual-only Session token rotation is supported.",
 			tokenCount: 8,
 		};
 		new ChunkRepository(store).replaceForDocument(docId, [chunk]);
@@ -423,9 +424,27 @@ describe("store integration", () => {
 				docId,
 			}),
 		]);
+		expect(lexicalSearch(store, { query: "export", repoId })).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ entityType: "document", docId }),
+				expect.objectContaining({
+					entityType: "section",
+					sectionId,
+					docId,
+				}),
+			]),
+		);
+		expect(lexicalSearch(store, { query: "contextual-only", repoId })).toEqual([
+			expect.objectContaining({
+				entityType: "chunk",
+				chunkId: chunk.chunkId,
+				docId,
+			}),
+		]);
 		expect(new ChunkRepository(store).getById(chunk.chunkId)).toMatchObject({
 			chunkId: chunk.chunkId,
 			docId,
+			text: "Session token rotation is supported.",
 		});
 		expect(new ChunkRepository(store).getById("missing_chunk")).toBeUndefined();
 

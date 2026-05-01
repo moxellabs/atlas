@@ -64,7 +64,7 @@ function insertDocumentEntry(db: StoreDatabase, document: CanonicalDocument): vo
       $path: document.path,
       $title: document.title ?? "",
       $headings: encodeJson(document.sections.map((section) => section.headingPath)),
-      $body: document.sections.map((section) => section.text).join("\n\n")
+      $body: document.sections.map(sectionSearchText).join("\n\n")
     }
   );
 }
@@ -81,7 +81,7 @@ function insertSectionEntry(db: StoreDatabase, document: CanonicalDocument, sect
       $path: document.path,
       $title: document.title ?? "",
       $headings: section.headingPath.join(" "),
-      $body: section.text
+      $body: sectionSearchText(section)
     }
   );
 }
@@ -98,7 +98,15 @@ function insertChunkEntry(db: StoreDatabase, document: CanonicalDocument, chunk:
       $path: document.path,
       $title: document.title ?? "",
       $headings: chunk.headingPath.join(" "),
-      $body: chunk.text
+      $body: chunk.searchText ?? chunk.text
     }
   );
+}
+
+function sectionSearchText(section: Pick<SectionRecord, "text" | "codeBlocks">): string {
+  const codeText = section.codeBlocks
+    .map((block) => [block.lang, block.code].filter(Boolean).join("\n"))
+    .filter((text) => text.trim().length > 0)
+    .join("\n\n");
+  return [section.text, codeText].filter((text) => text.trim().length > 0).join("\n\n");
 }
