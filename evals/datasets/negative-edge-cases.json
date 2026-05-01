@@ -2,5 +2,128 @@
   "name": "atlas-negative-edge-cases",
   "description": "Focused negative, malformed, and edge-case retrieval eval cases.",
   "repoId": "github.com/moxellabs/atlas",
-  "cases": []
+  "cases": [
+    {
+      "id": "edge-nonsense-no-results",
+      "category": "negative-edge",
+      "query": "zzzzqvx-no-such-atlas-concept-918273645",
+      "feature": "no-result",
+      "scenario": "nonsense query should stay low-confidence and expose diagnostics rather than a grounded exact match",
+      "priority": "p0",
+      "expected": {
+        "minRankedHits": 1,
+        "confidence": "low",
+        "diagnosticsInclude": ["classification", "candidate-generation", "planning"]
+      }
+    },
+    {
+      "id": "edge-non-existent-command",
+      "category": "negative-edge",
+      "query": "atlas frobnicate non-existent command unknown command troubleshooting help",
+      "feature": "unknown-command",
+      "scenario": "non-existent command queries land on CLI/runtime docs rather than fabricated command docs",
+      "priority": "p1",
+      "expected": {
+        "pathIncludes": ["apps/cli/docs/skills/add-cli-command/SKILL.md"],
+        "terms": ["command", "CLI"]
+      }
+    },
+    {
+      "id": "edge-ambiguous-shorthand",
+      "category": "negative-edge",
+      "query": "ambiguous shorthand use --host full SSH HTTPS URL non-interactive ambiguous cases",
+      "feature": "ambiguity",
+      "scenario": "ambiguous repo shorthand guidance is retrievable",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["docs/configuration.md"],
+        "terms": ["ambiguous", "Use --host <host>", "full SSH/HTTPS URL"]
+      }
+    },
+    {
+      "id": "edge-typo-retrieval-context",
+      "category": "negative-edge",
+      "query": "retrival contxt planing token budjet omissions diagnostics",
+      "feature": "typo-tolerance",
+      "scenario": "typo-heavy retrieval/context query still lands on nearby retrieval docs",
+      "priority": "p2",
+      "expected": {
+        "pathIncludes": ["docs/retrieval-and-context.md"],
+        "terms": ["Token Budgets", "omission diagnostics"]
+      }
+    },
+    {
+      "id": "edge-exact-path-security-doc",
+      "category": "negative-edge",
+      "query": "docs/security.md",
+      "feature": "exact-path",
+      "scenario": "exact path lookup retrieves that document",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["docs/security.md"],
+        "terms": ["Local-First Security", "Credentials"]
+      }
+    },
+    {
+      "id": "edge-slash-dot-symbol-artifact-path",
+      "category": "negative-edge",
+      "query": ".moxel/atlas manifest.json corpus.db docs.index.json checksums.json atlas.repo.json",
+      "feature": "symbol-query",
+      "scenario": "slash/dot/symbol artifact path query retrieves artifact docs",
+      "priority": "p0",
+      "expected": {
+        "pathIncludes": ["README.md"],
+        "terms": [".moxel/atlas", "manifest.json", "corpus.db", "docs.index.json", "checksums.json"]
+      }
+    },
+    {
+      "id": "edge-long-query-security-boundaries",
+      "category": "negative-edge",
+      "query": "Please explain in detail whether Atlas query-time search retrieval MCP and HTTP reads fetch remote source content upload indexed corpus content to external services store tokens in config logs diagnostics OpenAPI examples MCP output artifacts fixtures issue templates, and cite the local-first security boundary docs for credentials, public artifacts, internal visibility, machine-local paths, and least-privilege read tokens during explicit artifact fetch workflows.",
+      "feature": "long-query",
+      "scenario": "long compound query retrieves security boundary docs",
+      "priority": "p1",
+      "expected": {
+        "pathIncludes": ["README.md", "docs/security.md"],
+        "terms": ["do not fetch remote source content", "does not upload indexed corpus content", "Tokens must not be stored"]
+      }
+    },
+    {
+      "id": "edge-small-budget-diagnostics-query",
+      "category": "negative-edge",
+      "query": "budgetTokens usedTokens selected corpus evidence token cost omission diagnostics budget authority redundancy",
+      "feature": "budget-behavior",
+      "scenario": "small-budget concepts retrieve budget and omission docs",
+      "priority": "p1",
+      "expected": {
+        "pathIncludes": ["docs/retrieval-and-context.md"],
+        "terms": ["budgetTokens", "usedTokens", "omission diagnostics", "budget"]
+      }
+    },
+    {
+      "id": "edge-generated-vendor-boundary",
+      "category": "negative-edge",
+      "query": "generated vendor directories .moxel .atlas node_modules dist coverage target ignored live topology build source listing",
+      "feature": "ignored-paths",
+      "scenario": "generated/vendor path edge case guidance is retrievable",
+      "priority": "p1",
+      "expected": {
+        "pathIncludes": ["docs/troubleshooting.md"],
+        "terms": ["Generated/vendor directories", "node_modules", "ignore-boundary regression"]
+      }
+    },
+    {
+      "id": "edge-diagnostics-confidence-ambiguity",
+      "category": "negative-edge",
+      "query": "multiple top-ranked hits too close choose confidently ambiguity diagnostics clarify repo package module path",
+      "feature": "ambiguity-diagnostics",
+      "scenario": "ambiguous query reports deterministic diagnostics and medium confidence",
+      "priority": "p2",
+      "expected": {
+        "minRankedHits": 1,
+        "diagnosticsInclude": ["ranking", "planning"],
+        "confidence": "medium"
+      }
+    }
+  ]
 }

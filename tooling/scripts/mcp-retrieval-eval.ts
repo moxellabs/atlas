@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import {
   buildReport,
   caseMetadata,
+  evaluateExpectations,
   loadEvalDataset,
   printTerminalSummary,
   renderHtml,
@@ -104,34 +105,34 @@ try {
       contextPacket,
       topPaths,
     });
-    const pathIncludes = testCase.expected.pathIncludes ?? [];
-    const terms = testCase.expected.terms ?? [];
-    const missingPathIncludes = pathIncludes.filter(
-      (pathPart) => !topPaths.some((path) => path.includes(pathPart)),
-    );
-    const missingTerms = terms.filter(
-      (term) => !textHaystack.includes(term.toLowerCase()),
-    );
-    const pathRecall = recall(pathIncludes.length, missingPathIncludes.length);
-    const termRecall = recall(terms.length, missingTerms.length);
-    const nonEmptyContext = selected.length > 0 || rankedHits.length > 0;
+    const diagnosticsHaystack = JSON.stringify(diagnostics).toLowerCase();
+    const confidence =
+      typeof contextPacket.confidence === "string"
+        ? contextPacket.confidence
+        : typeof plan.confidence === "string"
+          ? plan.confidence
+          : undefined;
+    const expectationResult = evaluateExpectations({
+      testCase,
+      topPaths,
+      textHaystack,
+      diagnosticsHaystack,
+      selectedCount: selected.length,
+      rankedCount: rankedHits.length,
+      ...(confidence === undefined ? {} : { confidence }),
+    });
     results.push({
       id: testCase.id,
       category: testCase.category,
       query: testCase.query,
       ...caseMetadata(testCase),
-      passed:
-        missingPathIncludes.length === 0 &&
-        missingTerms.length === 0 &&
-        nonEmptyContext,
+      passed: expectationResult.passed,
       latencyMs,
       selectedCount: selected.length,
       rankedCount: rankedHits.length,
-      ...(typeof plan.confidence === "string"
-        ? { confidence: plan.confidence }
-        : {}),
-      scores: { pathRecall, termRecall, nonEmptyContext },
-      missing: { pathIncludes: missingPathIncludes, terms: missingTerms },
+      ...(confidence === undefined ? {} : { confidence }),
+      scores: expectationResult.scores,
+      missing: expectationResult.missing,
       topPaths,
       diagnostics,
     });
@@ -362,14 +363,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values)];
-}
-
-function recall(total: number, missing: number): number {
-  return total === 0 ? 1 : round((total - missing) / total);
-}
-
-function round(value: number): number {
-  return Number(value.toFixed(4));
 }
 
 function parseInteger(value: string, name: string): number {

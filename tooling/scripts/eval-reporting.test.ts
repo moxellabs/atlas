@@ -7,6 +7,7 @@ import { describe, expect, test } from "bun:test";
 import {
   buildReport,
   caseMetadata,
+  evaluateExpectations,
   loadEvalDataset,
   type CaseResult,
 } from "./eval-reporting";
@@ -27,7 +28,15 @@ function result(
       termRecall: 1,
       nonEmptyContext: true,
     },
-    missing: input.missing ?? { pathIncludes: [], terms: [] },
+    missing: input.missing ?? {
+      pathIncludes: [],
+      pathExcludes: [],
+      terms: [],
+      diagnosticsInclude: [],
+      rankedHits: [],
+      confidence: [],
+      noResults: [],
+    },
     topPaths: input.topPaths ?? [],
     diagnostics: input.diagnostics ?? [],
     ...(input.profile === undefined ? {} : { profile: input.profile }),
@@ -96,6 +105,94 @@ describe("eval reporting", () => {
       scenario: "smoke",
       priority: "p0",
     });
+  });
+
+  test("scores negative and deterministic expectation fields", () => {
+    const scored = evaluateExpectations({
+      testCase: {
+        id: "negative",
+        category: "edge",
+        query: "query",
+        expected: {
+          pathIncludes: ["docs/security.md"],
+          pathExcludes: ["docs/archive/"],
+          terms: ["local corpus"],
+          minRankedHits: 1,
+          maxRankedHits: 3,
+          confidence: "low",
+          diagnosticsInclude: ["planning"],
+        },
+      },
+      topPaths: ["docs/security.md"],
+      textHaystack: "retrieval reads the local corpus",
+      diagnosticsHaystack: JSON.stringify([{ stage: "planning" }]),
+      selectedCount: 1,
+      rankedCount: 2,
+      confidence: "low",
+    });
+
+    expect(scored.passed).toBe(true);
+    expect(scored.scores).toEqual({
+      pathRecall: 1,
+      termRecall: 1,
+      nonEmptyContext: true,
+    });
+    expect(scored.missing).toEqual({
+      pathIncludes: [],
+      pathExcludes: [],
+      terms: [],
+      diagnosticsInclude: [],
+      rankedHits: [],
+      confidence: [],
+      noResults: [],
+    });
+  });
+
+  test("allows no-result cases without requiring non-empty context", () => {
+    const scored = evaluateExpectations({
+      testCase: {
+        id: "no-results",
+        category: "edge",
+        query: "query",
+        expected: { noResults: true, maxRankedHits: 0 },
+      },
+      topPaths: [],
+      textHaystack: "",
+      diagnosticsHaystack: "",
+      selectedCount: 0,
+      rankedCount: 0,
+    });
+
+    expect(scored.passed).toBe(true);
+    expect(scored.scores.nonEmptyContext).toBe(false);
+  });
+
+  test("reports expectation gaps for excluded paths and rank bounds", () => {
+    const scored = evaluateExpectations({
+      testCase: {
+        id: "gaps",
+        category: "edge",
+        query: "query",
+        expected: {
+          pathExcludes: ["docs/archive/"],
+          maxRankedHits: 1,
+          confidence: "high",
+          diagnosticsInclude: ["budget"],
+        },
+      },
+      topPaths: ["docs/archive/old.md"],
+      textHaystack: "",
+      diagnosticsHaystack: "ranking",
+      selectedCount: 1,
+      rankedCount: 2,
+      confidence: "low",
+    });
+
+    expect(scored.passed).toBe(false);
+    expect(scored.missing.pathExcludes).toEqual(["docs/archive/"]);
+    expect(scored.missing.rankedHits).toEqual(["rankedCount <= 1"]);
+    expect(scored.missing.confidence).toEqual(["confidence=high"]);
+    expect(scored.missing.diagnosticsInclude).toEqual(["budget"]);
   });
 
   test("resolves manifest includes relative to the manifest file", async () => {
