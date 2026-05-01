@@ -126,6 +126,62 @@
       "feature": "diagnostics",
       "scenario": "inspect-retrieval-debugging",
       "priority": "p1"
+    },
+    {
+      "id": "exact-path-cli-docs",
+      "category": "path-lookup",
+      "query": "Open apps/cli/docs/index.md and summarize the CLI App commands section.",
+      "expected": {
+        "pathIncludes": ["apps/cli/docs/index.md"],
+        "terms": ["CLI App", "Commands", "repo add"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "agent-integrator",
+      "feature": "exact-path-lookup",
+      "scenario": "retrieve-cli-docs-by-path",
+      "priority": "p0"
+    },
+    {
+      "id": "typo-synonym-knowledge-bundle",
+      "category": "query-robustness",
+      "query": "artifakt knowledge bundle import no clone with atlas repo add",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["knowledge bundle", "repo add", "without cloning"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "consumer",
+      "feature": "typo-synonym-query",
+      "scenario": "misspelled-artifact-bundle-import",
+      "priority": "p1"
+    },
+    {
+      "id": "command-query-artifact-verify-fresh-ref",
+      "category": "command-lookup",
+      "query": "What docs explain the command atlas artifact verify --fresh --ref $(git rev-parse HEAD)?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["artifact verify --fresh", "--ref", "git rev-parse HEAD"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "maintainer",
+      "feature": "code-block-command-query",
+      "scenario": "lookup-artifact-freshness-command",
+      "priority": "p0"
+    },
+    {
+      "id": "section-heading-artifact-only-repo-add-fetch",
+      "category": "section-heading",
+      "query": "Find the section heading Artifact-only repo add fetch and explain it.",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["Artifact-only repo add fetch", "manifest.json", "checksums.json"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "consumer",
+      "feature": "section-heading-query",
+      "scenario": "retrieve-artifact-only-fetch-section",
+      "priority": "p0"
     }
   ]
 }

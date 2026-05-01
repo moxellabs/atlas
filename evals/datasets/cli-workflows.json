@@ -2,5 +2,174 @@
   "name": "atlas-cli-workflows",
   "description": "Focused Atlas CLI workflow eval cases.",
   "repoId": "github.com/moxellabs/atlas",
-  "cases": []
+  "cases": [
+    {
+      "id": "cli-atlas-init-maintainer-setup",
+      "category": "cli-workflow",
+      "query": "When should a maintainer run atlas init and what repo-local files does it prepare?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["atlas init", ".moxel/atlas", "manifest.json"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "maintainer",
+      "feature": "cli-init",
+      "scenario": "maintainer-initializes-repo-artifact",
+      "priority": "p0"
+    },
+    {
+      "id": "cli-atlas-build-public-artifact",
+      "category": "cli-workflow",
+      "query": "How does atlas build --profile public create a committed public artifact?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["atlas build --profile public", "public", "docs.index.json"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "maintainer",
+      "feature": "cli-build",
+      "scenario": "build-public-artifact",
+      "priority": "p0"
+    },
+    {
+      "id": "cli-repo-add-consumer-import",
+      "category": "cli-workflow",
+      "query": "What does atlas repo add org/repo do for a consumer importing documentation?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md", "apps/cli/docs/index.md"],
+        "terms": ["atlas repo add", "imports", "artifact"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "consumer",
+      "feature": "cli-repo-add",
+      "scenario": "consumer-imports-maintained-artifact",
+      "priority": "p0"
+    },
+    {
+      "id": "cli-repo-list-registry",
+      "category": "cli-workflow",
+      "query": "Where does atlas repo list read registry metadata from?",
+      "expected": {
+        "pathIncludes": ["docs/runtime-surfaces.md"],
+        "terms": ["atlas repo list", "repo.json", "~/.moxel/atlas/repos"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "operator",
+      "feature": "cli-repo-list",
+      "scenario": "list-imported-repos",
+      "priority": "p1"
+    },
+    {
+      "id": "cli-repo-show-target-inference",
+      "category": "cli-workflow",
+      "query": "How does atlas repo show share repo target inference with init and build?",
+      "expected": {
+        "pathIncludes": ["apps/cli/docs/index.md"],
+        "terms": ["repo show", "repo target inference", "explicit flags"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "operator",
+      "feature": "cli-repo-show",
+      "scenario": "inspect-single-repo-target",
+      "priority": "p1"
+    },
+    {
+      "id": "cli-search-scoped-query",
+      "category": "cli-workflow",
+      "query": "Show atlas search examples for querying deployment rollback in an imported repo.",
+      "expected": {
+        "pathIncludes": ["README.md", "docs/ingestion-build-flow.md"],
+        "terms": ["atlas search", "deployment rollback", "--repo"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "consumer",
+      "feature": "cli-search",
+      "scenario": "search-imported-repo",
+      "priority": "p0"
+    },
+    {
+      "id": "cli-inspect-retrieval-query",
+      "category": "cli-workflow",
+      "query": "Which Atlas CLI command inspects retrieval with --query and --repo?",
+      "expected": {
+        "pathIncludes": ["apps/cli/docs/index.md"],
+        "terms": ["atlas inspect retrieval", "--query", "--repo"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "agent-user",
+      "feature": "cli-inspect-retrieval",
+      "scenario": "debug-retrieval-plan",
+      "priority": "p0"
+    },
+    {
+      "id": "cli-artifact-verify-fresh",
+      "category": "cli-workflow",
+      "query": "What does atlas artifact verify --fresh check in maintainer CI?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["artifact verify --fresh", "CI", "stale"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "maintainer",
+      "feature": "cli-artifact-verify",
+      "scenario": "verify-artifact-freshness-in-ci",
+      "priority": "p0"
+    },
+    {
+      "id": "cli-doctor-prerequisites-store-readiness",
+      "category": "cli-workflow",
+      "query": "What does atlas doctor validate for local prerequisites credentials and store readiness?",
+      "expected": {
+        "pathIncludes": ["docs/runtime-surfaces.md"],
+        "terms": ["doctor", "credentials", "store readiness"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "operator",
+      "feature": "cli-doctor",
+      "scenario": "diagnose-local-runtime",
+      "priority": "p1"
+    },
+    {
+      "id": "cli-production-build-triage",
+      "category": "cli-workflow",
+      "query": "For production build triage, what command uses bunx @moxellabs/atlas build --json --verbose?",
+      "expected": {
+        "pathIncludes": ["apps/cli/docs/index.md"],
+        "terms": ["production build triage", "--json --verbose", "inspect topology --live"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "operator",
+      "feature": "production-triage",
+      "scenario": "triage-production-build-failure",
+      "priority": "p1"
+    },
+    {
+      "id": "cli-uat-public-consumer-workflow",
+      "category": "cli-workflow",
+      "query": "What public consumer workflow uses atlas setup, atlas repo add, and atlas search how to deploy?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md", "README.md"],
+        "terms": ["Public Consumer Workflow", "atlas setup", "how to deploy"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "consumer",
+      "feature": "uat-docs",
+      "scenario": "public-consumer-uat-flow",
+      "priority": "p1"
+    },
+    {
+      "id": "cli-adoption-template-onboarding",
+      "category": "cli-workflow",
+      "query": "How can a consumer generate maintainer onboarding text with atlas adoption-template or repo add --issue-pr-instructions?",
+      "expected": {
+        "pathIncludes": ["docs/ingestion-build-flow.md", "apps/cli/docs/index.md"],
+        "terms": ["adoption-template", "--issue-pr-instructions", "copyable"],
+        "tools": ["plan_context", "find_docs"]
+      },
+      "profile": "consumer",
+      "feature": "maintainer-onboarding",
+      "scenario": "generate-adoption-text",
+      "priority": "p1"
+    }
+  ]
 }
