@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import {
 	buildDocSummary,
+	buildContextualChunkHeader,
 	buildModuleSummary,
 	buildOutline,
 	type CompilerDiagnostic,
@@ -10,6 +11,7 @@ import {
 import type { RepoConfig } from "@atlas/core";
 import {
 	type CanonicalDocument,
+	type CorpusChunk,
 	type FileEntry,
 	type SummaryArtifact,
 	stableHash,
@@ -108,10 +110,15 @@ export async function rebuildDocs(
 								source,
 							);
 
+				const chunks = chunked.chunks.map((chunk) => ({
+					...chunk,
+					searchText: buildChunkSearchText(compiled.canonical.document, chunk),
+				}));
+
 				rebuiltDocs.push({
 					classifiedDoc,
 					document: compiled.canonical.document,
-					chunks: chunked.chunks,
+					chunks,
 					documentSummaries: [
 						shortSummaryArtifact,
 						mediumSummaryArtifact,
@@ -201,6 +208,21 @@ function tryBuildStage<T>(
 			},
 		);
 	}
+}
+
+function buildChunkSearchText(document: CanonicalDocument, chunk: CorpusChunk): string {
+	const header = buildContextualChunkHeader({
+		repoId: chunk.repoId,
+		packageId: chunk.packageId ?? document.metadata.packageId,
+		moduleId: chunk.moduleId ?? document.metadata.moduleId,
+		skillId: chunk.skillId ?? document.metadata.skillId,
+		docKind: chunk.kind,
+		authority: chunk.authority,
+		title: document.title,
+		headingPath: chunk.headingPath,
+	}).text;
+
+	return `${header} | path: ${document.path}\n\n${chunk.text}`;
 }
 
 async function readSkillArtifacts(

@@ -13,5 +13,7 @@ export interface CorpusChunk {
   headingPath: string[];
   ordinal: number;
   text: string;
+  /** Optional indexing-only text used for lexical retrieval without changing stored chunk text. */
+  searchText?: string | undefined;
   tokenCount: number;
 }
