@@ -30,7 +30,7 @@ bun run eval
 bun run eval:quick      # focused retrieval-smoke subset; writes reports under /tmp
 bun run eval:full       # full manifest; writes evals/reports/*.json and *.html
 bun run eval:report     # alias for the full report generation path
-bun run eval:ci         # full report plus conservative threshold gates
+bun run eval:ci         # full report plus conservative threshold gates; writes reports under /tmp
 bun run eval:mcp        # preserved alias for full suite
 bun run eval:retrieval  # preserved alias for full suite
 ```
@@ -42,7 +42,7 @@ evals/reports/mcp-retrieval-report.json
 evals/reports/mcp-retrieval-report.html
 ```
 
-The generated reports include timestamps, runtime paths, revision details, and per-run metrics. They may change whenever the eval is re-run. Do not commit report changes unless the snapshot is intentionally being updated.
+The generated reports include timestamps, runtime paths, revision details, and per-run metrics. They may change whenever the eval is re-run. The `evals/reports/` directory is ignored so generated local dashboards are not committed accidentally.
 
 ## Dataset layout
 
@@ -71,7 +71,7 @@ Each case contains:
 - `expected.terms`: terms expected somewhere in selected/ranked context payloads or retrieved local source text.
 - `expected.minRankedHits` / `expected.maxRankedHits`: ranked-hit count bounds.
 - `expected.confidence`, `expected.diagnosticsInclude`, and `expected.noResults`: deterministic checks for diagnostics, confidence, and no-result behavior.
-- `expected.tools`: intended MCP tools for the scenario. These are documented now and can be used by future agent-trace evals.
+- `expected.tools`: intended MCP tools for the scenario. These are scenario annotations today; the deterministic retrieval harness does not execute MCP tool calls yet. They can be used by future agent-trace evals.
 
 Path-substring expectations are used instead of generated document IDs so the suite survives corpus rebuilds.
 
@@ -82,7 +82,7 @@ Path-substring expectations are used instead of generated document IDs so the su
 3. Prefer path and term expectations tied to public docs or public skills that should remain discoverable.
 4. Add profile/feature/scenario/priority metadata when the case represents a user workflow or product surface.
 5. Run `bun run eval:quick` for smoke coverage when relevant, then `bun run eval:full` or `bun run eval:report` before opening a PR.
-6. Restore generated files in `evals/reports/` unless the report snapshot is an intentional part of the change.
+6. Generated files under `evals/reports/` are ignored; do not force-add them unless an intentionally reviewed snapshot policy is introduced.
 
 ## Interpreting metrics
 
@@ -93,7 +93,7 @@ Path-substring expectations are used instead of generated document IDs so the su
 - Average latency: wall-clock CLI query time per case.
 - Average ranked hits: mean ranked hit count.
 
-The report also groups metrics by category, profile, feature, scenario, and priority so regressions can be mapped back to user workflows.
+The report also groups metrics by category, profile, feature, and scenario so regressions can be mapped back to user workflows. Case priority is preserved per case in the detailed table.
 
 ## Publishing and CI behavior
 
@@ -102,8 +102,8 @@ The report also groups metrics by category, profile, feature, scenario, and prio
 1. Sets up Bun 1.3.11.
 2. Installs with `bun install --frozen-lockfile`.
 3. Runs `bun run eval:ci`.
-4. Uploads `evals/reports` as the `atlas-eval-reports` GitHub Actions artifact, even when the eval step fails.
-5. On pushes to `main`, uploads the same report directory as a GitHub Pages artifact and deploys it with the standard Pages actions.
+4. Uploads `/tmp/atlas-eval-report` as the `atlas-eval-reports` GitHub Actions artifact when the report exists.
+5. On pushes to `main`, uploads the same fresh report directory as a GitHub Pages artifact and deploys it with the standard Pages actions.
 
 If GitHub Pages has not been enabled for the repository, the Actions artifact is still the source of truth for the latest dashboard. When Pages is enabled, the workflow copies `mcp-retrieval-report.html` to `index.html`, so the latest dashboard is expected at:
 
