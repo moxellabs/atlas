@@ -1,7 +1,231 @@
+export * from "../../packages/eval/src/retrieval-harness";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 import { moxelBandedFieldScript } from "../../apps/server/src/openapi/moxel-theme";
+
+// ============================================================================
+// Health classification
+// ============================================================================
+
+export type HealthLevel = "good" | "warn" | "bad";
+
+interface HealthThreshold {
+	readonly good: number;
+	readonly warn: number;
+	readonly direction?: "lower";
+}
+
+export const HEALTH_THRESHOLDS = {
+	passRate: { good: 1.0, warn: 0.95 },
+	pathRecall: { good: 0.95, warn: 0.85 },
+	termRecall: { good: 0.95, warn: 0.85 },
+	nonEmptyContextRate: { good: 1.0, warn: 0.95 },
+	pathRecallAt1: { good: 0.6, warn: 0.35 },
+	pathRecallAt3: { good: 0.75, warn: 0.5 },
+	pathRecallAt5: { good: 0.8, warn: 0.6 },
+	expectedPathPrecisionAt5: { good: 0.3, warn: 0.15 },
+	expectedPathNdcgAt5: { good: 0.5, warn: 0.25 },
+	mrr: { good: 0.6, warn: 0.35 },
+	p95LatencyMs: { good: 500, warn: 1000, direction: "lower" },
+	averageLatencyMs: { good: 300, warn: 700, direction: "lower" },
+	noResultAccuracy: { good: 1.0, warn: 0.95 },
+	forbiddenPathAccuracy: { good: 1.0, warn: 0.95 },
+} as const satisfies Record<string, HealthThreshold>;
+
+export type HealthMetric = keyof typeof HEALTH_THRESHOLDS;
+
+const SEVERITY_ORDER: Record<HealthLevel, number> = {
+	good: 0,
+	warn: 1,
+	bad: 2,
+};
+
+export function classifyHealth(
+	metric: HealthMetric,
+	value: number,
+): HealthLevel {
+	const threshold = HEALTH_THRESHOLDS[metric] as HealthThreshold;
+	if (threshold.direction === "lower") {
+		if (value <= threshold.good) return "good";
+		if (value <= threshold.warn) return "warn";
+		return "bad";
+	}
+	if (value >= threshold.good) return "good";
+	if (value >= threshold.warn) return "warn";
+	return "bad";
+}
+
+function worstHealth(levels: HealthLevel[]): HealthLevel {
+	return levels.reduce<HealthLevel>(
+		(worst, level) =>
+			SEVERITY_ORDER[level] > SEVERITY_ORDER[worst] ? level : worst,
+		"good",
+	);
+}
+
+function severityBadge(level: HealthLevel): string {
+	if (level === "bad") return "BROKEN";
+	if (level === "warn") return "NEEDS WORK";
+	return "PASSING";
+}
+
+function formatMetricValue(metric: HealthMetric, value: number): string {
+	if (metric === "p95LatencyMs" || metric === "averageLatencyMs") {
+		return `${Math.round(value)}ms`;
+	}
+	if (metric === "mrr") {
+		return value.toFixed(2);
+	}
+	return `${Math.round(value * 100)}%`;
+}
+
+function formatThresholdTarget(metric: HealthMetric): string {
+	const threshold = HEALTH_THRESHOLDS[metric] as HealthThreshold;
+	if (threshold.direction === "lower") {
+		return `good ≤ ${formatMetricValue(metric, threshold.good)}, warn ≤ ${formatMetricValue(metric, threshold.warn)}`;
+	}
+	return `good ≥ ${formatMetricValue(metric, threshold.good)}, warn ≥ ${formatMetricValue(metric, threshold.warn)}`;
+}
+
+// ============================================================================
+// Metric glossary (drives the inline (i) popovers)
+// ============================================================================
+
+export interface MetricGlossaryEntry {
+	readonly label: string;
+	readonly short: string;
+	readonly long: string;
+	readonly interpretation: string;
+	readonly targets: string;
+}
+
+export const METRIC_GLOSSARY: Record<HealthMetric, MetricGlossaryEntry> = {
+	passRate: {
+		label: "Pass rate",
+		short:
+			"Fraction of cases that passed every deterministic expectation declared in the dataset.",
+		long: "Each case declares required path substrings, required terms, forbidden paths, diagnostic markers, and optional no-result behavior. Pass means every gate passed. It does not say anything about rank order.",
+		interpretation:
+			"Drops usually mean a corpus regression (paths moved or docs deleted) or a new case with a broken expectation, not a ranker bug.",
+		targets: "",
+	},
+	pathRecall: {
+		label: "Path recall",
+		short:
+			"Fraction of expected path substrings found anywhere in the top retrieved paths.",
+		long: "This is the coarse recall signal that tolerates ranking noise. Recall@k is the rank-aware variant you usually want.",
+		interpretation:
+			"If this is red, Atlas is missing known-good evidence entirely. Check corpus ingest and filters.",
+		targets: "",
+	},
+	termRecall: {
+		label: "Term recall",
+		short:
+			"Fraction of expected terms found in the selected/ranked context or in the retrieved source contents.",
+		long: "Uses the concatenated ranked hits, selected hits, context packet, and local file contents of retrieved paths as the haystack.",
+		interpretation:
+			"Red usually means the docs exist but the terms have been renamed/moved, or context packing dropped them.",
+		targets: "",
+	},
+	nonEmptyContextRate: {
+		label: "Non-empty context",
+		short: "Fraction of cases where Atlas returned any selected or ranked hit.",
+		long: "No-result cases that explicitly expect empty results are still considered non-empty-context-correct when they abstain.",
+		interpretation:
+			"Red on a normal case means retrieval returned nothing. Red on a no-result case means Atlas refused to abstain when it should have.",
+		targets: "",
+	},
+	pathRecallAt1: {
+		label: "Recall@1",
+		short:
+			"Fraction of expected paths that appear as the single top-ranked result.",
+		long: "Strictest rank quality signal. Answers: did we put the right file first?",
+		interpretation:
+			"Red means the ranker is not surfacing known-good evidence at position 1 even when it has the doc indexed.",
+		targets: "",
+	},
+	pathRecallAt3: {
+		label: "Recall@3",
+		short: "Fraction of expected paths in the top 3 retrieved paths.",
+		long: "Practical first-glance window most agents actually read.",
+		interpretation:
+			"Red here plus green Recall@5 means evidence is indexed but pushed past the first screenful.",
+		targets: "",
+	},
+	pathRecallAt5: {
+		label: "Recall@5",
+		short: "Fraction of expected paths in the top 5 retrieved paths.",
+		long: "Default reading-window metric. Expected paths are substring labels declared per case.",
+		interpretation:
+			"Red means the ranker is dropping known-good docs outside the reading window. Fix ranking signals, not the index.",
+		targets: "",
+	},
+	expectedPathPrecisionAt5: {
+		label: "Expected-path P@5",
+		short: "Lower-bound sparse-label precision over top-5 retrieved paths.",
+		long: "Only labeled expected paths are treated as relevant. Unlabeled but genuinely relevant docs make true precision higher. Do not compare across datasets with different label densities.",
+		interpretation:
+			"Use for trending within the same dataset. Drops suggest top-5 is dominated by off-topic paths.",
+		targets: "",
+	},
+	expectedPathNdcgAt5: {
+		label: "Expected-path nDCG@5",
+		short: "Rank-sensitive binary relevance over sparse expected path labels.",
+		long: "Rewards earlier expected paths more than later ones. Sparse labels mean this is a lower bound on true nDCG.",
+		interpretation:
+			"Drops mean known-good paths moved later in the list even if they are still inside top-5.",
+		targets: "",
+	},
+	mrr: {
+		label: "MRR",
+		short: "Mean reciprocal rank of the first expected path.",
+		long: "Averages 1 / rank of the first labeled hit across cases. Missing-label cases contribute 0.",
+		interpretation:
+			"Best single number for 'how early does Atlas put the right doc'. Red means expected evidence is consistently past rank 3.",
+		targets: "",
+	},
+	p95LatencyMs: {
+		label: "p95 latency",
+		short:
+			"95th-percentile wall-clock time of the local CLI retrieval call, per case.",
+		long: "Measured end-to-end inside the eval harness. Includes CLI process spawn on each case; a long-lived server process would be faster.",
+		interpretation:
+			"Red means the slowest tail is dragging; often corpus-size sensitive. Amber on this page is fine for local dev; CI gate is looser.",
+		targets: "",
+	},
+	averageLatencyMs: {
+		label: "Avg latency",
+		short: "Arithmetic mean of per-case retrieval latency.",
+		long: "Pair with p95 to see whether slowness is uniform or tail-heavy.",
+		interpretation:
+			"Red average usually tracks cold-start overhead or an oversized corpus window.",
+		targets: "",
+	},
+	noResultAccuracy: {
+		label: "Abstain accuracy",
+		short:
+			"Fraction of cases where Atlas correctly abstained from returning hits.",
+		long: "Only counts cases that explicitly declare noResults=true. Pass means zero selected and zero ranked hits for those cases.",
+		interpretation:
+			"Red means Atlas is inventing evidence on queries that should return nothing. Safety regression.",
+		targets: "",
+	},
+	forbiddenPathAccuracy: {
+		label: "Forbidden-path accuracy",
+		short:
+			"Fraction of cases that kept excluded paths out of the top retrieved list.",
+		long: "Excluded path substrings come from the case definition. Negative/edge cases use this to guard against surfacing archived or private docs.",
+		interpretation:
+			"Red means retrieval leaked a path it was told to avoid. Also a safety regression.",
+		targets: "",
+	},
+};
+
+for (const metric of Object.keys(METRIC_GLOSSARY) as HealthMetric[]) {
+	(METRIC_GLOSSARY[metric] as { targets: string }).targets =
+		formatThresholdTarget(metric);
+}
 
 export interface EvalDataset {
 	name: string;
@@ -65,6 +289,13 @@ export interface CaseResult extends EvalCaseMetadata {
 		recallAt3: number;
 		recallAt5: number;
 		reciprocalRank: number;
+		precisionAt1: number;
+		precisionAt3: number;
+		precisionAt5: number;
+		ndcgAt3: number;
+		ndcgAt5: number;
+		rankDistance?: number;
+		topPathDiversity: number;
 		noResultCorrect: boolean;
 		forbiddenPathCorrect: boolean;
 	};
@@ -99,14 +330,70 @@ export interface ReportThresholdInput {
 	minPathRecall?: number;
 	minTermRecall?: number;
 	minNonEmptyContextRate?: number;
+	minRecallAt1?: number;
+	minRecallAt3?: number;
+	minRecallAt5?: number;
+	minMrr?: number;
+	minNoResultAccuracy?: number;
+	minForbiddenPathAccuracy?: number;
+	maxP95LatencyMs?: number;
+	maxAverageLatencyMs?: number;
+	maxMetricRegression?: number;
 }
 
 export interface ReportThresholdResult {
 	metric: keyof Report["metrics"];
 	label: string;
 	actual: number;
-	minimum: number;
+	limit: number;
+	direction: "higher" | "lower";
 	passed: boolean;
+}
+
+export interface BaselineSummary {
+	metrics: Partial<Report["metrics"]>;
+	generatedAt?: string;
+	repoRevision?: string;
+	dataset?: string;
+}
+
+export interface MetricDeltaEntry {
+	metric: HealthMetric;
+	label: string;
+	current: number;
+	baseline: number;
+	delta: number;
+	direction: "higher" | "lower";
+	severity: HealthLevel;
+}
+
+export interface RegressionEntry {
+	metric: HealthMetric;
+	label: string;
+	delta: number;
+	tolerance: number;
+	direction: "higher" | "lower";
+}
+
+export interface ReportDeltas {
+	baseline: { generatedAt?: string; repoRevision?: string; dataset?: string };
+	entries: MetricDeltaEntry[];
+	regressions: RegressionEntry[];
+}
+
+export interface NarrativeFinding {
+	metric: HealthMetric;
+	label: string;
+	value: string;
+	severity: HealthLevel;
+	message: string;
+}
+
+export interface AttentionArea {
+	severity: HealthLevel;
+	message: string;
+	metric?: HealthMetric;
+	caseId?: string;
 }
 
 type ReportGroup = Record<
@@ -235,6 +522,15 @@ export function evaluateExpectations(
 		confidence: missingConfidence,
 		noResults: missingNoResults,
 	};
+	const expectedPathCount = pathIncludes.length;
+	const precisionAt1 = sparsePrecisionAtK(expectedPathRanks, 1);
+	const precisionAt3 = sparsePrecisionAtK(expectedPathRanks, 3);
+	const precisionAt5 = sparsePrecisionAtK(expectedPathRanks, 5);
+	const ndcgAt3 = sparseNdcgAtK(expectedPathRanks, expectedPathCount, 3);
+	const ndcgAt5 = sparseNdcgAtK(expectedPathRanks, expectedPathCount, 5);
+	const rankDistance =
+		bestExpectedPathRank === undefined ? undefined : bestExpectedPathRank - 1;
+	const topPathDiversity = countDistinctParents(input.topPaths.slice(0, 5));
 	return {
 		passed:
 			missingPathIncludes.length === 0 &&
@@ -260,6 +556,13 @@ export function evaluateExpectations(
 				bestExpectedPathRank === undefined
 					? 0
 					: round(1 / bestExpectedPathRank),
+			precisionAt1,
+			precisionAt3,
+			precisionAt5,
+			ndcgAt3,
+			ndcgAt5,
+			...(rankDistance === undefined ? {} : { rankDistance }),
+			topPathDiversity,
 			noResultCorrect: expected.noResults === true ? !hasResults : true,
 			forbiddenPathCorrect: matchedPathExcludes.length === 0,
 		},
@@ -303,6 +606,8 @@ export interface Report {
 		mrr: number;
 		noResultAccuracy: number;
 		forbiddenPathAccuracy: number;
+		averageRankDistance: number;
+		averageTopPathDiversity: number;
 	};
 	quality: {
 		rankBuckets: RankBucket[];
@@ -317,12 +622,15 @@ export interface Report {
 		byCoverageType: Record<string, QualityGroupSummary>;
 	};
 	narrative: {
+		severity: HealthLevel;
+		headline: string;
 		verdict: string;
-		keyFindings: string[];
+		keyFindings: NarrativeFinding[];
 		caveats: string[];
-		attentionAreas: string[];
+		attentionAreas: AttentionArea[];
 		metricNotes: string[];
 	};
+	deltas?: ReportDeltas;
 	coverage: {
 		capabilities: Record<string, number>;
 		priorities: Record<string, number>;
@@ -423,8 +731,12 @@ export function buildReport(
 	runtime: RuntimeInfo,
 	judge: { provider?: string; model?: string },
 	thresholds: ReportThresholdInput = {},
+	baseline?: BaselineSummary,
 ): Report {
 	const passedCases = cases.filter((result) => result.passed).length;
+	const rankDistances = cases
+		.map((result) => result.retrieval.rankDistance)
+		.filter((value): value is number => value !== undefined);
 	const metrics = {
 		passRate: rate(cases, (result) => result.passed),
 		pathRecall: average(cases.map((result) => result.scores.pathRecall)),
@@ -444,19 +756,19 @@ export function buildReport(
 		pathRecallAt3: average(cases.map((result) => result.retrieval.recallAt3)),
 		pathRecallAt5: average(cases.map((result) => result.retrieval.recallAt5)),
 		expectedPathPrecisionAt1: average(
-			cases.map((result) => expectedPathPrecisionAtK(result, 1)),
+			cases.map((result) => result.retrieval.precisionAt1),
 		),
 		expectedPathPrecisionAt3: average(
-			cases.map((result) => expectedPathPrecisionAtK(result, 3)),
+			cases.map((result) => result.retrieval.precisionAt3),
 		),
 		expectedPathPrecisionAt5: average(
-			cases.map((result) => expectedPathPrecisionAtK(result, 5)),
+			cases.map((result) => result.retrieval.precisionAt5),
 		),
 		expectedPathNdcgAt3: average(
-			cases.map((result) => expectedPathNdcgAtK(result, 3)),
+			cases.map((result) => result.retrieval.ndcgAt3),
 		),
 		expectedPathNdcgAt5: average(
-			cases.map((result) => expectedPathNdcgAtK(result, 5)),
+			cases.map((result) => result.retrieval.ndcgAt5),
 		),
 		mrr: average(cases.map((result) => result.retrieval.reciprocalRank)),
 		noResultAccuracy: rate(cases, (result) => result.retrieval.noResultCorrect),
@@ -464,8 +776,19 @@ export function buildReport(
 			cases,
 			(result) => result.retrieval.forbiddenPathCorrect,
 		),
+		averageRankDistance:
+			rankDistances.length === 0 ? 0 : average(rankDistances),
+		averageTopPathDiversity: average(
+			cases.map((result) => result.retrieval.topPathDiversity),
+		),
 	};
 	const thresholdResults = evaluateThresholds(metrics, thresholds);
+	const deltas = computeDeltas(metrics, baseline, thresholds.maxMetricRegression);
+	const regressionResults = deltas
+		? evaluateRegressions(deltas, thresholds.maxMetricRegression)
+		: [];
+	const combinedThresholdResults = [...thresholdResults, ...regressionResults];
+	const narrative = buildNarrative(metrics, cases, deltas);
 	return {
 		dataset: dataset.name,
 		...(dataset.description === undefined
@@ -504,7 +827,7 @@ export function buildReport(
 			byPriority: byQualityGroup(cases, (result) => result.priority),
 			byCoverageType: byQualityGroup(cases, (result) => result.coverageType),
 		},
-		narrative: buildNarrative(metrics, cases),
+		narrative,
 		coverage: {
 			capabilities: countBy(
 				cases,
@@ -520,14 +843,17 @@ export function buildReport(
 				(result) => result.coverageType ?? "deterministic",
 			),
 		},
-		...(thresholdResults.length === 0
+		...(combinedThresholdResults.length === 0
 			? {}
 			: {
 					thresholds: {
-						passed: thresholdResults.every((result) => result.passed),
-						results: thresholdResults,
+						passed: combinedThresholdResults.every(
+							(result) => result.passed,
+						),
+						results: combinedThresholdResults,
 					},
 				}),
+		...(deltas === undefined ? {} : { deltas }),
 		byCategory: byGroup(cases, (result) => result.category),
 		byProfile: byGroup(cases, (result) => result.profile),
 		byFeature: byGroup(cases, (result) => result.feature),
@@ -540,27 +866,35 @@ export function printTerminalSummary(report: Report): void {
 	console.log("");
 	console.log("Retrieval eval");
 	console.log("==============");
+	console.log(`Verdict: ${severityBadge(report.narrative.severity)}`);
+	console.log(`Headline: ${report.narrative.headline}`);
 	console.log(`Corpus: ${report.runtime.corpusDbPath ?? "CLI default"}`);
 	console.log(`Docs: ${report.runtime.docCount ?? "unknown"}`);
 	console.log(`Passed: ${report.passedCases}/${report.totalCases}`);
-	console.log(`Pass rate: ${percent(report.metrics.passRate)}`);
-	console.log(`Path recall: ${percent(report.metrics.pathRecall)}`);
-	console.log(`Term recall: ${percent(report.metrics.termRecall)}`);
-	console.log(
-		`Non-empty context: ${percent(report.metrics.nonEmptyContextRate)}`,
-	);
-	console.log(`Path Recall@5: ${percent(report.metrics.pathRecallAt5)}`);
-	console.log(`MRR: ${report.metrics.mrr}`);
+	for (const finding of report.narrative.keyFindings) {
+		console.log(
+			`${finding.label}: ${finding.value} [${finding.severity}]`,
+		);
+	}
 	console.log(`Average ranked hits: ${report.metrics.averageRankedHits}`);
 	console.log(`Median latency: ${report.metrics.medianLatencyMs}ms`);
-	console.log(`P95 latency: ${report.metrics.p95LatencyMs}ms`);
+	if (report.deltas !== undefined && report.deltas.entries.length > 0) {
+		console.log("");
+		console.log("Baseline deltas:");
+		for (const entry of report.deltas.entries) {
+			console.log(
+				`- ${entry.label}: ${formatDeltaMagnitude(entry.metric, entry.delta)} (${entry.severity})`,
+			);
+		}
+	}
 	if (report.thresholds !== undefined) {
+		console.log("");
 		console.log(
 			`Thresholds: ${report.thresholds.passed ? "passed" : "failed"}`,
 		);
 		for (const threshold of report.thresholds.results) {
 			console.log(
-				`- ${threshold.label}: ${percent(threshold.actual)} >= ${percent(threshold.minimum)} ${threshold.passed ? "✓" : "✗"}`,
+				`- ${threshold.label}: ${formatThresholdComparison(threshold)} ${threshold.passed ? "✓" : "✗"}`,
 			);
 		}
 	}
@@ -609,28 +943,31 @@ export function printTerminalSummary(report: Report): void {
 
 export function renderHtml(report: Report): string {
 	return `<!doctype html>
-<html lang="en">
+<html lang="en" data-severity="${escapeHtml(report.narrative.severity)}">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>MOXEL ATLAS EVALS — ${escapeHtml(report.dataset)}</title>
 <style>${renderReportCss()}</style>
 </head>
-<body class="moxel-eval-body">
+<body class="moxel-eval-body" data-severity="${escapeHtml(report.narrative.severity)}">
 <canvas id="banded-field" aria-hidden="true"></canvas>
 <div class="noise" aria-hidden="true"></div>
 <main class="report-shell" data-report-shell="moxel-atlas-eval-report-theme">
 ${renderLabHeader(report)}
-${renderHero(report)}
-${renderHeadlineCards(report)}
+${renderVerdictCard(report)}
+${renderKpiStrip(report)}
+${renderAtAGlance(report)}
 ${renderInterpretation(report)}
 ${renderCharts(report)}
 ${renderCoverageLab(report)}
 ${renderExplorer(report)}
 ${renderMethodology(report)}
 ${renderReproducibility(report)}
+${renderResearchNotes(report)}
 ${renderStaticFallback(report)}
 </main>
+<div id="info-popover" class="info-popover" role="dialog" aria-modal="false" aria-live="polite" hidden></div>
 <script id="atlas-eval-report-data" type="application/json">${safeJson(reportClientData(report))}</script>
 <script>${moxelBandedFieldScript}</script>
 <script>${renderExplorerScript()}</script>
@@ -653,127 +990,379 @@ function renderReportCss(): string {
 	--muted:rgba(195,210,240,.72);
 	--cyan:#35f0ff;
 	--mint:#6df2d6;
+	--good:#6df2d6;
+	--good-strong:#35f0ff;
 	--warn:#ffd166;
+	--warn-strong:#ffb347;
 	--bad:#ff6b8a;
+	--bad-strong:#ff3366;
 	--shadow:0 22px 54px rgba(2,8,26,.62);
 }
 *,*::before,*::after{box-sizing:border-box}
 html,body{min-height:100%;margin:0;background:var(--bg-900);color:var(--text)}
 body{overflow-x:hidden;font:15px/1.55 "Space Grotesk",Inter,system-ui,sans-serif}
-canvas#banded-field{position:fixed;inset:0;width:100vw;height:100vh;display:block;z-index:0;pointer-events:none;background:transparent;opacity:.46}
-.noise{position:fixed;inset:-15%;z-index:1;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.25'/%3E%3C/svg%3E");mix-blend-mode:screen;animation:grain 8s steps(60) infinite;opacity:.24}
+canvas#banded-field{position:fixed;inset:0;width:100vw;height:100vh;display:block;z-index:0;pointer-events:none;background:transparent;opacity:.34}
+.noise{position:fixed;inset:-15%;z-index:1;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.25'/%3E%3C/svg%3E");mix-blend-mode:screen;animation:grain 8s steps(60) infinite;opacity:.18}
 @keyframes grain{to{transform:translate3d(-6%,-4%,0)}}
-.moxel-eval-body::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at 18% 12%,rgba(90,204,255,.10),transparent 55%),radial-gradient(circle at 74% 78%,rgba(115,244,214,.08),transparent 62%)}
-.report-shell{position:relative;z-index:2;width:min(1180px,calc(100vw - 2rem));margin:0 auto;padding:5.4rem 0 3rem}
-.topbar{position:fixed;top:0;left:0;right:0;z-index:5;display:grid;grid-template-columns:auto 1fr auto;gap:1rem;align-items:center;min-height:4.15rem;padding:.85rem clamp(1rem,2vw,2rem);border-bottom:1px solid var(--line);background:rgba(3,7,17,.84);backdrop-filter:blur(18px);text-transform:uppercase;letter-spacing:.16em}
-.wordmark{font-weight:900;letter-spacing:.12em}.topmeta{color:var(--muted);font-size:.68rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.status-dot{justify-self:end;border:1px solid var(--line-strong);border-radius:999px;padding:.35rem .7rem;background:rgba(53,240,255,.06);color:var(--mint);font-size:.72rem}
+.moxel-eval-body::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at 18% 12%,rgba(90,204,255,.08),transparent 55%),radial-gradient(circle at 74% 78%,rgba(115,244,214,.06),transparent 62%)}
+.report-shell{position:relative;z-index:2;width:min(1180px,100% - 1.5rem);margin:0 auto;padding:5rem 0 2.5rem}
+@media(min-width:641px){.report-shell{width:min(1180px,100% - 2.5rem);padding:5.6rem 0 3rem}}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;flex-wrap:wrap;gap:.6rem .9rem;align-items:center;min-height:3.8rem;padding:.65rem clamp(.85rem,2vw,2rem);border-bottom:1px solid var(--line);background:rgba(3,7,17,.9);backdrop-filter:blur(18px);text-transform:uppercase;letter-spacing:.14em}
+.wordmark{font-weight:900;letter-spacing:.12em;font-size:.78rem}
+.topmeta{flex:1 1 0;min-width:0;color:var(--muted);font-size:.66rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status-pill{flex:0 0 auto;border:1px solid var(--line-strong);border-radius:999px;padding:.32rem .7rem;font-size:.7rem;font-weight:900;letter-spacing:.12em;display:inline-flex;align-items:center;gap:.4rem}
+.status-pill::before{content:"";display:inline-block;width:.5rem;height:.5rem;border-radius:999px;background:currentColor;box-shadow:0 0 8px currentColor}
+.status-pill[data-health="good"]{border-color:var(--good);background:rgba(109,242,214,.08);color:var(--good)}
+.status-pill[data-health="warn"]{border-color:var(--warn);background:rgba(255,209,102,.10);color:var(--warn)}
+.status-pill[data-health="bad"]{border-color:var(--bad);background:rgba(255,107,138,.12);color:var(--bad)}
 a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}.muted{color:var(--muted)}
-.hero,.panel,.card,.case-card{border:1px solid var(--line);border-radius:1.2rem;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(14px) saturate(112%)}
-.hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr);gap:1.25rem;align-items:stretch;padding:clamp(1.25rem,3vw,2.2rem);overflow:hidden;background:linear-gradient(135deg,rgba(3,7,17,.78),rgba(6,15,28,.38));min-height:0}
-.hero-copy{display:flex;flex-direction:column;justify-content:center}.eyebrow{color:var(--mint);font-size:.72rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase}.hero h1{max-width:760px;margin:.4rem 0 .9rem;font-size:clamp(2.1rem,5vw,4.6rem);line-height:.96;letter-spacing:-.055em}.lede{max-width:850px;color:rgba(245,248,255,.9);font-size:clamp(1rem,1.6vw,1.18rem)}.hero-visual{display:grid;gap:.8rem;align-content:stretch}.hero-chart{min-height:100%;border:1px solid var(--line);border-radius:1rem;background:rgba(0,3,10,.34);padding:1rem}.hero-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}.tiny-note{font-size:.78rem;color:var(--muted)}
-.cards,.chart-grid,.quality-grid,.controls{display:grid;gap:.9rem}.cards{grid-template-columns:repeat(5,1fr);margin:1rem 0}.card{padding:.9rem}.card span,.label{display:block;color:var(--muted);font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.card strong{display:block;margin:.25rem 0;font-size:clamp(1.45rem,2.5vw,2.2rem);line-height:1}.panel{margin-top:1rem;padding:1rem}.panel h2{margin:.1rem 0 .8rem;font-size:1.22rem}.callout{border-color:rgba(255,209,102,.34);background:linear-gradient(135deg,rgba(255,209,102,.10),rgba(53,240,255,.05))}.callout ul{margin:.6rem 0 .2rem}
-.chart-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-panel svg,.hero-chart svg{width:100%;height:auto;display:block}.chart-caption{margin:.65rem 0 0;color:var(--muted);font-size:.85rem}.chart-legend{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.7rem}.bars{display:grid;gap:.55rem}.bar{display:grid;grid-template-columns:150px 1fr 64px;gap:.65rem;align-items:center}.track{height:.55rem;border:1px solid var(--line);border-radius:999px;background:rgba(0,3,10,.48);overflow:hidden}.fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cyan),var(--mint));box-shadow:0 0 18px rgba(53,240,255,.34)}
-.heatmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem}.heat{border:1px solid var(--line);border-radius:.95rem;padding:.75rem;background:linear-gradient(135deg,rgba(53,240,255,var(--heat)),rgba(109,242,214,.05))}.heat strong{display:block}.pillrow{display:flex;flex-wrap:wrap;gap:.38rem}.pill{display:inline-flex;gap:.25rem;border:1px solid var(--line);border-radius:999px;padding:.18rem .5rem;background:rgba(53,240,255,.055);color:rgba(245,248,255,.86);font-size:.76rem}.tag{border:1px solid var(--line);border-radius:.65rem;padding:.22rem .42rem;color:var(--muted);font-size:.76rem}
-.controls{grid-template-columns:1.7fr repeat(3,1fr) .9fr auto;align-items:end}.control label{display:block;margin-bottom:.3rem;color:var(--muted);font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em}input,select,button{width:100%;border:1px solid var(--line);border-radius:.82rem;background:rgba(0,3,10,.55);color:var(--text);padding:.65rem .75rem;font:inherit}button{cursor:pointer}button:hover,button:focus{border-color:var(--line-strong);box-shadow:0 0 0 3px rgba(53,240,255,.1)}
-.case-list{display:grid;gap:.65rem;margin-top:1rem;max-height:72vh;overflow:auto;padding-right:.35rem;scrollbar-color:rgba(53,240,255,.35) rgba(3,7,17,.35)}.case-card{padding:.8rem}.case-head{display:grid;grid-template-columns:1fr auto;gap:.75rem;align-items:start}.case-title{margin:0;font-size:.96rem}.case-summary{margin:.55rem 0;color:rgba(245,248,255,.86)}.scoreline{display:flex;flex-wrap:wrap;gap:.45rem;margin:.55rem 0}details{margin-top:.55rem}summary{cursor:pointer;color:var(--cyan)}pre,code{font-family:SFMono-Regular,Cascadia Code,Roboto Mono,ui-monospace,monospace}pre{overflow:auto;max-height:180px;border:1px solid var(--line);border-radius:.75rem;padding:.65rem;background:rgba(0,3,10,.52);white-space:pre-wrap}.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}
-.table-wrap{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:.85rem}table{width:100%;border-collapse:collapse;min-width:860px}th,td{border-bottom:1px solid var(--line);padding:.58rem;text-align:left;vertical-align:top}th{position:sticky;top:0;background:rgba(3,7,17,.94);color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.1em}.fallback summary{list-style:none;cursor:pointer}.fallback summary::-webkit-details-marker{display:none}.fallback-summary{display:flex;justify-content:space-between;gap:1rem;align-items:center}.fallback:not([open]){padding:1rem}.empty{display:none;color:var(--warn);padding:1rem}
-@media(max-width:980px){.hero,.cards,.chart-grid,.quality-grid,.controls,.cols{grid-template-columns:1fr}.bar{grid-template-columns:1fr}.topbar{grid-template-columns:1fr}.status-dot{justify-self:start}.report-shell{width:min(100% - 1rem,1180px)}}
+.panel,.card,.case-card,.kpi,.verdict{border:1px solid var(--line);border-radius:1.1rem;background:var(--panel);box-shadow:var(--shadow);backdrop-filter:blur(14px) saturate(112%)}
+.verdict{padding:clamp(.95rem,2.2vw,1.4rem);margin-top:.9rem;display:grid;gap:.5rem;border-left:3px solid var(--line-strong)}
+.verdict[data-health="good"]{border-left-color:var(--good-strong)}
+.verdict[data-health="warn"]{border-left-color:var(--warn-strong)}
+.verdict[data-health="bad"]{border-left-color:var(--bad-strong)}
+.verdict .eyebrow{color:var(--muted)}
+.verdict h1{margin:.1rem 0;font-size:clamp(1.35rem,3.2vw,2rem);line-height:1.15;letter-spacing:-.02em;font-weight:800}
+.verdict .lede{margin:0;color:rgba(245,248,255,.88);font-size:clamp(.92rem,1.4vw,1.05rem);line-height:1.5}
+.eyebrow{color:var(--mint);font-size:.68rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:.7rem;margin-top:.8rem}
+.kpi{padding:.8rem .9rem;display:flex;flex-direction:column;gap:.2rem;border-left:3px solid transparent;position:relative}
+.kpi .kpi-label{display:flex;align-items:center;gap:.35rem;color:var(--muted);font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.kpi .kpi-value{font-size:clamp(1.3rem,2.4vw,1.7rem);line-height:1.05;font-weight:800;letter-spacing:-.01em}
+.kpi .kpi-desc{color:var(--muted);font-size:.74rem}
+.kpi .kpi-delta{display:inline-flex;align-items:center;gap:.25rem;font-size:.7rem;font-weight:700;margin-top:.1rem}
+.kpi[data-health="good"]{border-left-color:var(--good)}
+.kpi[data-health="warn"]{border-left-color:var(--warn)}
+.kpi[data-health="bad"]{border-left-color:var(--bad)}
+.kpi[data-health="good"] .kpi-value{color:var(--good)}
+.kpi[data-health="warn"] .kpi-value{color:var(--warn)}
+.kpi[data-health="bad"] .kpi-value{color:var(--bad)}
+.kpi-delta[data-trend="up-good"],.kpi-delta[data-trend="down-good"]{color:var(--good)}
+.kpi-delta[data-trend="up-bad"],.kpi-delta[data-trend="down-bad"]{color:var(--bad)}
+.kpi-delta[data-trend="flat"]{color:var(--muted)}
+.info-btn{width:1.1rem;height:1.1rem;min-width:1.1rem;padding:0;border-radius:999px;border:1px solid var(--line);background:rgba(0,3,10,.55);color:var(--muted);font-size:.65rem;font-weight:900;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.info-btn:hover,.info-btn:focus{color:var(--cyan);border-color:var(--line-strong);outline:none;box-shadow:0 0 0 2px rgba(53,240,255,.2)}
+.info-popover{position:absolute;z-index:30;width:min(320px,calc(100vw - 1.5rem));padding:.9rem 1rem;border:1px solid var(--line-strong);border-radius:.9rem;background:rgba(3,7,17,.96);box-shadow:var(--shadow);color:var(--text);font-size:.82rem;line-height:1.45}
+.info-popover[hidden]{display:none}
+.info-popover h3{margin:0 0 .3rem;font-size:.95rem;font-weight:800}
+.info-popover p{margin:.25rem 0}
+.info-popover .info-targets{color:var(--muted);font-size:.75rem;margin-top:.4rem;padding-top:.4rem;border-top:1px dashed var(--line)}
+.info-popover .info-close{position:absolute;top:.35rem;right:.5rem;border:none;background:transparent;color:var(--muted);font-size:.9rem;cursor:pointer;padding:.15rem .35rem}
+.chart-grid,.quality-grid,.controls{display:grid;gap:.9rem}
+.chart-grid{grid-template-columns:repeat(auto-fit,minmax(360px,1fr));margin-top:1rem}
+.panel{margin-top:1rem;padding:.95rem;border-left:3px solid transparent}
+.panel[data-health="good"]{border-left-color:var(--good)}
+.panel[data-health="warn"]{border-left-color:var(--warn)}
+.panel[data-health="bad"]{border-left-color:var(--bad)}
+.panel h2{margin:.1rem 0 .7rem;font-size:1.18rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.panel h3{font-size:1rem;margin:.8rem 0 .4rem}
+.callout{border-color:rgba(255,209,102,.34);background:linear-gradient(135deg,rgba(255,209,102,.10),rgba(53,240,255,.05))}
+.callout[data-health="good"]{border-color:rgba(109,242,214,.30);background:linear-gradient(135deg,rgba(109,242,214,.10),rgba(53,240,255,.04))}
+.callout[data-health="bad"]{border-color:rgba(255,107,138,.34);background:linear-gradient(135deg,rgba(255,107,138,.12),rgba(53,240,255,.04))}
+.findings-list{margin:.4rem 0 .1rem;padding:0;list-style:none;display:grid;gap:.45rem}
+.finding{display:grid;grid-template-columns:auto 1fr auto;gap:.5rem;align-items:baseline;padding:.5rem .7rem;border:1px solid var(--line);border-radius:.7rem;background:rgba(0,3,10,.28)}
+.finding[data-health="good"]{border-color:rgba(109,242,214,.3)}
+.finding[data-health="warn"]{border-color:rgba(255,209,102,.34)}
+.finding[data-health="bad"]{border-color:rgba(255,107,138,.36)}
+.finding-label{font-weight:800}
+.finding-value{font-variant-numeric:tabular-nums;font-weight:800}
+.finding-value[data-health="good"]{color:var(--good)}
+.finding-value[data-health="warn"]{color:var(--warn)}
+.finding-value[data-health="bad"]{color:var(--bad)}
+.finding-msg{grid-column:1/-1;color:var(--muted);font-size:.82rem}
+.chart-panel svg{width:100%;height:auto;display:block}
+.chart-caption{margin:.6rem 0 0;color:var(--muted);font-size:.82rem}
+.chart-legend{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.7rem}
+.bars{display:grid;gap:.55rem}
+.bar{display:grid;grid-template-columns:minmax(120px,150px) 1fr 62px;gap:.65rem;align-items:center}
+.track{height:.55rem;border:1px solid var(--line);border-radius:999px;background:rgba(0,3,10,.48);overflow:hidden}
+.fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cyan),var(--mint));box-shadow:0 0 18px rgba(53,240,255,.34)}
+.fill[data-health="good"]{background:linear-gradient(90deg,var(--good-strong),var(--good));box-shadow:0 0 18px rgba(109,242,214,.35)}
+.fill[data-health="warn"]{background:linear-gradient(90deg,var(--warn-strong),var(--warn));box-shadow:0 0 18px rgba(255,209,102,.34)}
+.fill[data-health="bad"]{background:linear-gradient(90deg,var(--bad-strong),var(--bad));box-shadow:0 0 18px rgba(255,107,138,.34)}
+.heatmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem}
+.heat{border:1px solid var(--line);border-radius:.9rem;padding:.75rem;background:linear-gradient(135deg,rgba(53,240,255,var(--heat)),rgba(109,242,214,.05))}
+.heat[data-health="good"]{border-color:rgba(109,242,214,.34);background:linear-gradient(135deg,rgba(109,242,214,var(--heat)),rgba(3,7,17,.3))}
+.heat[data-health="warn"]{border-color:rgba(255,209,102,.34);background:linear-gradient(135deg,rgba(255,209,102,var(--heat)),rgba(3,7,17,.3))}
+.heat[data-health="bad"]{border-color:rgba(255,107,138,.34);background:linear-gradient(135deg,rgba(255,107,138,var(--heat)),rgba(3,7,17,.3))}
+.heat strong{display:block}
+.pillrow{display:flex;flex-wrap:wrap;gap:.35rem}
+.pill{display:inline-flex;gap:.25rem;border:1px solid var(--line);border-radius:999px;padding:.18rem .5rem;background:rgba(53,240,255,.05);color:rgba(245,248,255,.86);font-size:.72rem}
+.tag{border:1px solid var(--line);border-radius:.55rem;padding:.18rem .42rem;color:var(--muted);font-size:.72rem;display:inline-flex;align-items:center;gap:.25rem}
+.tag[data-health="good"]{border-color:rgba(109,242,214,.35);color:var(--good)}
+.tag[data-health="warn"]{border-color:rgba(255,209,102,.35);color:var(--warn)}
+.tag[data-health="bad"]{border-color:rgba(255,107,138,.4);color:var(--bad)}
+.controls{grid-template-columns:1fr;align-items:end}
+@media(min-width:641px){.controls{grid-template-columns:1.6fr repeat(3,1fr) .9fr auto}}
+.control label{display:block;margin-bottom:.3rem;color:var(--muted);font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em}
+input,select,button{width:100%;border:1px solid var(--line);border-radius:.75rem;background:rgba(0,3,10,.55);color:var(--text);padding:.55rem .7rem;font:inherit}
+button{cursor:pointer}
+button:hover,button:focus{border-color:var(--line-strong);box-shadow:0 0 0 3px rgba(53,240,255,.1)}
+.case-list{display:grid;gap:.6rem;margin-top:1rem;max-height:72vh;overflow:auto;padding-right:.35rem;scrollbar-color:rgba(53,240,255,.35) rgba(3,7,17,.35)}
+.case-card{padding:.8rem}
+.case-head{display:grid;grid-template-columns:1fr auto;gap:.75rem;align-items:start}
+.case-title{margin:0;font-size:.94rem}
+.case-summary{margin:.5rem 0;color:rgba(245,248,255,.86);font-size:.88rem}
+.scoreline{display:flex;flex-wrap:wrap;gap:.4rem;margin:.5rem 0}
+.section-details>summary{list-style:none;cursor:pointer;padding:.25rem 0;display:flex;align-items:center;gap:.6rem;justify-content:space-between;flex-wrap:wrap}
+.section-details>summary::-webkit-details-marker{display:none}
+.section-details>summary::after{content:"+";font-weight:800;color:var(--cyan);border:1px solid var(--line);border-radius:999px;padding:.05rem .5rem}
+.section-details[open]>summary::after{content:"−"}
+details.section-details{margin-top:.55rem}
+summary{cursor:pointer;color:var(--cyan)}
+pre,code{font-family:SFMono-Regular,Cascadia Code,Roboto Mono,ui-monospace,monospace}
+pre{overflow:auto;max-height:180px;border:1px solid var(--line);border-radius:.7rem;padding:.6rem;background:rgba(0,3,10,.52);white-space:pre-wrap;font-size:.78rem}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.7rem}
+.attention-list{display:grid;gap:.4rem;margin:.5rem 0 0;padding:0;list-style:none}
+.attention-list li{padding:.4rem .6rem;border:1px solid var(--line);border-radius:.65rem;background:rgba(0,3,10,.3);font-size:.82rem;display:flex;gap:.4rem;align-items:baseline}
+.attention-list li[data-health="warn"]{border-color:rgba(255,209,102,.34)}
+.attention-list li[data-health="bad"]{border-color:rgba(255,107,138,.36)}
+.table-wrap{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:.8rem}
+table{width:100%;border-collapse:collapse;min-width:720px}
+th,td{border-bottom:1px solid var(--line);padding:.5rem;text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:rgba(3,7,17,.94);color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.1em}
+.fallback summary{list-style:none;cursor:pointer}
+.fallback summary::-webkit-details-marker{display:none}
+.fallback-summary{display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap}
+.fallback:not([open]){padding:1rem}
+.empty{display:none;color:var(--warn);padding:1rem}
+@media(max-width:640px){
+	.report-shell{padding-top:4.6rem}
+	.chart-grid{grid-template-columns:1fr}
+	.kpi-strip{grid-template-columns:repeat(2,1fr)}
+	.bar{grid-template-columns:minmax(110px,1fr) 2fr 46px;gap:.4rem}
+	.panel h2{font-size:1.06rem}
+	.topbar{letter-spacing:.08em}
+	.topmeta{flex-basis:100%;order:3}
+}
 @media(prefers-reduced-motion:reduce){*,.noise{animation:none!important;transition:none!important}}
 `;
 }
 function renderLabHeader(report: Report): string {
-	return `<header class="topbar"><div class="wordmark">MOXEL ATLAS EVALS</div><div class="topmeta">${escapeHtml(report.dataset)} · ${escapeHtml(report.generatedAt)} · ${escapeHtml(report.runtime.repoRevision ?? "local revision")}</div><div class="status-dot">${report.thresholds?.passed === false ? "GATED FAIL" : "PASSING RUN"}</div></header>`;
+	const revision = report.runtime.repoRevision
+		? report.runtime.repoRevision.slice(0, 7)
+		: "local";
+	const timestamp = report.generatedAt.slice(0, 16).replace("T", " ");
+	return `<header class="topbar"><div class="wordmark">MOXEL ATLAS EVALS</div><div class="topmeta">${escapeHtml(report.dataset)} · ${escapeHtml(timestamp)}Z · rev ${escapeHtml(revision)}</div><div class="status-pill" data-health="${escapeHtml(report.narrative.severity)}">${severityBadge(report.narrative.severity)}</div></header>`;
 }
 
-function renderHero(report: Report): string {
-	return `<section class="hero"><div class="hero-copy"><div class="eyebrow">Atlas retrieval eval · deterministic benchmark</div><h1>Atlas finds the required docs. Ranking still has measurable headroom.</h1><p class="lede">${escapeHtml(report.narrative.verdict)}</p><p class="muted">${escapeHtml(report.description ?? "Deterministic retrieval evaluation")} Measures retrieved source evidence for Atlas docs workflows. Does not score generated answers.</p></div><aside class="hero-visual" aria-label="Headline retrieval charts"><div class="hero-chart" data-eval-chart="headline-dial"><div class="hero-chart-grid">${renderDonutSvg("Pass", report.metrics.passRate, `${report.passedCases}/${report.totalCases}`)}${renderDonutSvg("Recall@5", report.metrics.pathRecallAt5, percent(report.metrics.pathRecallAt5))}</div><p class="tiny-note">Pass gate verifies deterministic expectations. Recall@k shows whether expected source paths appear early.</p></div>${renderPathRankSparkline(report)}</aside></section>`;
+function renderVerdictCard(report: Report): string {
+	const description =
+		report.description ??
+		"Deterministic retrieval evaluation against atlas inspect retrieval.";
+	return `<section class="verdict" data-health="${escapeHtml(report.narrative.severity)}" aria-labelledby="verdict-headline"><div class="eyebrow">Atlas retrieval eval · ${report.passedCases}/${report.totalCases} deterministic cases</div><h1 id="verdict-headline">${escapeHtml(report.narrative.headline)}</h1><p class="lede">${escapeHtml(report.narrative.verdict)}</p><p class="muted">${escapeHtml(description)} Measures retrieved source evidence for Atlas docs workflows. Does not score generated answers.</p></section>`;
 }
 
-function renderHeadlineCards(report: Report): string {
-	return `<section class="cards" aria-label="Headline metrics">${[
-		scoreCard(
-			"Cases passing",
-			`${report.passedCases}/${report.totalCases}`,
-			percent(report.metrics.passRate),
-		),
-		scoreCard(
-			"Recall@5",
-			percent(report.metrics.pathRecallAt5),
-			"expected paths",
-		),
-		scoreCard("MRR", String(report.metrics.mrr), "first expected path"),
-		scoreCard("P95 latency", `${report.metrics.p95LatencyMs}ms`, "local CLI"),
-		scoreCard(
-			"Abstain/safety",
-			`${percent(report.metrics.noResultAccuracy)} / ${percent(report.metrics.forbiddenPathAccuracy)}`,
-			"no-result / forbidden",
-		),
-	].join("")}</section>`;
+function renderKpiStrip(report: Report): string {
+	const findings = report.narrative.keyFindings;
+	const shown = (
+		[
+			"passRate",
+			"pathRecallAt5",
+			"mrr",
+			"p95LatencyMs",
+			"noResultAccuracy",
+		] as HealthMetric[]
+	)
+		.map((metric) => findings.find((finding) => finding.metric === metric))
+		.filter(
+			(finding): finding is NarrativeFinding => finding !== undefined,
+		);
+	const deltaFor = (metric: HealthMetric): MetricDeltaEntry | undefined =>
+		report.deltas?.entries.find((entry) => entry.metric === metric);
+	return `<section class="kpi-strip" aria-label="Headline metrics">${shown
+		.map((finding) =>
+			renderKpiCard(finding, deltaFor(finding.metric)),
+		)
+		.join("")}</section>`;
 }
 
-function scoreCard(label: string, value: string, description: string): string {
-	return `<article class="card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small class="muted">${escapeHtml(description)}</small></article>`;
+function renderKpiCard(
+	finding: NarrativeFinding,
+	delta: MetricDeltaEntry | undefined,
+): string {
+	return `<article class="kpi" data-health="${escapeHtml(finding.severity)}" data-metric="${escapeHtml(finding.metric)}"><div class="kpi-label">${escapeHtml(METRIC_GLOSSARY[finding.metric].label)}${renderInfoButton(finding.metric)}</div><strong class="kpi-value">${escapeHtml(finding.value)}</strong><small class="kpi-desc">${escapeHtml(
+		METRIC_GLOSSARY[finding.metric].short.split(".")[0] ?? "",
+	)}</small>${delta ? renderKpiDelta(delta) : ""}</article>`;
+}
+
+function renderKpiDelta(delta: MetricDeltaEntry): string {
+	const magnitude = formatDeltaMagnitude(delta.metric, delta.delta);
+	const isFlat = Math.abs(delta.delta) < 1e-9;
+	const isImprovement =
+		!isFlat &&
+		(delta.direction === "higher" ? delta.delta > 0 : delta.delta < 0);
+	const arrow = isFlat ? "·" : delta.delta > 0 ? "▲" : "▼";
+	const trend = isFlat
+		? "flat"
+		: delta.delta > 0
+			? isImprovement
+				? "up-good"
+				: "up-bad"
+			: isImprovement
+				? "down-good"
+				: "down-bad";
+	return `<span class="kpi-delta" data-trend="${escapeHtml(trend)}" title="vs baseline">${arrow} ${escapeHtml(magnitude)} vs baseline</span>`;
+}
+
+function renderInfoButton(metric: HealthMetric): string {
+	return `<button type="button" class="info-btn" data-info-metric="${escapeHtml(metric)}" aria-label="What is ${escapeHtml(METRIC_GLOSSARY[metric].label)}?">i</button>`;
+}
+
+function renderAtAGlance(report: Report): string {
+	const radarMetrics: Array<[string, number, HealthLevel]> = [
+		[
+			"Pass",
+			report.metrics.passRate,
+			classifyHealth("passRate", report.metrics.passRate),
+		],
+		[
+			"R@5",
+			report.metrics.pathRecallAt5,
+			classifyHealth("pathRecallAt5", report.metrics.pathRecallAt5),
+		],
+		[
+			"MRR",
+			report.metrics.mrr,
+			classifyHealth("mrr", report.metrics.mrr),
+		],
+		[
+			"Abstain",
+			report.metrics.noResultAccuracy,
+			classifyHealth("noResultAccuracy", report.metrics.noResultAccuracy),
+		],
+		[
+			"Forbidden",
+			report.metrics.forbiddenPathAccuracy,
+			classifyHealth(
+				"forbiddenPathAccuracy",
+				report.metrics.forbiddenPathAccuracy,
+			),
+		],
+		[
+			"Terms",
+			report.metrics.termRecall,
+			classifyHealth("termRecall", report.metrics.termRecall),
+		],
+	];
+	return `<section class="panel" data-eval-chart="at-a-glance" data-health="${escapeHtml(report.narrative.severity)}"><div class="case-head"><div><div class="eyebrow">At a glance</div><h2>Metric constellation${renderInfoButton("mrr")}</h2></div></div>${renderRadarSvg(radarMetrics)}<p class="chart-caption">Each axis is a metric scaled to 0–1. Fill color tracks the worst axis; outer ring is target.</p></section>`;
 }
 
 function renderInterpretation(report: Report): string {
-	return `<section class="panel callout"><div class="eyebrow">Interpretation</div><h2>Perfect pass rate can coexist with rank-quality headroom.</h2><ul>${report.narrative.keyFindings.map((finding) => `<li>${escapeHtml(finding)}</li>`).join("")}</ul><p class="muted">${report.narrative.caveats.map(escapeHtml).join(" ")}</p></section>`;
+	const severity = report.narrative.severity;
+	return `<section class="panel callout" data-health="${escapeHtml(severity)}"><div class="eyebrow">Interpretation</div><h2>${escapeHtml(report.narrative.headline)}</h2><ul class="findings-list">${report.narrative.keyFindings
+		.map(
+			(finding) =>
+				`<li class="finding" data-health="${escapeHtml(finding.severity)}"><span class="finding-label">${escapeHtml(finding.label)}${renderInfoButton(finding.metric)}</span><span class="finding-value" data-health="${escapeHtml(finding.severity)}">${escapeHtml(finding.value)}</span><span class="tag" data-health="${escapeHtml(finding.severity)}">${escapeHtml(finding.severity)}</span><span class="finding-msg">${escapeHtml(finding.message)}</span></li>`,
+		)
+		.join(
+			"",
+		)}</ul>${report.narrative.attentionAreas.length === 0 ? "" : `<h3>Attention areas</h3><ul class="attention-list">${report.narrative.attentionAreas.map((area) => `<li data-health="${escapeHtml(area.severity)}">${escapeHtml(area.message)}</li>`).join("")}</ul>`}<p class="muted">${report.narrative.caveats.map(escapeHtml).join(" ")}</p></section>`;
 }
 
 function renderCharts(report: Report): string {
-	return `<section class="chart-grid"><article class="panel chart-panel" data-eval-chart="recall-funnel"><h2>Recall and sparse-label rank quality</h2>${renderRecallSvg(report)}<p class="chart-caption">Recall@k asks: did known-good paths appear by rank k? Expected-path precision/nDCG are sparse-label lower bounds, not full relevance judgments.</p><div class="bars">${[
-		["Recall@1", report.metrics.pathRecallAt1],
-		["Recall@3", report.metrics.pathRecallAt3],
-		["Recall@5", report.metrics.pathRecallAt5],
-		["Expected-path P@5", report.metrics.expectedPathPrecisionAt5],
-		["Expected-path nDCG@5", report.metrics.expectedPathNdcgAt5],
-	]
-		.map(([label, value]) => renderProgress(String(label), Number(value)))
+	const recallBars: Array<[string, number, HealthMetric]> = [
+		["Recall@1", report.metrics.pathRecallAt1, "pathRecallAt1"],
+		["Recall@3", report.metrics.pathRecallAt3, "pathRecallAt3"],
+		["Recall@5", report.metrics.pathRecallAt5, "pathRecallAt5"],
+		[
+			"Expected-path P@5",
+			report.metrics.expectedPathPrecisionAt5,
+			"expectedPathPrecisionAt5",
+		],
+		[
+			"Expected-path nDCG@5",
+			report.metrics.expectedPathNdcgAt5,
+			"expectedPathNdcgAt5",
+		],
+	];
+	const recallSeverity = worstHealth(
+		recallBars.map(([, value, metric]) => classifyHealth(metric, value)),
+	);
+	const rankBucketsHealth = rankBucketHealth(report.quality.rankBuckets);
+	const rankBucketSeverity = worstBucketSeverity(rankBucketsHealth);
+	const latencyBucketsHealth = latencyBucketHealth(
+		report.quality.latencyBuckets,
+	);
+	const latencyBucketSeverity = worstBucketSeverity(latencyBucketsHealth);
+	const latencyHealth = classifyHealth(
+		"p95LatencyMs",
+		report.metrics.p95LatencyMs,
+	);
+	const recallLine: Array<[string, number, HealthLevel]> = recallBars.map(
+		([label, value, metric]) => [label, value, classifyHealth(metric, value)],
+	);
+	return `<section class="chart-grid"><article class="panel chart-panel" data-eval-chart="recall-funnel" data-health="${escapeHtml(recallSeverity)}"><h2>Recall and sparse-label rank quality${renderInfoButton("pathRecallAt5")}</h2>${renderLineSvg(recallLine)}<p class="chart-caption">Recall@k asks: did known-good paths appear by rank k? Expected-path precision/nDCG are sparse-label lower bounds, not full relevance judgments.</p><div class="bars">${recallBars
+		.map(([label, value, metric]) =>
+			renderProgress(label, value, classifyHealth(metric, value)),
+		)
 		.join(
 			"",
-		)}</div></article><article class="panel chart-panel" data-eval-chart="rank-buckets"><h2>First expected path rank</h2>${renderBucketSvg(report.quality.rankBuckets, "cases")}<p class="chart-caption">Lower ranks are better. Missing/no-label bucket includes abstain cases or cases without a first expected path.</p></article><article class="panel chart-panel" data-eval-chart="latency-buckets"><h2>Latency distribution</h2>${renderBucketSvg(report.quality.latencyBuckets, "cases")}<p class="chart-caption">Local CLI wall-clock runtime per eval case. P95: ${report.metrics.p95LatencyMs}ms.</p></article><article class="panel chart-panel" data-eval-chart="metric-radar"><h2>Metric constellation</h2>${renderRadarSvg(
+		)}</div></article><article class="panel chart-panel" data-eval-chart="rank-buckets" data-health="${escapeHtml(rankBucketSeverity)}"><h2>First expected path rank${renderInfoButton("mrr")}</h2>${renderBucketSvg(report.quality.rankBuckets, "cases", rankBucketsHealth)}<p class="chart-caption">Lower ranks are better. Missing/no-label bucket includes abstain cases or cases without a first expected path.</p></article><article class="panel chart-panel" data-eval-chart="latency-buckets" data-health="${escapeHtml(latencyBucketSeverity)}"><h2>Latency distribution${renderInfoButton("p95LatencyMs")}</h2>${renderBucketSvg(report.quality.latencyBuckets, "cases", latencyBucketsHealth)}<p class="chart-caption">Local CLI wall-clock runtime per eval case. p95: ${Math.round(report.metrics.p95LatencyMs)}ms (${escapeHtml(latencyHealth)}), median: ${Math.round(report.metrics.medianLatencyMs)}ms.</p></article><article class="panel chart-panel" data-eval-chart="safety-bars" data-health="${escapeHtml(worstHealth([
+		classifyHealth("noResultAccuracy", report.metrics.noResultAccuracy),
+		classifyHealth(
+			"forbiddenPathAccuracy",
+			report.metrics.forbiddenPathAccuracy,
+		),
+		classifyHealth("termRecall", report.metrics.termRecall),
+		classifyHealth("nonEmptyContextRate", report.metrics.nonEmptyContextRate),
+	]))}"><h2>Safety and context${renderInfoButton("forbiddenPathAccuracy")}</h2><p class="chart-caption">Abstain and forbidden-path accuracy track whether Atlas refuses to leak. Term recall and non-empty context track whether it found anything useful at all.</p><div class="bars">${safetyBars(
+		report,
+	).join("")}</div></article></section>`;
+}
+
+function rankBucketHealth(buckets: RankBucket[]): HealthLevel[] {
+	return buckets.map((bucket) => {
+		if (bucket.bucket === "rank-1") return "good";
+		if (bucket.bucket === "rank-2-3") return "good";
+		if (bucket.bucket === "rank-4-5") return "warn";
+		if (bucket.bucket === "rank-6-10") return "bad";
+		if (bucket.bucket === "rank-gt-10") return "bad";
+		return "warn";
+	});
+}
+
+function latencyBucketHealth(buckets: RankBucket[]): HealthLevel[] {
+	return buckets.map((bucket) => {
+		if (bucket.bucket === "latency-lte-250") return "good";
+		if (bucket.bucket === "latency-251-500") return "good";
+		if (bucket.bucket === "latency-501-1000") return "warn";
+		return "bad";
+	});
+}
+
+function worstBucketSeverity(bucketHealths: HealthLevel[]): HealthLevel {
+	const represented = bucketHealths.filter(
+		(_, index) => index !== undefined,
+	);
+	return represented.length === 0 ? "good" : worstHealth(represented);
+}
+
+function safetyBars(report: Report): string[] {
+	const rows: Array<[string, number, HealthMetric]> = [
+		["Abstain accuracy", report.metrics.noResultAccuracy, "noResultAccuracy"],
 		[
-			["Pass", report.metrics.passRate],
-			["Terms", report.metrics.termRecall],
-			["R@5", report.metrics.pathRecallAt5],
-			["MRR", report.metrics.mrr],
-			["No result", report.metrics.noResultAccuracy],
-			["Forbidden", report.metrics.forbiddenPathAccuracy],
+			"Forbidden-path accuracy",
+			report.metrics.forbiddenPathAccuracy,
+			"forbiddenPathAccuracy",
 		],
-	)}<div class="chart-legend">${metricBars(report).join("")}</div></article></section>`;
-}
-
-function renderDonutSvg(label: string, value: number, center: string): string {
-	const radius = 44;
-	const circumference = 2 * Math.PI * radius;
-	const dash = Math.max(0, Math.min(1, value)) * circumference;
-	return `<svg viewBox="0 0 120 120" role="img" aria-label="${escapeHtml(label)} ${escapeHtml(center)}"><circle cx="60" cy="60" r="44" fill="none" stroke="rgba(70,215,255,.16)" stroke-width="12"/><circle cx="60" cy="60" r="44" fill="none" stroke="url(#donutGradient)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${round(dash)} ${round(circumference)}" transform="rotate(-90 60 60)"/><defs><linearGradient id="donutGradient" x1="0" x2="1"><stop stop-color="#35f0ff"/><stop offset="1" stop-color="#6df2d6"/></linearGradient></defs><text x="60" y="57" text-anchor="middle" fill="#f5f8ff" font-size="18" font-weight="800">${escapeHtml(center)}</text><text x="60" y="78" text-anchor="middle" fill="rgba(195,210,240,.78)" font-size="10" font-weight="700" letter-spacing="1.2">${escapeHtml(label.toUpperCase())}</text></svg>`;
-}
-
-function renderPathRankSparkline(report: Report): string {
-	const points: Array<[string, number]> = [
-		["R@1", report.metrics.pathRecallAt1],
-		["R@3", report.metrics.pathRecallAt3],
-		["R@5", report.metrics.pathRecallAt5],
-		["MRR", report.metrics.mrr],
+		["Term recall", report.metrics.termRecall, "termRecall"],
+		[
+			"Non-empty context",
+			report.metrics.nonEmptyContextRate,
+			"nonEmptyContextRate",
+		],
 	];
-	return `<div class="hero-chart" data-eval-chart="headline-sparkline"><div class="eyebrow">Rank headroom</div>${renderLineSvg(points)}<p class="tiny-note">Known-good evidence is present, but often not rank 1. That is next optimization target.</p></div>`;
+	return rows.map(([label, value, metric]) =>
+		renderProgress(label, value, classifyHealth(metric, value)),
+	);
 }
 
-function renderRecallSvg(report: Report): string {
-	return renderLineSvg([
-		["R@1", report.metrics.pathRecallAt1],
-		["R@3", report.metrics.pathRecallAt3],
-		["R@5", report.metrics.pathRecallAt5],
-		["P@5", report.metrics.expectedPathPrecisionAt5],
-		["nDCG@5", report.metrics.expectedPathNdcgAt5],
-	]);
-}
-
-function renderLineSvg(points: Array<[string, number]>): string {
+function renderLineSvg(points: Array<[string, number, HealthLevel]>): string {
 	const width = 720;
-	const height = 260;
-	const padX = 52;
-	const padY = 34;
+	const height = 240;
+	const padX = 48;
+	const padY = 30;
 	const usableW = width - padX * 2;
 	const usableH = height - padY * 2;
 	const coords = points.map(([, value], index) => {
@@ -788,28 +1377,44 @@ function renderLineSvg(points: Array<[string, number]>): string {
 		.join(" ");
 	const lastX = coords[coords.length - 1]?.[0] ?? padX;
 	const area = `${path} L${lastX},${height - padY} L${padX},${height - padY} Z`;
-	return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Retrieval quality line chart"><defs><linearGradient id="lineFill" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#35f0ff" stop-opacity=".24"/><stop offset="1" stop-color="#6df2d6" stop-opacity=".02"/></linearGradient><linearGradient id="lineStroke" x1="0" x2="1"><stop stop-color="#35f0ff"/><stop offset="1" stop-color="#6df2d6"/></linearGradient></defs><rect x="1" y="1" width="718" height="258" rx="20" fill="rgba(0,3,10,.22)" stroke="rgba(70,215,255,.18)"/>${[0, 0.25, 0.5, 0.75, 1].map((tick) => `<line x1="${padX}" x2="${width - padX}" y1="${round(padY + (1 - tick) * usableH)}" y2="${round(padY + (1 - tick) * usableH)}" stroke="rgba(70,215,255,.12)"/><text x="14" y="${round(padY + (1 - tick) * usableH + 4)}" fill="rgba(195,210,240,.64)" font-size="11">${Math.round(tick * 100)}%</text>`).join("")}<path d="${area}" fill="url(#lineFill)"/><path d="${path}" fill="none" stroke="url(#lineStroke)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>${coords.map(([x, y], index) => `<circle cx="${x}" cy="${y}" r="6" fill="#6df2d6" stroke="#030711" stroke-width="3"/><text x="${x}" y="${height - 12}" text-anchor="middle" fill="rgba(245,248,255,.82)" font-size="12" font-weight="700">${escapeHtml(points[index]?.[0] ?? "")}</text><text x="${x}" y="${Math.max(18, y - 12)}" text-anchor="middle" fill="#f5f8ff" font-size="13" font-weight="800">${percent(points[index]?.[1] ?? 0)}</text>`).join("")}</svg>`;
+	const overallHealth = worstHealth(points.map(([, , health]) => health));
+	const stroke = colorFor(overallHealth);
+	return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Retrieval quality line chart"><defs><linearGradient id="lineFill" x1="0" x2="0" y1="0" y2="1"><stop stop-color="${stroke}" stop-opacity=".28"/><stop offset="1" stop-color="${stroke}" stop-opacity=".02"/></linearGradient></defs><rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="18" fill="rgba(0,3,10,.22)" stroke="rgba(70,215,255,.15)"/>${[0, 0.25, 0.5, 0.75, 1].map((tick) => `<line x1="${padX}" x2="${width - padX}" y1="${round(padY + (1 - tick) * usableH)}" y2="${round(padY + (1 - tick) * usableH)}" stroke="rgba(70,215,255,.1)"/><text x="12" y="${round(padY + (1 - tick) * usableH + 4)}" fill="rgba(195,210,240,.6)" font-size="11">${Math.round(tick * 100)}%</text>`).join("")}<path d="${area}" fill="url(#lineFill)"/><path d="${path}" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${coords
+		.map(([x, y], index) => {
+			const [label, value, health] = points[index] ?? ["", 0, "good"];
+			const dotColor = colorFor(health);
+			return `<circle cx="${x}" cy="${y}" r="5" fill="${dotColor}" stroke="#030711" stroke-width="2"/><text x="${x}" y="${height - 10}" text-anchor="middle" fill="rgba(245,248,255,.82)" font-size="11" font-weight="700">${escapeHtml(label)}</text><text x="${x}" y="${Math.max(16, y - 10)}" text-anchor="middle" fill="#f5f8ff" font-size="12" font-weight="800">${percent(value)}</text>`;
+		})
+		.join("")}</svg>`;
 }
 
-function renderBucketSvg(buckets: RankBucket[], unit: string): string {
+function renderBucketSvg(
+	buckets: RankBucket[],
+	unit: string,
+	healthLevels: HealthLevel[] = [],
+): string {
 	const width = 720;
-	const rowH = 38;
-	const height = Math.max(170, 42 + buckets.length * rowH);
+	const rowH = 34;
+	const height = Math.max(160, 40 + buckets.length * rowH);
 	const maxCount = Math.max(1, ...buckets.map((bucket) => bucket.count));
 	const labelW = 128;
 	const barW = width - labelW - 88;
-	return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Bucket bar chart"><rect x="1" y="1" width="718" height="${height - 2}" rx="20" fill="rgba(0,3,10,.22)" stroke="rgba(70,215,255,.18)"/>${buckets
+	return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Bucket bar chart"><rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="18" fill="rgba(0,3,10,.22)" stroke="rgba(70,215,255,.15)"/>${buckets
 		.map((bucket, index) => {
-			const y = 28 + index * rowH;
+			const y = 24 + index * rowH;
 			const w = Math.max(4, (bucket.count / maxCount) * barW);
-			return `<text x="22" y="${y + 15}" fill="rgba(245,248,255,.82)" font-size="13" font-weight="700">${escapeHtml(bucket.label)}</text><rect x="${labelW}" y="${y}" width="${barW}" height="18" rx="9" fill="rgba(70,215,255,.12)"/><rect x="${labelW}" y="${y}" width="${round(w)}" height="18" rx="9" fill="url(#bucketGradient)"/><text x="${labelW + barW + 16}" y="${y + 14}" fill="#f5f8ff" font-size="13" font-weight="800">${bucket.count}</text>`;
+			const health = healthLevels[index] ?? "good";
+			const color = colorFor(health);
+			return `<text x="20" y="${y + 14}" fill="rgba(245,248,255,.82)" font-size="12" font-weight="700">${escapeHtml(bucket.label)}</text><rect x="${labelW}" y="${y}" width="${barW}" height="16" rx="8" fill="rgba(70,215,255,.1)"/><rect x="${labelW}" y="${y}" width="${round(w)}" height="16" rx="8" fill="${color}" opacity=".88"/><text x="${labelW + barW + 12}" y="${y + 12}" fill="#f5f8ff" font-size="12" font-weight="800">${bucket.count}</text>`;
 		})
 		.join(
 			"",
-		)}<defs><linearGradient id="bucketGradient" x1="0" x2="1"><stop stop-color="#35f0ff"/><stop offset="1" stop-color="#6df2d6"/></linearGradient></defs><text x="22" y="${height - 12}" fill="rgba(195,210,240,.68)" font-size="12">Count of ${escapeHtml(unit)} per bucket</text></svg>`;
+		)}<text x="20" y="${height - 10}" fill="rgba(195,210,240,.68)" font-size="11">Count of ${escapeHtml(unit)} per bucket</text></svg>`;
 }
 
-function renderRadarSvg(metrics: Array<[string, number]>): string {
+function renderRadarSvg(
+	metrics: Array<[string, number, HealthLevel?]>,
+): string {
 	const size = 320;
 	const center = size / 2;
 	const radius = 108;
@@ -827,41 +1432,67 @@ function renderRadarSvg(metrics: Array<[string, number]>): string {
 	const poly = metrics
 		.map(([, value], index) => point(index, value).join(","))
 		.join(" ");
-	return `<svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Metric radar chart"><defs><linearGradient id="radarFill" x1="0" x2="1"><stop stop-color="#35f0ff" stop-opacity=".34"/><stop offset="1" stop-color="#6df2d6" stop-opacity=".24"/></linearGradient></defs><rect x="1" y="1" width="318" height="318" rx="22" fill="rgba(0,3,10,.22)" stroke="rgba(70,215,255,.18)"/>${[0.25, 0.5, 0.75, 1].map((level) => `<polygon points="${metrics.map((_, index) => point(index, level).join(",")).join(" ")}" fill="none" stroke="rgba(70,215,255,.13)"/>`).join("")}${outer.map(([x, y]) => `<line x1="${center}" y1="${center}" x2="${x}" y2="${y}" stroke="rgba(70,215,255,.12)"/>`).join("")}<polygon points="${poly}" fill="url(#radarFill)" stroke="#6df2d6" stroke-width="3"/>${metrics
-		.map(([label, value], index) => {
+	const overall = worstHealth(
+		metrics.map(([, , health]) => health ?? "good"),
+	);
+	const fillColor = colorFor(overall);
+	return `<svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Metric radar chart"><rect x="1" y="1" width="${size - 2}" height="${size - 2}" rx="20" fill="rgba(0,3,10,.22)" stroke="rgba(70,215,255,.15)"/>${[0.25, 0.5, 0.75, 1].map((level) => `<polygon points="${metrics.map((_, index) => point(index, level).join(",")).join(" ")}" fill="none" stroke="rgba(70,215,255,.13)"/>`).join("")}${outer.map(([x, y]) => `<line x1="${center}" y1="${center}" x2="${x}" y2="${y}" stroke="rgba(70,215,255,.1)"/>`).join("")}<polygon points="${poly}" fill="${fillColor}" fill-opacity=".28" stroke="${fillColor}" stroke-width="2.5"/>${metrics
+		.map(([label, value, health], index) => {
 			const [x, y] = point(index, 1.14);
-			return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="rgba(245,248,255,.82)" font-size="11" font-weight="800">${escapeHtml(label)}</text><title>${escapeHtml(label)} ${percent(value)}</title>`;
+			const axisColor = colorFor(health ?? "good");
+			const [dotX, dotY] = point(index, value);
+			return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="rgba(245,248,255,.82)" font-size="11" font-weight="800">${escapeHtml(label)}</text><circle cx="${dotX}" cy="${dotY}" r="4" fill="${axisColor}" stroke="#030711" stroke-width="1.5"/><title>${escapeHtml(label)} ${percent(value)} (${escapeHtml(health ?? "good")})</title>`;
 		})
 		.join("")}</svg>`;
 }
 
-function renderProgress(label: string, value: number): string {
+function renderProgress(
+	label: string,
+	value: number,
+	health?: HealthLevel,
+): string {
 	const width = Math.max(0, Math.min(100, Math.round(value * 100)));
-	return `<div class="bar"><span>${escapeHtml(label)}</span><div class="track"><div class="fill" style="width:${width}%"></div></div><strong>${percent(value)}</strong></div>`;
+	const healthAttr = health
+		? ` data-health="${escapeHtml(health)}"`
+		: "";
+	return `<div class="bar"><span>${escapeHtml(label)}</span><div class="track"><div class="fill"${healthAttr} style="width:${width}%"></div></div><strong>${percent(value)}</strong></div>`;
 }
 
-function metricBars(report: Report): string[] {
-	return [
-		["Pass rate", report.metrics.passRate],
-		["Term recall", report.metrics.termRecall],
-		["No-result accuracy", report.metrics.noResultAccuracy],
-		["Forbidden-path accuracy", report.metrics.forbiddenPathAccuracy],
-		["Non-empty context", report.metrics.nonEmptyContextRate],
-	].map(([label, value]) => renderProgress(String(label), Number(value)));
+function colorFor(health: HealthLevel): string {
+	if (health === "bad") return "#ff6b8a";
+	if (health === "warn") return "#ffd166";
+	return "#6df2d6";
 }
 
 function renderCoverageLab(report: Report): string {
-	return `<section class="panel" data-eval-chart="coverage-heatmap"><div class="case-head"><div><div class="eyebrow">Coverage heatmap</div><h2 id="quality-title">Quality by capability</h2></div><select id="quality-group" aria-label="Change coverage heatmap group"><option value="byCapability">Capability</option><option value="byRiskArea">Risk area</option><option value="byProfile">Profile</option><option value="byCategory">Category</option><option value="byPriority">Priority</option><option value="byCoverageType">Coverage type</option></select></div><div id="quality-heatmap" class="heatmap">${renderHeatmap(report.quality.byCapability)}</div></section><section class="panel"><h2>Ranking worklist</h2><p class="muted">Cases below passed deterministic gates but known-good evidence was missing from top five, not first, or slow. Use these to improve retrieval order.</p><div class="case-list">${report.quality.weakestCases.map((item) => `<article class="case-card"><div class="case-head"><strong>${escapeHtml(item.id)}</strong><span class="tag">${escapeHtml(item.reason)}</span></div><p class="muted">${escapeHtml(item.category)} · Recall@5 ${percent(item.recallAt5)} · MRR ${item.mrr} · rank ${item.bestExpectedPathRank ?? "missing"} · ${item.latencyMs}ms</p></article>`).join("")}</div></section>`;
+	return `<section class="panel" data-eval-chart="coverage-heatmap"><div class="case-head"><div><div class="eyebrow">Coverage heatmap</div><h2 id="quality-title">Quality by capability</h2></div><select id="quality-group" aria-label="Change coverage heatmap group"><option value="byCapability">Capability</option><option value="byRiskArea">Risk area</option><option value="byProfile">Profile</option><option value="byCategory">Category</option><option value="byPriority">Priority</option><option value="byCoverageType">Coverage type</option></select></div><div id="quality-heatmap" class="heatmap">${renderHeatmap(report.quality.byCapability)}</div></section><section class="panel"><h2>Ranking worklist</h2><p class="muted">Cases below passed deterministic gates but known-good evidence was missing from top five, not first, or slow. Use these to improve retrieval order.</p><div class="case-list">${report.quality.weakestCases.map(renderWorklistCard).join("")}</div></section>`;
+}
+
+function renderWorklistCard(item: WeakCaseSummary): string {
+	const health: HealthLevel = !item.passed
+		? "bad"
+		: item.recallAt5 < 0.5 || item.bestExpectedPathRank === undefined
+			? "bad"
+			: "warn";
+	return `<article class="case-card" data-health="${escapeHtml(health)}"><div class="case-head"><strong>${escapeHtml(item.id)}</strong><span class="tag" data-health="${escapeHtml(health)}">${escapeHtml(item.reason)}</span></div><p class="muted">${escapeHtml(item.category)} · Recall@5 ${percent(item.recallAt5)} · MRR ${item.mrr.toFixed(2)} · rank ${item.bestExpectedPathRank ?? "missing"} · ${item.latencyMs}ms</p></article>`;
+}
+
+function heatmapHealth(value: QualityGroupSummary): HealthLevel {
+	const recallHealth = classifyHealth("pathRecallAt5", value.recallAt5);
+	const mrrHealth = classifyHealth("mrr", value.mrr);
+	const passHealth = classifyHealth("passRate", value.passRate);
+	return worstHealth([recallHealth, mrrHealth, passHealth]);
 }
 
 function renderHeatmap(group: Record<string, QualityGroupSummary>): string {
 	return Object.entries(group)
 		.map(([name, value]) => {
 			const heat = Math.max(
-				0.05,
+				0.08,
 				Math.min(0.45, value.recallAt5 * 0.35 + value.mrr * 0.1),
 			);
-			return `<article class="heat" style="--heat:${heat}"><strong>${escapeHtml(name)}</strong><span class="muted">${value.passed}/${value.total} pass · R@5 ${percent(value.recallAt5)} · MRR ${value.mrr} · p95 ${value.p95LatencyMs}ms</span><div class="pillrow">${value.weakestCases.map((id) => `<span class="pill">${escapeHtml(id)}</span>`).join("")}</div></article>`;
+			const health = heatmapHealth(value);
+			return `<article class="heat" data-health="${escapeHtml(health)}" style="--heat:${heat}"><strong>${escapeHtml(name)}</strong><span class="muted">${value.passed}/${value.total} pass · R@5 ${percent(value.recallAt5)} · MRR ${value.mrr.toFixed(2)} · p95 ${Math.round(value.p95LatencyMs)}ms</span><div class="pillrow">${value.weakestCases.map((id) => `<span class="pill">${escapeHtml(id)}</span>`).join("")}</div></article>`;
 		})
 		.join("");
 }
@@ -891,14 +1522,35 @@ function unique(values: string[]): string[] {
 }
 
 function renderCaseCard(testCase: CaseResult): string {
-	const status =
-		testCase.passed && testCase.retrieval.recallAt5 < 1
+	const health = caseHealth(testCase);
+	const status = !testCase.passed
+		? "fail"
+		: testCase.retrieval.recallAt5 < 1
 			? "pass · rank headroom"
-			: testCase.passed
-				? "pass"
-				: "fail";
+			: "pass";
 	const summary = caseSummary(testCase);
-	return `<article class="case-card" data-case-card data-id="${escapeHtml(testCase.id)}" data-category="${escapeHtml(testCase.category)}" data-profile="${escapeHtml(testCase.profile ?? "unknown")}" data-risk="${escapeHtml(testCase.riskArea ?? "unknown")}" data-recall="${testCase.retrieval.recallAt5}" data-mrr="${testCase.retrieval.reciprocalRank}" data-latency="${testCase.latencyMs}" data-ranked="${testCase.rankedCount}" data-search="${escapeHtml(caseSearchText(testCase))}"><div class="case-head"><h3 class="case-title">${escapeHtml(testCase.id)} · ${escapeHtml(status)}</h3><button type="button" class="copy-case" data-copy-id="${escapeHtml(testCase.id)}">Copy JSON</button></div>${renderMetadataPills(testCase)}<p class="case-summary">${escapeHtml(summary)}</p><div class="scoreline"><span class="tag">R@1 ${percent(testCase.retrieval.recallAt1)}</span><span class="tag">R@5 ${percent(testCase.retrieval.recallAt5)}</span><span class="tag">MRR ${testCase.retrieval.reciprocalRank}</span><span class="tag">Rank ${testCase.retrieval.bestExpectedPathRank ?? "missing"}</span><span class="tag">${testCase.latencyMs}ms</span></div><details><summary>Open evidence</summary><p><b>Query:</b> ${escapeHtml(testCase.query)}</p><div class="cols"><div><b>Expected behavior</b><pre>${escapeHtml(testCase.expectedBehavior ?? "Required paths/terms present; forbidden paths absent; no-result behavior correct when expected.")}</pre></div><div><b>Top paths</b><pre>${escapeHtml(formatList(testCase.topPaths.slice(0, 10)))}</pre></div><div><b>Missing fields</b><pre>${escapeHtml(JSON.stringify(testCase.missing, null, 2))}</pre></div><div><b>Diagnostics</b><pre>${escapeHtml(summarizeDiagnostics(testCase.diagnostics))}</pre></div></div></details></article>`;
+	const recallHealth = classifyHealth(
+		"pathRecallAt5",
+		testCase.retrieval.recallAt5,
+	);
+	const mrrHealth = classifyHealth(
+		"mrr",
+		testCase.retrieval.reciprocalRank,
+	);
+	const latencyHealth = classifyHealth("p95LatencyMs", testCase.latencyMs);
+	return `<article class="case-card" data-case-card data-health="${escapeHtml(health)}" data-id="${escapeHtml(testCase.id)}" data-category="${escapeHtml(testCase.category)}" data-profile="${escapeHtml(testCase.profile ?? "unknown")}" data-risk="${escapeHtml(testCase.riskArea ?? "unknown")}" data-recall="${testCase.retrieval.recallAt5}" data-mrr="${testCase.retrieval.reciprocalRank}" data-latency="${testCase.latencyMs}" data-ranked="${testCase.rankedCount}" data-search="${escapeHtml(caseSearchText(testCase))}"><div class="case-head"><h3 class="case-title">${escapeHtml(testCase.id)} · <span class="tag" data-health="${escapeHtml(health)}">${escapeHtml(status)}</span></h3><button type="button" class="copy-case" data-copy-id="${escapeHtml(testCase.id)}">Copy JSON</button></div>${renderMetadataPills(testCase)}<p class="case-summary">${escapeHtml(summary)}</p><div class="scoreline"><span class="tag">R@1 ${percent(testCase.retrieval.recallAt1)}</span><span class="tag" data-health="${escapeHtml(recallHealth)}">R@5 ${percent(testCase.retrieval.recallAt5)}</span><span class="tag" data-health="${escapeHtml(mrrHealth)}">MRR ${testCase.retrieval.reciprocalRank.toFixed(2)}</span><span class="tag">Rank ${testCase.retrieval.bestExpectedPathRank ?? "missing"}</span><span class="tag" data-health="${escapeHtml(latencyHealth)}">${testCase.latencyMs}ms</span><span class="tag">Diversity ${testCase.retrieval.topPathDiversity}/5</span></div><details><summary>Open evidence</summary><p><b>Query:</b> ${escapeHtml(testCase.query)}</p><div class="cols"><div><b>Expected behavior</b><pre>${escapeHtml(testCase.expectedBehavior ?? "Required paths/terms present; forbidden paths absent; no-result behavior correct when expected.")}</pre></div><div><b>Top paths</b><pre>${escapeHtml(formatList(testCase.topPaths.slice(0, 10)))}</pre></div><div><b>Missing fields</b><pre>${escapeHtml(JSON.stringify(testCase.missing, null, 2))}</pre></div><div><b>Diagnostics</b><pre>${escapeHtml(summarizeDiagnostics(testCase.diagnostics))}</pre></div></div></details></article>`;
+}
+
+function caseHealth(testCase: CaseResult): HealthLevel {
+	if (!testCase.passed) return "bad";
+	if (testCase.retrieval.recallAt5 < 0.5) return "bad";
+	if (testCase.retrieval.recallAt5 < 1) return "warn";
+	if (
+		testCase.retrieval.bestExpectedPathRank !== undefined &&
+		testCase.retrieval.bestExpectedPathRank > 3
+	)
+		return "warn";
+	return "good";
 }
 
 function caseSummary(testCase: CaseResult): string {
@@ -939,11 +1591,11 @@ function renderMetadataPills(testCase: CaseResult): string {
 }
 
 function renderMethodology(report: Report): string {
-	return `<section class="panel"><h2>Methodology factsheet</h2><ul><li><b>Eval unit:</b> one user-like query against <code>atlas inspect retrieval</code>.</li><li><b>Pass:</b> every deterministic expectation passes: required paths, terms, exclusions, diagnostics, confidence, hit bounds, and no-result behavior.</li><li><b>Recall@k:</b> fraction of expected path substrings found in top-k paths.</li><li><b>Expected-path Precision@k:</b> lower-bound proportion of top-k paths matching sparse expected labels; unlabeled relevant docs may exist.</li><li><b>Expected-path nDCG@k:</b> rank-sensitive binary relevance over sparse expected paths.</li><li><b>MRR:</b> reciprocal rank of first expected path, averaged across cases.</li><li><b>Latency:</b> local wall-clock CLI query time. Median ${report.metrics.medianLatencyMs}ms; p95 ${report.metrics.p95LatencyMs}ms.</li></ul><h3>Limitations</h3><ul>${report.narrative.caveats.map((caveat) => `<li>${escapeHtml(caveat)}</li>`).join("")}</ul></section>`;
+	return `<details class="panel section-details"><summary><div><div class="eyebrow">Methodology</div><strong>Metric definitions and limitations</strong></div><span class="tag">expand</span></summary><h3>Eval unit</h3><p class="muted">One user-like query against <code>atlas inspect retrieval</code>. Pass means every deterministic expectation passed: required paths, terms, exclusions, diagnostics, confidence, hit bounds, and no-result behavior.</p><h3>Metrics</h3><ul><li><b>Recall@k:</b> fraction of expected path substrings found in top-k paths.</li><li><b>Expected-path Precision@k:</b> lower-bound proportion of top-k paths matching sparse expected labels; unlabeled relevant docs may exist.</li><li><b>Expected-path nDCG@k:</b> rank-sensitive binary relevance over sparse expected paths.</li><li><b>MRR:</b> reciprocal rank of first expected path, averaged across cases.</li><li><b>Rank distance:</b> per-case <code>bestExpectedPathRank - 1</code>, averaged; lower is better.</li><li><b>Top-path diversity:</b> distinct parent directory count among top-5 retrieved paths.</li><li><b>Latency:</b> local wall-clock CLI query time. Median ${Math.round(report.metrics.medianLatencyMs)}ms; p95 ${Math.round(report.metrics.p95LatencyMs)}ms.</li></ul><h3>Limitations</h3><ul>${report.narrative.caveats.map((caveat) => `<li>${escapeHtml(caveat)}</li>`).join("")}</ul></details>`;
 }
 
 function renderReproducibility(report: Report): string {
-	const command = "bun run eval:full";
+	const command = "bun run eval";
 	const items: Array<[string, string]> = [
 		["Dataset", report.runtime.datasetPath ?? report.dataset],
 		["CLI", report.runtime.cli],
@@ -954,7 +1606,18 @@ function renderReproducibility(report: Report): string {
 		["Repo revision", report.runtime.repoRevision ?? "unknown"],
 		["Indexed revision", report.runtime.indexedRevision ?? "unknown"],
 	];
-	return `<section class="panel"><div class="case-head"><div><h2>Reproducibility</h2><p class="muted">Local-first command and runtime metadata.</p></div><button type="button" data-copy-text="${escapeHtml(command)}">Copy command</button></div><pre>${escapeHtml(command)}</pre><div class="heatmap">${items.map(([label, value]) => `<div class="heat" style="--heat:.08"><span class="label">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("")}</div><p><a href="mcp-retrieval-report.json">Machine-readable JSON report</a> · <a href="../../docs/evals.md">Interpretation guide</a></p></section>`;
+	return `<details class="panel section-details"><summary><div><div class="eyebrow">Reproducibility</div><strong><code>${escapeHtml(command)}</code></strong></div><button type="button" data-copy-text="${escapeHtml(command)}">Copy</button></summary><p class="muted">Local-first command and runtime metadata.</p><div class="heatmap">${items.map(([label, value]) => `<div class="heat" style="--heat:.08"><span class="label">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("")}</div><p><a href="mcp-retrieval-report.json">Machine-readable JSON report</a> · <a href="../../docs/evals.md">Interpretation guide</a></p></details>`;
+}
+
+function renderResearchNotes(report: Report): string {
+	if (report.researchNotes.length === 0) {
+		return "";
+	}
+	return `<details class="panel section-details"><summary><div><div class="eyebrow">Research context</div><strong>Why Atlas ships its own harness</strong></div><span class="tag">expand</span></summary><ul>${report.researchNotes
+		.map((note) => `<li>${escapeHtml(note)}</li>`)
+		.join(
+			"",
+		)}</ul></details>`;
 }
 
 function renderStaticFallback(report: Report): string {
@@ -966,12 +1629,95 @@ function renderCaseRow(testCase: CaseResult): string {
 }
 
 function renderExplorerScript(): string {
-	return `(function(){const data=JSON.parse(document.getElementById('atlas-eval-report-data').textContent);const cards=[...document.querySelectorAll('[data-case-card]')];const search=document.getElementById('case-search');const cat=document.getElementById('filter-category');const profile=document.getElementById('filter-profile');const risk=document.getElementById('filter-risk');const sort=document.getElementById('case-sort');const list=document.getElementById('case-list');const count=document.getElementById('visible-count');const empty=document.getElementById('empty-state');function apply(){const q=search.value.trim().toLowerCase();let visible=cards.filter(c=>(!q||c.dataset.search.includes(q))&&(!cat.value||c.dataset.category===cat.value)&&(!profile.value||c.dataset.profile===profile.value)&&(!risk.value||c.dataset.risk===risk.value));visible.sort((a,b)=>{const key=sort.value;if(key==='id')return a.dataset.id.localeCompare(b.dataset.id);if(key==='latency')return Number(b.dataset.latency)-Number(a.dataset.latency);if(key==='ranked')return Number(b.dataset.ranked)-Number(a.dataset.ranked);if(key==='recallAt5')return Number(a.dataset.recall)-Number(b.dataset.recall);if(key==='mrr')return Number(a.dataset.mrr)-Number(b.dataset.mrr);return Number(a.dataset.recall)-Number(b.dataset.recall)||Number(a.dataset.mrr)-Number(b.dataset.mrr)||Number(b.dataset.latency)-Number(a.dataset.latency)||a.dataset.id.localeCompare(b.dataset.id)});cards.forEach(c=>c.hidden=true);visible.forEach(c=>{c.hidden=false;list.appendChild(c)});count.textContent=String(visible.length);empty.style.display=visible.length?'none':'block'}[search,cat,profile,risk,sort].forEach(el=>el&&el.addEventListener('input',apply));document.getElementById('clear-filters').addEventListener('click',()=>{search.value='';cat.value='';profile.value='';risk.value='';sort.value='weakest';apply()});document.addEventListener('click',async e=>{const btn=e.target.closest('button');if(!btn)return;let text=btn.dataset.copyText;if(btn.dataset.copyId){text=JSON.stringify(data.cases.find(c=>c.id===btn.dataset.copyId),null,2)}if(!text)return;try{await navigator.clipboard.writeText(text);btn.textContent='Copied'}catch{const area=document.createElement('textarea');area.value=text;document.body.appendChild(area);area.select();document.execCommand('copy');area.remove();btn.textContent='Copied'}});const group=document.getElementById('quality-group');const heat=document.getElementById('quality-heatmap');const title=document.getElementById('quality-title');function heatHtml(groups){return Object.entries(groups).map(([name,v])=>'<article class="heat" style="--heat:'+Math.max(.05,Math.min(.45,v.recallAt5*.35+v.mrr*.1))+'"><strong>'+esc(name)+'</strong><span class="muted">'+v.passed+'/'+v.total+' pass · R@5 '+pct(v.recallAt5)+' · MRR '+v.mrr+' · p95 '+v.p95LatencyMs+'ms</span><div class="pillrow">'+v.weakestCases.map(id=>'<span class="pill">'+esc(id)+'</span>').join('')+'</div></article>').join('')}function esc(s){return String(s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]))}function pct(n){return Math.round(n*100)+'%'}group.addEventListener('change',()=>{heat.innerHTML=heatHtml(data.quality[group.value]);title.textContent='Quality by '+group.options[group.selectedIndex].text.toLowerCase()});apply();})();`;
+	return `(function(){
+const data=JSON.parse(document.getElementById('atlas-eval-report-data').textContent);
+const cards=[...document.querySelectorAll('[data-case-card]')];
+const search=document.getElementById('case-search');
+const cat=document.getElementById('filter-category');
+const profile=document.getElementById('filter-profile');
+const risk=document.getElementById('filter-risk');
+const sort=document.getElementById('case-sort');
+const list=document.getElementById('case-list');
+const count=document.getElementById('visible-count');
+const empty=document.getElementById('empty-state');
+function esc(s){return String(s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]))}
+function pct(n){return Math.round(n*100)+'%'}
+function apply(){
+  const q=search.value.trim().toLowerCase();
+  let visible=cards.filter(c=>(!q||c.dataset.search.includes(q))&&(!cat.value||c.dataset.category===cat.value)&&(!profile.value||c.dataset.profile===profile.value)&&(!risk.value||c.dataset.risk===risk.value));
+  visible.sort((a,b)=>{const key=sort.value;if(key==='id')return a.dataset.id.localeCompare(b.dataset.id);if(key==='latency')return Number(b.dataset.latency)-Number(a.dataset.latency);if(key==='ranked')return Number(b.dataset.ranked)-Number(a.dataset.ranked);if(key==='recallAt5')return Number(a.dataset.recall)-Number(b.dataset.recall);if(key==='mrr')return Number(a.dataset.mrr)-Number(b.dataset.mrr);return Number(a.dataset.recall)-Number(b.dataset.recall)||Number(a.dataset.mrr)-Number(b.dataset.mrr)||Number(b.dataset.latency)-Number(a.dataset.latency)||a.dataset.id.localeCompare(b.dataset.id)});
+  cards.forEach(c=>c.hidden=true);
+  visible.forEach(c=>{c.hidden=false;list.appendChild(c)});
+  count.textContent=String(visible.length);
+  empty.style.display=visible.length?'none':'block';
+}
+[search,cat,profile,risk,sort].forEach(el=>el&&el.addEventListener('input',apply));
+const clear=document.getElementById('clear-filters');
+if(clear)clear.addEventListener('click',()=>{search.value='';cat.value='';profile.value='';risk.value='';sort.value='weakest';apply()});
+const popover=document.getElementById('info-popover');
+function hidePopover(){if(popover){popover.hidden=true;popover.innerHTML='';popover.removeAttribute('data-open-for')}}
+function showPopover(btn){
+  const metric=btn.getAttribute('data-info-metric');
+  if(!metric||!popover)return;
+  const entry=(data.glossary||{})[metric];
+  if(!entry)return;
+  const rect=btn.getBoundingClientRect();
+  popover.innerHTML='<button type="button" class="info-close" aria-label="Close">×</button><h3>'+esc(entry.label)+'</h3><p>'+esc(entry.short)+'</p><p class="muted">'+esc(entry.long)+'</p><p><strong>Interpretation:</strong> '+esc(entry.interpretation)+'</p><p class="info-targets">Targets: '+esc(entry.targets)+'</p>';
+  popover.hidden=false;
+  const popoverWidth=Math.min(320,window.innerWidth-24);
+  popover.style.width=popoverWidth+'px';
+  const scrollX=window.scrollX||window.pageXOffset||0;
+  const scrollY=window.scrollY||window.pageYOffset||0;
+  let left=rect.left+scrollX;
+  if(left+popoverWidth>window.innerWidth-12+scrollX)left=window.innerWidth-popoverWidth-12+scrollX;
+  if(left<12+scrollX)left=12+scrollX;
+  popover.style.left=left+'px';
+  popover.style.top=(rect.bottom+scrollY+6)+'px';
+  popover.setAttribute('data-open-for',metric);
+}
+document.addEventListener('click',async e=>{
+  const info=e.target.closest('.info-btn');
+  if(info){
+    e.preventDefault();
+    if(popover&&popover.getAttribute('data-open-for')===info.getAttribute('data-info-metric')){hidePopover();return}
+    showPopover(info);
+    return;
+  }
+  if(popover&&e.target.closest('.info-close')){hidePopover();return}
+  if(popover&&!popover.hidden&&!e.target.closest('.info-popover')&&!e.target.closest('.info-btn'))hidePopover();
+  const btn=e.target.closest('button');
+  if(!btn)return;
+  let text=btn.dataset.copyText;
+  if(btn.dataset.copyId){text=JSON.stringify(data.cases.find(c=>c.id===btn.dataset.copyId),null,2)}
+  if(!text)return;
+  try{await navigator.clipboard.writeText(text);btn.textContent='Copied'}catch{const area=document.createElement('textarea');area.value=text;document.body.appendChild(area);area.select();document.execCommand('copy');area.remove();btn.textContent='Copied'}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&popover&&!popover.hidden)hidePopover()});
+const group=document.getElementById('quality-group');
+const heat=document.getElementById('quality-heatmap');
+const title=document.getElementById('quality-title');
+function heatHtml(groups){return Object.entries(groups).map(([name,v])=>{
+  const passH=v.passRate>=1?'good':v.passRate>=.95?'warn':'bad';
+  const rH=v.recallAt5>=.8?'good':v.recallAt5>=.6?'warn':'bad';
+  const mH=v.mrr>=.6?'good':v.mrr>=.35?'warn':'bad';
+  const order={good:0,warn:1,bad:2};
+  const worst=[passH,rH,mH].reduce((a,b)=>order[b]>order[a]?b:a,'good');
+  const heatLevel=Math.max(.08,Math.min(.45,v.recallAt5*.35+v.mrr*.1));
+  return '<article class="heat" data-health="'+worst+'" style="--heat:'+heatLevel+'"><strong>'+esc(name)+'</strong><span class="muted">'+v.passed+'/'+v.total+' pass · R@5 '+pct(v.recallAt5)+' · MRR '+v.mrr.toFixed(2)+' · p95 '+Math.round(v.p95LatencyMs)+'ms</span><div class="pillrow">'+v.weakestCases.map(id=>'<span class="pill">'+esc(id)+'</span>').join('')+'</div></article>';
+}).join('')}
+if(group)group.addEventListener('change',()=>{heat.innerHTML=heatHtml(data.quality[group.value]);title.textContent='Quality by '+group.options[group.selectedIndex].text.toLowerCase()});
+apply();
+})();`;
 }
 
 function reportClientData(report: Report): unknown {
 	return {
 		quality: report.quality,
+		narrative: report.narrative,
+		glossary: METRIC_GLOSSARY,
+		thresholds: HEALTH_THRESHOLDS,
+		metrics: report.metrics,
+		...(report.deltas === undefined ? {} : { deltas: report.deltas }),
 		cases: report.cases.map((testCase) => ({
 			id: testCase.id,
 			category: testCase.category,
@@ -1012,40 +1758,6 @@ function summarizeDiagnostics(diagnostics: unknown[]): string {
 	return diagnostics.length === 0
 		? "None"
 		: JSON.stringify(diagnostics.slice(0, 5), null, 2);
-}
-
-function expectedPathCount(result: CaseResult): number {
-	return (
-		result.retrieval.expectedPathRanks.length +
-		result.missing.pathIncludes.length
-	);
-}
-
-/** Lower-bound expected-path precision over sparse path labels, not true relevance precision. */
-function expectedPathPrecisionAtK(result: CaseResult, k: number): number {
-	if (expectedPathCount(result) === 0 || k <= 0) {
-		return 0;
-	}
-	const hits = result.retrieval.expectedPathRanks.filter(
-		(rank) => rank <= k,
-	).length;
-	return round(hits / k);
-}
-
-function expectedPathNdcgAtK(result: CaseResult, k: number): number {
-	const expectedCount = expectedPathCount(result);
-	if (expectedCount === 0 || k <= 0) {
-		return 0;
-	}
-	const dcg = result.retrieval.expectedPathRanks
-		.filter((rank) => rank <= k)
-		.reduce((sum, rank) => sum + 1 / Math.log2(rank + 1), 0);
-	const idealCount = Math.min(expectedCount, k);
-	const idcg = Array.from(
-		{ length: idealCount },
-		(_, index) => 1 / Math.log2(index + 2),
-	).reduce((sum, value) => sum + value, 0);
-	return idcg === 0 ? 0 : round(dcg / idcg);
 }
 
 function rankBuckets(cases: CaseResult[]): RankBucket[] {
@@ -1156,7 +1868,14 @@ function weakReason(result: CaseResult): string {
 	if (!result.passed) return "failed deterministic expectations";
 	if (result.retrieval.bestExpectedPathRank === undefined)
 		return "expected path missing or unlabeled no-result case";
-	if (result.retrieval.recallAt5 < 1) return "expected path outside top five";
+	if (result.retrieval.recallAt5 < 1) {
+		if (
+			result.retrieval.topPathDiversity <= 1 &&
+			result.topPaths.length >= 2
+		)
+			return "top-5 dominated by one directory";
+		return "expected path outside top five";
+	}
 	if (result.retrieval.bestExpectedPathRank > 1)
 		return "expected path not ranked first";
 	return "slow relative latency";
@@ -1200,37 +1919,395 @@ function qualitySummary(cases: CaseResult[]): QualityGroupSummary {
 	};
 }
 
+const NARRATIVE_METRICS: ReadonlyArray<HealthMetric> = [
+	"passRate",
+	"pathRecallAt5",
+	"mrr",
+	"pathRecallAt1",
+	"p95LatencyMs",
+	"noResultAccuracy",
+	"forbiddenPathAccuracy",
+	"termRecall",
+];
+
 function buildNarrative(
 	metrics: Report["metrics"],
 	cases: CaseResult[],
+	deltas?: ReportDeltas,
 ): Report["narrative"] {
 	const total = cases.length;
 	const passed = cases.filter((result) => result.passed).length;
-	const perfect = total > 0 && passed === total;
+	const findings: NarrativeFinding[] = NARRATIVE_METRICS.map((metric) =>
+		narrativeFinding(metric, metrics, passed, total),
+	);
+	const severity = worstHealth(findings.map((finding) => finding.severity));
+	const headline = buildHeadline(findings, severity, passed, total);
+	const verdict = buildVerdict(findings, deltas);
+	const caveats = [
+		"This report measures retrieval evidence quality, not generated-answer faithfulness or hallucination rate.",
+		"Expected-path precision and nDCG are lower-bound sparse-label metrics; unlabeled relevant documents can make true relevance higher.",
+		"Perfect pass rate means deterministic gates passed, not that ranking is saturated or optimal.",
+	];
+	const attentionAreas: AttentionArea[] = weakestCases(cases, 5).map(
+		(result) => ({
+			severity: attentionSeverity(result),
+			message: `${result.id}: ${result.reason}`,
+			caseId: result.id,
+		}),
+	);
 	return {
-		verdict: `${passed}/${total} deterministic retrieval expectations pass. Recall@5 is ${percent(metrics.pathRecallAt5)}, MRR is ${metrics.mrr}, and p95 latency is ${metrics.p95LatencyMs}ms.`,
-		keyFindings: [
-			perfect
-				? `All ${total} deterministic cases passed; ranking metrics still show headroom.`
-				: `${passed}/${total} deterministic cases passed; failures need regression triage first.`,
-			`First-window quality: Recall@1 ${percent(metrics.pathRecallAt1)}, Recall@3 ${percent(metrics.pathRecallAt3)}, Recall@5 ${percent(metrics.pathRecallAt5)}.`,
-			`Sparse-label rank metrics: expected-path Precision@5 ${percent(metrics.expectedPathPrecisionAt5)}, expected-path nDCG@5 ${percent(metrics.expectedPathNdcgAt5)}.`,
-			`Boundary behavior: no-result accuracy ${percent(metrics.noResultAccuracy)}, forbidden-path accuracy ${percent(metrics.forbiddenPathAccuracy)}.`,
-		],
-		caveats: [
-			"This report measures retrieval evidence quality, not generated-answer faithfulness or hallucination rate.",
-			"Expected-path precision and nDCG are lower-bound sparse-label metrics; unlabeled relevant documents can make true relevance higher.",
-			"Perfect pass rate means deterministic gates passed, not that ranking is saturated or optimal.",
-		],
-		attentionAreas: weakestCases(cases, 5).map(
-			(result) => `${result.id}: ${result.reason}`,
-		),
+		severity,
+		headline,
+		verdict,
+		keyFindings: findings,
+		caveats,
+		attentionAreas,
 		metricNotes: [
 			"Recall@k measures whether expected source paths appear in practical reading windows.",
 			"MRR rewards earlier first expected evidence and exposes ranking headroom even when cases pass.",
 			"Latency buckets summarize local CLI query responsiveness.",
 		],
 	};
+}
+
+function narrativeFinding(
+	metric: HealthMetric,
+	metrics: Report["metrics"],
+	passed: number,
+	total: number,
+): NarrativeFinding {
+	const value = metricValue(metric, metrics);
+	const severity = classifyHealth(metric, value);
+	const threshold = HEALTH_THRESHOLDS[metric] as HealthThreshold;
+	const direction = threshold.direction === "lower" ? "lower" : "higher";
+	const displayValue =
+		metric === "passRate"
+			? `${passed}/${total} (${formatMetricValue(metric, value)})`
+			: formatMetricValue(metric, value);
+	return {
+		metric,
+		label: METRIC_GLOSSARY[metric].label,
+		value: displayValue,
+		severity,
+		message: narrativeMessage(metric, severity, direction, threshold, value),
+	};
+}
+
+function narrativeMessage(
+	metric: HealthMetric,
+	severity: HealthLevel,
+	direction: "higher" | "lower",
+	threshold: HealthThreshold,
+	value: number,
+): string {
+	const bound = severity === "bad" ? threshold.warn : threshold.good;
+	const comparator = direction === "lower" ? "≤" : "≥";
+	const verdict =
+		severity === "good"
+			? "within the healthy band"
+			: severity === "warn"
+				? `in the warn band (needs ${comparator} ${formatMetricValue(metric, threshold.good)} to clear)`
+				: `below the warn floor (needs ${comparator} ${formatMetricValue(metric, bound)} to recover)`;
+	const target =
+		direction === "lower"
+			? `${formatMetricValue(metric, threshold.good)} / ${formatMetricValue(metric, threshold.warn)} warn`
+			: `${formatMetricValue(metric, threshold.good)} / ${formatMetricValue(metric, threshold.warn)} warn`;
+	return `${METRIC_GLOSSARY[metric].label} is ${formatMetricValue(metric, value)}, ${verdict}. Targets: ${target}.`;
+}
+
+function metricValue(
+	metric: HealthMetric,
+	metrics: Report["metrics"],
+): number {
+	const mapping: Record<HealthMetric, number> = {
+		passRate: metrics.passRate,
+		pathRecall: metrics.pathRecall,
+		termRecall: metrics.termRecall,
+		nonEmptyContextRate: metrics.nonEmptyContextRate,
+		pathRecallAt1: metrics.pathRecallAt1,
+		pathRecallAt3: metrics.pathRecallAt3,
+		pathRecallAt5: metrics.pathRecallAt5,
+		expectedPathPrecisionAt5: metrics.expectedPathPrecisionAt5,
+		expectedPathNdcgAt5: metrics.expectedPathNdcgAt5,
+		mrr: metrics.mrr,
+		p95LatencyMs: metrics.p95LatencyMs,
+		averageLatencyMs: metrics.averageLatencyMs,
+		noResultAccuracy: metrics.noResultAccuracy,
+		forbiddenPathAccuracy: metrics.forbiddenPathAccuracy,
+	};
+	return mapping[metric];
+}
+
+function buildHeadline(
+	findings: NarrativeFinding[],
+	severity: HealthLevel,
+	passed: number,
+	total: number,
+): string {
+	const passFinding = findings.find((finding) => finding.metric === "passRate");
+	const rankFindings = findings.filter((finding) =>
+		(["pathRecallAt1", "pathRecallAt5", "mrr"] as HealthMetric[]).includes(
+			finding.metric,
+		),
+	);
+	const safetyFindings = findings.filter((finding) =>
+		(
+			["noResultAccuracy", "forbiddenPathAccuracy"] as HealthMetric[]
+		).includes(finding.metric),
+	);
+	const latencyFinding = findings.find(
+		(finding) => finding.metric === "p95LatencyMs",
+	);
+	const rankBad = rankFindings.some((finding) => finding.severity === "bad");
+	const rankWarn = rankFindings.some(
+		(finding) => finding.severity !== "good",
+	);
+	const safetyBad = safetyFindings.some((finding) => finding.severity === "bad");
+	const passBad = passFinding?.severity === "bad";
+	const latencyBad = latencyFinding?.severity === "bad";
+	if (severity === "good") {
+		return `Atlas retrieval is healthy: ${passed}/${total} pass and ranking signals are inside target bands.`;
+	}
+	if (passBad || safetyBad) {
+		return `Atlas retrieval has a correctness regression: ${passed}/${total} pass${safetyBad ? ", safety gates leaked" : ""}. Triage before looking at ranking.`;
+	}
+	if (rankBad) {
+		return `Retrieval is safe but poorly ranked: ${passed}/${total} pass, known-good evidence is missing from the top window.`;
+	}
+	if (latencyBad) {
+		return `Retrieval is correct but slow: ${passed}/${total} pass, p95 latency is past the warn ceiling.`;
+	}
+	if (rankWarn) {
+		return `Retrieval is passing with measurable rank headroom: ${passed}/${total} pass, ranking metrics in the warn band.`;
+	}
+	return `Retrieval is passing with minor warnings: ${passed}/${total} pass.`;
+}
+
+function buildVerdict(
+	findings: NarrativeFinding[],
+	deltas?: ReportDeltas,
+): string {
+	const segments: string[] = [];
+	const passFinding = findings.find((finding) => finding.metric === "passRate");
+	if (passFinding) {
+		segments.push(
+			`Pass gate: ${passFinding.value} (${passFinding.severity})`,
+		);
+	}
+	const rank = findings
+		.filter((finding) =>
+			(
+				["pathRecallAt5", "mrr", "pathRecallAt1"] as HealthMetric[]
+			).includes(finding.metric),
+		)
+		.map(
+			(finding) =>
+				`${finding.label} ${finding.value} (${finding.severity})`,
+		)
+		.join(", ");
+	if (rank) {
+		segments.push(`Rank: ${rank}`);
+	}
+	const latency = findings.find(
+		(finding) => finding.metric === "p95LatencyMs",
+	);
+	if (latency) {
+		segments.push(`Latency: ${latency.label} ${latency.value} (${latency.severity})`);
+	}
+	const safety = findings
+		.filter((finding) =>
+			(
+				[
+					"noResultAccuracy",
+					"forbiddenPathAccuracy",
+				] as HealthMetric[]
+			).includes(finding.metric),
+		)
+		.map(
+			(finding) =>
+				`${finding.label} ${finding.value} (${finding.severity})`,
+		)
+		.join(", ");
+	if (safety) {
+		segments.push(`Safety: ${safety}`);
+	}
+	if (deltas && deltas.regressions.length > 0) {
+		const top = deltas.regressions[0];
+		if (top) {
+			segments.push(
+				`Regression vs baseline: ${top.label} moved by ${formatDeltaMagnitude(top.metric, top.delta)}`,
+			);
+		}
+	}
+	return `${segments.join(". ")}.`;
+}
+
+function attentionSeverity(result: WeakCaseSummary): HealthLevel {
+	if (!result.passed) return "bad";
+	if (result.bestExpectedPathRank === undefined) return "warn";
+	if (result.recallAt5 < 0.5) return "bad";
+	return "warn";
+}
+
+function formatDeltaMagnitude(metric: HealthMetric, delta: number): string {
+	if (metric === "p95LatencyMs" || metric === "averageLatencyMs") {
+		return `${delta > 0 ? "+" : ""}${Math.round(delta)}ms`;
+	}
+	const pct = Math.round(delta * 100);
+	return `${pct > 0 ? "+" : ""}${pct}pp`;
+}
+
+function formatThresholdComparison(result: ReportThresholdResult): string {
+	const metric = result.metric as HealthMetric;
+	const isLatency =
+		metric === "p95LatencyMs" || metric === "averageLatencyMs";
+	const formatLocal = (value: number): string =>
+		isLatency ? `${Math.round(value)}ms` : percent(value);
+	const comparator = result.direction === "lower" ? "<=" : ">=";
+	return `${formatLocal(result.actual)} ${comparator} ${formatLocal(result.limit)}`;
+}
+
+// ============================================================================
+// Baseline diff and regression detection
+// ============================================================================
+
+const BASELINE_METRICS: ReadonlyArray<HealthMetric> = [
+	"passRate",
+	"pathRecall",
+	"termRecall",
+	"nonEmptyContextRate",
+	"pathRecallAt1",
+	"pathRecallAt3",
+	"pathRecallAt5",
+	"expectedPathPrecisionAt5",
+	"expectedPathNdcgAt5",
+	"mrr",
+	"p95LatencyMs",
+	"averageLatencyMs",
+	"noResultAccuracy",
+	"forbiddenPathAccuracy",
+];
+
+export async function loadBaseline(
+	path: string,
+): Promise<BaselineSummary | undefined> {
+	try {
+		const content = await readFile(path, "utf8");
+		const parsed = JSON.parse(content) as unknown;
+		if (
+			typeof parsed === "object" &&
+			parsed !== null &&
+			"metrics" in parsed
+		) {
+			return parsed as BaselineSummary;
+		}
+	} catch {
+		return undefined;
+	}
+	return undefined;
+}
+
+export function baselineSummaryFromReport(report: Report): BaselineSummary {
+	return {
+		dataset: report.dataset,
+		generatedAt: report.generatedAt,
+		...(report.runtime.repoRevision === undefined
+			? {}
+			: { repoRevision: report.runtime.repoRevision }),
+		metrics: { ...report.metrics },
+	};
+}
+
+function computeDeltas(
+	metrics: Report["metrics"],
+	baseline: BaselineSummary | undefined,
+	tolerance: number | undefined,
+): ReportDeltas | undefined {
+	if (baseline === undefined) {
+		return undefined;
+	}
+	const entries: MetricDeltaEntry[] = [];
+	for (const metric of BASELINE_METRICS) {
+		const current = metricValue(metric, metrics);
+		const baselineValue = (baseline.metrics as Record<string, number | undefined>)[
+			metric
+		];
+		if (baselineValue === undefined) continue;
+		const direction =
+			(HEALTH_THRESHOLDS[metric] as HealthThreshold).direction === "lower"
+				? "lower"
+				: "higher";
+		const delta = round(current - baselineValue);
+		entries.push({
+			metric,
+			label: METRIC_GLOSSARY[metric].label,
+			current,
+			baseline: baselineValue,
+			delta,
+			direction,
+			severity: classifyDelta(metric, delta, direction, tolerance),
+		});
+	}
+	const regressions: RegressionEntry[] = entries
+		.filter((entry) => entry.severity === "bad")
+		.map((entry) => ({
+			metric: entry.metric,
+			label: entry.label,
+			delta: entry.delta,
+			tolerance: tolerance ?? 0.05,
+			direction: entry.direction,
+		}));
+	return {
+		baseline: {
+			...(baseline.generatedAt === undefined
+				? {}
+				: { generatedAt: baseline.generatedAt }),
+			...(baseline.repoRevision === undefined
+				? {}
+				: { repoRevision: baseline.repoRevision }),
+			...(baseline.dataset === undefined ? {} : { dataset: baseline.dataset }),
+		},
+		entries,
+		regressions,
+	};
+}
+
+function classifyDelta(
+	metric: HealthMetric,
+	delta: number,
+	direction: "higher" | "lower",
+	tolerance: number | undefined,
+): HealthLevel {
+	if (Math.abs(delta) < 1e-9) return "good";
+	const isRegression = direction === "higher" ? delta < 0 : delta > 0;
+	if (!isRegression) return "good";
+	const magnitude = Math.abs(delta);
+	if (metric === "p95LatencyMs" || metric === "averageLatencyMs") {
+		if (magnitude > 500) return "bad";
+		if (magnitude > 150) return "warn";
+		return "good";
+	}
+	const effective = tolerance ?? 0.05;
+	if (magnitude > effective) return "bad";
+	if (magnitude > effective / 2) return "warn";
+	return "good";
+}
+
+function evaluateRegressions(
+	deltas: ReportDeltas,
+	tolerance: number | undefined,
+): ReportThresholdResult[] {
+	if (tolerance === undefined) {
+		return [];
+	}
+	return deltas.regressions.map((regression) => ({
+		metric: regression.metric as keyof Report["metrics"],
+		label: `${regression.label} regression`,
+		actual: regression.delta,
+		limit: regression.direction === "higher" ? -tolerance : tolerance,
+		direction: regression.direction === "higher" ? "higher" : "lower",
+		passed: false,
+	}));
 }
 
 function byGroup(
@@ -1283,34 +2360,77 @@ function evaluateThresholds(
 	thresholds: ReportThresholdInput,
 ): ReportThresholdResult[] {
 	return [
-		thresholdResult(
+		floorThreshold(
 			"passRate",
 			"Pass rate",
 			metrics.passRate,
 			thresholds.minPassRate,
 		),
-		thresholdResult(
+		floorThreshold(
 			"pathRecall",
 			"Path recall",
 			metrics.pathRecall,
 			thresholds.minPathRecall,
 		),
-		thresholdResult(
+		floorThreshold(
 			"termRecall",
 			"Term recall",
 			metrics.termRecall,
 			thresholds.minTermRecall,
 		),
-		thresholdResult(
+		floorThreshold(
 			"nonEmptyContextRate",
 			"Non-empty context",
 			metrics.nonEmptyContextRate,
 			thresholds.minNonEmptyContextRate,
 		),
+		floorThreshold(
+			"pathRecallAt1",
+			"Recall@1",
+			metrics.pathRecallAt1,
+			thresholds.minRecallAt1,
+		),
+		floorThreshold(
+			"pathRecallAt3",
+			"Recall@3",
+			metrics.pathRecallAt3,
+			thresholds.minRecallAt3,
+		),
+		floorThreshold(
+			"pathRecallAt5",
+			"Recall@5",
+			metrics.pathRecallAt5,
+			thresholds.minRecallAt5,
+		),
+		floorThreshold("mrr", "MRR", metrics.mrr, thresholds.minMrr),
+		floorThreshold(
+			"noResultAccuracy",
+			"Abstain accuracy",
+			metrics.noResultAccuracy,
+			thresholds.minNoResultAccuracy,
+		),
+		floorThreshold(
+			"forbiddenPathAccuracy",
+			"Forbidden-path accuracy",
+			metrics.forbiddenPathAccuracy,
+			thresholds.minForbiddenPathAccuracy,
+		),
+		ceilingThreshold(
+			"p95LatencyMs",
+			"p95 latency",
+			metrics.p95LatencyMs,
+			thresholds.maxP95LatencyMs,
+		),
+		ceilingThreshold(
+			"averageLatencyMs",
+			"Avg latency",
+			metrics.averageLatencyMs,
+			thresholds.maxAverageLatencyMs,
+		),
 	].filter((result): result is ReportThresholdResult => result !== undefined);
 }
 
-function thresholdResult(
+function floorThreshold(
 	metric: ReportThresholdResult["metric"],
 	label: string,
 	actual: number,
@@ -1323,8 +2443,28 @@ function thresholdResult(
 		metric,
 		label,
 		actual,
-		minimum,
+		limit: minimum,
+		direction: "higher",
 		passed: actual >= minimum,
+	};
+}
+
+function ceilingThreshold(
+	metric: ReportThresholdResult["metric"],
+	label: string,
+	actual: number,
+	maximum: number | undefined,
+): ReportThresholdResult | undefined {
+	if (maximum === undefined) {
+		return undefined;
+	}
+	return {
+		metric,
+		label,
+		actual,
+		limit: maximum,
+		direction: "lower",
+		passed: actual <= maximum,
 	};
 }
 
@@ -1351,6 +2491,45 @@ function recallAtK(
 		topK.some((path) => path.includes(pathPart)),
 	).length;
 	return round(found / expectedPaths.length);
+}
+
+function sparsePrecisionAtK(expectedPathRanks: number[], k: number): number {
+	if (k <= 0) {
+		return 0;
+	}
+	const hits = expectedPathRanks.filter((rank) => rank <= k).length;
+	return round(hits / k);
+}
+
+function sparseNdcgAtK(
+	expectedPathRanks: number[],
+	expectedCount: number,
+	k: number,
+): number {
+	if (expectedCount === 0 || k <= 0) {
+		return 0;
+	}
+	const dcg = expectedPathRanks
+		.filter((rank) => rank <= k)
+		.reduce((sum, rank) => sum + 1 / Math.log2(rank + 1), 0);
+	const idealCount = Math.min(expectedCount, k);
+	const idcg = Array.from(
+		{ length: idealCount },
+		(_, index) => 1 / Math.log2(index + 2),
+	).reduce((sum, value) => sum + value, 0);
+	return idcg === 0 ? 0 : round(dcg / idcg);
+}
+
+function countDistinctParents(paths: string[]): number {
+	if (paths.length === 0) {
+		return 0;
+	}
+	const parents = new Set<string>();
+	for (const path of paths) {
+		const lastSlash = path.lastIndexOf("/");
+		parents.add(lastSlash === -1 ? "" : path.slice(0, lastSlash));
+	}
+	return parents.size;
 }
 
 function percentile(values: number[], quantile: number): number {

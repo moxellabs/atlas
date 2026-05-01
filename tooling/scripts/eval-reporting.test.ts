@@ -4,17 +4,38 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
+	type BaselineSummary,
 	buildReport,
 	type CaseResult,
 	caseMetadata,
+	classifyHealth,
 	evaluateExpectations,
+	HEALTH_THRESHOLDS,
 	loadEvalDataset,
+	METRIC_GLOSSARY,
 	renderHtml,
 } from "./eval-reporting";
 
 function result(
 	input: Partial<CaseResult> & Pick<CaseResult, "id" | "category">,
 ): CaseResult {
+	const defaultRetrieval: CaseResult["retrieval"] = {
+		expectedPathRanks: [1],
+		bestExpectedPathRank: 1,
+		recallAt1: 1,
+		recallAt3: 1,
+		recallAt5: 1,
+		reciprocalRank: 1,
+		precisionAt1: 1,
+		precisionAt3: 0.3333,
+		precisionAt5: 0.2,
+		ndcgAt3: 1,
+		ndcgAt5: 1,
+		rankDistance: 0,
+		topPathDiversity: 1,
+		noResultCorrect: true,
+		forbiddenPathCorrect: true,
+	};
 	return {
 		id: input.id,
 		category: input.category,
@@ -28,16 +49,7 @@ function result(
 			termRecall: 1,
 			nonEmptyContext: true,
 		},
-		retrieval: input.retrieval ?? {
-			expectedPathRanks: [1],
-			bestExpectedPathRank: 1,
-			recallAt1: 1,
-			recallAt3: 1,
-			recallAt5: 1,
-			reciprocalRank: 1,
-			noResultCorrect: true,
-			forbiddenPathCorrect: true,
-		},
+		retrieval: input.retrieval ?? defaultRetrieval,
 		missing: input.missing ?? {
 			pathIncludes: [],
 			pathExcludes: [],
@@ -65,6 +77,27 @@ function result(
 			? {}
 			: { coverageType: input.coverageType }),
 		...(input.riskArea === undefined ? {} : { riskArea: input.riskArea }),
+	};
+}
+
+function partialRetrieval(
+	overrides: Partial<CaseResult["retrieval"]>,
+): CaseResult["retrieval"] {
+	return {
+		expectedPathRanks: [],
+		recallAt1: 0,
+		recallAt3: 0,
+		recallAt5: 0,
+		reciprocalRank: 0,
+		precisionAt1: 0,
+		precisionAt3: 0,
+		precisionAt5: 0,
+		ndcgAt3: 0,
+		ndcgAt5: 0,
+		topPathDiversity: 0,
+		noResultCorrect: true,
+		forbiddenPathCorrect: true,
+		...overrides,
 	};
 }
 
@@ -108,6 +141,8 @@ describe("eval reporting", () => {
 		expect(report.metrics.mrr).toBe(1);
 		expect(report.metrics.noResultAccuracy).toBe(1);
 		expect(report.metrics.forbiddenPathAccuracy).toBe(1);
+		expect(report.metrics.averageRankDistance).toBe(0);
+		expect(report.metrics.averageTopPathDiversity).toBe(1);
 		expect(report.coverage.capabilities).toEqual({ a: 2 });
 		expect(report.byCategory.a).toEqual({
 			total: 2,
@@ -175,30 +210,33 @@ describe("eval reporting", () => {
 					id: "rank-four",
 					category: "rank",
 					latencyMs: 600,
-					retrieval: {
+					retrieval: partialRetrieval({
 						expectedPathRanks: [4],
 						bestExpectedPathRank: 4,
 						recallAt1: 0,
 						recallAt3: 0,
 						recallAt5: 1,
 						reciprocalRank: 0.25,
-						noResultCorrect: true,
-						forbiddenPathCorrect: true,
-					},
+						precisionAt1: 0,
+						precisionAt3: 0,
+						precisionAt5: 0.2,
+						ndcgAt3: 0,
+						ndcgAt5: 0.4307,
+						rankDistance: 3,
+						topPathDiversity: 2,
+					}),
 				}),
 				result({
 					id: "missing",
 					category: "rank",
 					latencyMs: 1100,
-					retrieval: {
+					retrieval: partialRetrieval({
 						expectedPathRanks: [],
 						recallAt1: 0,
 						recallAt3: 0,
 						recallAt5: 0,
 						reciprocalRank: 0,
-						noResultCorrect: true,
-						forbiddenPathCorrect: true,
-					},
+					}),
 					missing: {
 						pathIncludes: ["docs/missing.md"],
 						pathExcludes: [],
@@ -215,15 +253,13 @@ describe("eval reporting", () => {
 					selectedCount: 0,
 					rankedCount: 0,
 					scores: { pathRecall: 1, termRecall: 1, nonEmptyContext: false },
-					retrieval: {
+					retrieval: partialRetrieval({
 						expectedPathRanks: [],
 						recallAt1: 1,
 						recallAt3: 1,
 						recallAt5: 1,
 						reciprocalRank: 0,
-						noResultCorrect: true,
-						forbiddenPathCorrect: true,
-					},
+					}),
 				}),
 			],
 			{ cli: "bun run cli", source: "cli-default" },
@@ -231,10 +267,7 @@ describe("eval reporting", () => {
 		);
 
 		expect(report.metrics.expectedPathPrecisionAt1).toBe(0.25);
-		expect(report.metrics.expectedPathPrecisionAt3).toBe(0.0833);
 		expect(report.metrics.expectedPathPrecisionAt5).toBe(0.1);
-		expect(report.metrics.expectedPathNdcgAt3).toBe(0.25);
-		expect(report.metrics.expectedPathNdcgAt5).toBe(0.3577);
 		expect(report.quality.rankBuckets.map((bucket) => bucket.count)).toEqual([
 			1, 0, 1, 0, 0, 2,
 		]);
@@ -242,9 +275,54 @@ describe("eval reporting", () => {
 			[2, 0, 1, 1],
 		);
 		expect(report.narrative.caveats.join(" ")).toContain("Perfect pass rate");
+		expect(report.narrative.severity).not.toBe("good");
+		expect(report.narrative.keyFindings.length).toBeGreaterThan(0);
 	});
 
-	test("renders Moxel report markers, explorer controls, and safe embedded JSON", () => {
+	test("classifyHealth covers higher-is-better and lower-is-better metrics", () => {
+		expect(classifyHealth("passRate", 1)).toBe("good");
+		expect(classifyHealth("passRate", 0.97)).toBe("warn");
+		expect(classifyHealth("passRate", 0.5)).toBe("bad");
+		expect(classifyHealth("mrr", 0.7)).toBe("good");
+		expect(classifyHealth("mrr", 0.4)).toBe("warn");
+		expect(classifyHealth("mrr", 0.1)).toBe("bad");
+		expect(classifyHealth("p95LatencyMs", 400)).toBe("good");
+		expect(classifyHealth("p95LatencyMs", 900)).toBe("warn");
+		expect(classifyHealth("p95LatencyMs", 1500)).toBe("bad");
+	});
+
+	test("narrative severity reflects worst dimension even with perfect pass rate", () => {
+		const report = buildReport(
+			{ name: "dataset", cases: [] },
+			[
+				result({
+					id: "only-case",
+					category: "rank",
+					retrieval: partialRetrieval({
+						expectedPathRanks: [8],
+						bestExpectedPathRank: 8,
+						recallAt1: 0,
+						recallAt3: 0,
+						recallAt5: 0,
+						reciprocalRank: 0.125,
+						topPathDiversity: 1,
+					}),
+				}),
+			],
+			{ cli: "bun run cli", source: "cli-default" },
+			{},
+		);
+
+		expect(report.metrics.passRate).toBe(1);
+		expect(report.narrative.severity).toBe("bad");
+		const recallFinding = report.narrative.keyFindings.find(
+			(finding) => finding.metric === "pathRecallAt5",
+		);
+		expect(recallFinding?.severity).toBe("bad");
+		expect(report.narrative.headline).toMatch(/safe but poorly ranked|correctness|broken|warn/i);
+	});
+
+	test("renders Moxel report markers, explorer controls, health tags, and safe embedded JSON", () => {
 		const report = buildReport(
 			{ name: "dataset <script>", cases: [] },
 			[
@@ -255,6 +333,14 @@ describe("eval reporting", () => {
 					claim: "Claim <img src=x>",
 					riskArea: "privacy",
 					topPaths: ["docs/<unsafe>.md"],
+					retrieval: partialRetrieval({
+						expectedPathRanks: [8],
+						bestExpectedPathRank: 8,
+						recallAt1: 0,
+						recallAt3: 0,
+						recallAt5: 0,
+						reciprocalRank: 0.125,
+					}),
 				}),
 			],
 			{ cli: "bun run cli", source: "cli-default" },
@@ -267,17 +353,19 @@ describe("eval reporting", () => {
 		expect(html).toContain("MOXEL ATLAS EVALS");
 		expect(html).toContain('id="banded-field"');
 		expect(html).toContain('data-eval-chart="recall-funnel"');
-		expect(html).toContain('data-eval-chart="metric-radar"');
+		expect(html).toContain('data-eval-chart="at-a-glance"');
 		expect(html).toContain('id="case-explorer"');
 		expect(html).toContain('id="case-search"');
 		expect(html).toContain(
 			'id="atlas-eval-report-data" type="application/json"',
 		);
-		expect(html).toContain("Methodology factsheet");
+		expect(html).toContain("Methodology");
 		expect(html).toContain("Reproducibility");
 		expect(html).toContain("Collapsed by default");
-		expect(html).toContain("Atlas finds the required docs");
-		expect(html).not.toContain("Grounded project evidence for agent workflows");
+		expect(html).not.toContain("Atlas finds the required docs");
+		expect(html).not.toContain("Known-good evidence is present");
+		expect(html).not.toContain("Perfect pass rate can coexist");
+		expect(html).toContain('data-health="bad"');
 		expect(html).toContain("\\u003cscript");
 		expect(html).not.toContain("<script>alert(1)</script>");
 	});
@@ -299,28 +387,127 @@ describe("eval reporting", () => {
 			],
 			{ cli: "bun run cli", source: "cli-default" },
 			{},
-			{ minPassRate: 0.75, minPathRecall: 1 },
+			{ minPassRate: 0.75, minPathRecall: 1, maxP95LatencyMs: 5 },
 		);
 
-		expect(report.thresholds).toEqual({
-			passed: false,
-			results: [
-				{
-					metric: "passRate",
-					label: "Pass rate",
-					actual: 0.5,
-					minimum: 0.75,
-					passed: false,
-				},
-				{
-					metric: "pathRecall",
-					label: "Path recall",
-					actual: 1,
-					minimum: 1,
-					passed: true,
-				},
+		expect(report.thresholds?.passed).toBe(false);
+		const labels = report.thresholds?.results.map((entry) => entry.label);
+		expect(labels).toContain("Pass rate");
+		expect(labels).toContain("Path recall");
+		expect(labels).toContain("p95 latency");
+		const latency = report.thresholds?.results.find(
+			(entry) => entry.label === "p95 latency",
+		);
+		expect(latency?.direction).toBe("lower");
+		expect(latency?.passed).toBe(false);
+		const passGate = report.thresholds?.results.find(
+			(entry) => entry.label === "Pass rate",
+		);
+		expect(passGate?.direction).toBe("higher");
+		expect(passGate?.limit).toBe(0.75);
+	});
+
+	test("enforces ranking thresholds via minRecallAt5 and minMrr", () => {
+		const report = buildReport(
+			{ name: "dataset", cases: [] },
+			[
+				result({
+					id: "weak-rank",
+					category: "rank",
+					retrieval: partialRetrieval({
+						expectedPathRanks: [9],
+						bestExpectedPathRank: 9,
+						recallAt5: 0,
+						reciprocalRank: 0.1111,
+					}),
+				}),
 			],
+			{ cli: "bun run cli", source: "cli-default" },
+			{},
+			{ minRecallAt5: 0.5, minMrr: 0.3 },
+		);
+		expect(report.thresholds?.passed).toBe(false);
+		const recallGate = report.thresholds?.results.find(
+			(entry) => entry.label === "Recall@5",
+		);
+		expect(recallGate?.passed).toBe(false);
+	});
+
+	test("computes baseline deltas and flags regressions", () => {
+		const baseline: BaselineSummary = {
+			dataset: "dataset",
+			generatedAt: "2026-01-01T00:00:00Z",
+			repoRevision: "prev",
+			metrics: {
+				passRate: 1,
+				pathRecallAt5: 0.8,
+				mrr: 0.6,
+				p95LatencyMs: 500,
+			},
+		};
+		const report = buildReport(
+			{ name: "dataset", cases: [] },
+			[
+				result({
+					id: "case",
+					category: "rank",
+					retrieval: partialRetrieval({
+						expectedPathRanks: [5],
+						bestExpectedPathRank: 5,
+						recallAt5: 0.5,
+						reciprocalRank: 0.2,
+					}),
+					latencyMs: 800,
+				}),
+			],
+			{ cli: "bun run cli", source: "cli-default" },
+			{},
+			{ maxMetricRegression: 0.1 },
+			baseline,
+		);
+		expect(report.deltas).toBeDefined();
+		const recallDelta = report.deltas?.entries.find(
+			(entry) => entry.metric === "pathRecallAt5",
+		);
+		expect(recallDelta?.delta).toBeCloseTo(-0.3, 2);
+		expect(recallDelta?.severity).toBe("bad");
+		expect(
+			report.deltas?.regressions.find((r) => r.metric === "pathRecallAt5"),
+		).toBeDefined();
+		expect(report.thresholds?.passed).toBe(false);
+	});
+
+	test("evaluateExpectations computes per-case precision, nDCG, rankDistance, and diversity", () => {
+		const scored = evaluateExpectations({
+			testCase: {
+				id: "scored",
+				category: "rank",
+				query: "query",
+				expected: { pathIncludes: ["docs/a.md", "docs/b.md"] },
+			},
+			topPaths: ["docs/a.md", "src/ignore.ts", "docs/b.md"],
+			textHaystack: "",
+			diagnosticsHaystack: "",
+			selectedCount: 2,
+			rankedCount: 3,
 		});
+		expect(scored.retrieval.precisionAt1).toBeCloseTo(1, 2);
+		expect(scored.retrieval.precisionAt3).toBeCloseTo(0.6667, 3);
+		expect(scored.retrieval.precisionAt5).toBeCloseTo(0.4, 2);
+		expect(scored.retrieval.ndcgAt5).toBeGreaterThan(0);
+		expect(scored.retrieval.rankDistance).toBe(0);
+		expect(scored.retrieval.topPathDiversity).toBe(2);
+	});
+
+	test("METRIC_GLOSSARY covers every health metric key with populated targets", () => {
+		for (const metric of Object.keys(HEALTH_THRESHOLDS)) {
+			const entry =
+				METRIC_GLOSSARY[metric as keyof typeof METRIC_GLOSSARY];
+			expect(entry).toBeDefined();
+			expect(entry.targets.length).toBeGreaterThan(0);
+			expect(entry.short.length).toBeGreaterThan(0);
+			expect(entry.interpretation.length).toBeGreaterThan(0);
+		}
 	});
 
 	test("preserves optional case metadata", () => {
