@@ -372,6 +372,42 @@ describe("store integration", () => {
 		);
 	});
 
+	test("weights title path and heading matches above body-only matches", () => {
+		seedStructuralStore(store);
+		const titleDocId = createDocId({ repoId, path: "docs/public-artifacts.md" });
+		const bodyDocId = createDocId({ repoId, path: "docs/body-only.md" });
+		new DocRepository(store).replaceCanonicalDocument({
+			...createDocument("Public Artifact", "General release packaging guidance."),
+			docId: titleDocId,
+			path: "docs/public-artifacts.md",
+			sections: [
+				{
+					sectionId: createSectionId({
+						docId: titleDocId,
+						headingPath: ["Artifact"],
+						ordinal: 0,
+					}),
+					headingPath: ["Artifact"],
+					ordinal: 0,
+					text: "Release packaging guidance.",
+					codeBlocks: [],
+				},
+			],
+		});
+		new DocRepository(store).replaceCanonicalDocument({
+			...createDocument("Operations", "Artifact artifact artifact artifact details live here."),
+			docId: bodyDocId,
+			path: "docs/body-only.md",
+		});
+
+		const hits = lexicalSearch(store, { query: "artifact", repoId, limit: 6 });
+
+		expect(hits[0]).toMatchObject({ docId: titleDocId });
+		expect(hits.findIndex((hit) => hit.docId === titleDocId)).toBeLessThan(
+			hits.findIndex((hit) => hit.docId === bodyDocId),
+		);
+	});
+
 	test("persists chunks, supports path and scope search, and cascades repo deletion", () => {
 		seedStructuralStore(store);
 		const document = createDocument(
