@@ -50,8 +50,9 @@ export function registerPlanContextTool(
 	server.registerTool(
 		PLAN_CONTEXT_TOOL,
 		{
-			title: "Plan ATLAS context",
-			description: "Build a staged, token-budgeted context plan for a query.",
+			title: "Plan ATLAS context first",
+			description:
+				"Use first for repository questions. Builds a staged, token-budgeted context plan and accepts repoId/profile/audience/purpose/visibility filters so agents retrieve the right corpus slice before answering.",
 			inputSchema: planContextInputSchema,
 			outputSchema: jsonOutputSchema,
 		},

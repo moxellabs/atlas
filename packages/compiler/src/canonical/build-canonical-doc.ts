@@ -58,7 +58,7 @@ export function buildCanonicalDocument(
 	const title = resolveDocumentTitle(input.normalized, sectionsResult.sections);
 	const resolvedMetadata = resolveDocumentMetadata(
 		input.classifiedDoc.path,
-		input.normalized.frontmatter.data,
+		input.normalized.frontmatter,
 		input.metadataRules ?? [],
 	);
 	const document: CanonicalDocument = {
@@ -163,10 +163,11 @@ export function resolveDocumentTitle(
 
 function resolveDocumentMetadata(
 	path: string,
-	frontmatter: FrontmatterData,
+	frontmatter: { present: boolean; data: FrontmatterData },
 	rules: readonly DocMetadataRule[],
 ): DocumentMetadata & { diagnostics: string[]; title?: string | undefined } {
-	const base = defaultMetadataFor(path);
+	const data = frontmatter.data;
+	const base = defaultMetadataFor(path, frontmatter);
 	const rule = [...rules]
 		.filter(
 			(candidate) =>
@@ -199,32 +200,42 @@ function resolveDocumentMetadata(
 			: { visibility: rule.metadata.visibility }),
 	};
 	const diagnostics: string[] = [];
-	const title = stringField(frontmatter, "title");
+	const title = stringField(data, "title");
 	if (title !== undefined) merged.title = title;
-	const description = stringField(frontmatter, "description");
+	const description = stringField(data, "description");
 	if (description !== undefined) merged.description = description;
-	const order = numberField(frontmatter, "order");
+	const order = numberField(data, "order");
 	if (order !== undefined) merged.order = order;
 	const visibility = enumField(
-		frontmatter,
+		data,
 		"visibility",
 		VISIBILITIES,
 		diagnostics,
 	);
 	if (visibility !== undefined) merged.visibility = visibility;
 	const audience = enumArrayField(
-		frontmatter,
+		data,
 		"audience",
 		AUDIENCES,
 		diagnostics,
 	);
 	if (audience !== undefined) merged.audience = audience;
-	const purpose = enumArrayField(frontmatter, "purpose", PURPOSES, diagnostics);
+	const purpose = enumArrayField(data, "purpose", PURPOSES, diagnostics);
 	if (purpose !== undefined) merged.purpose = purpose;
 	return { ...merged, diagnostics };
 }
 
-function defaultMetadataFor(path: string): DocumentMetadata {
+function defaultMetadataFor(
+	path: string,
+	frontmatter: { present: boolean; data: FrontmatterData },
+): DocumentMetadata {
+	if (frontmatter.present && !hasAtlasMetadata(frontmatter.data))
+		return {
+			visibility: "internal",
+			audience: ["contributor"],
+			purpose: ["implementation"],
+			tags: [],
+		};
 	if (matchesGlob(path, "docs/prd/**"))
 		return {
 			visibility: "internal",
@@ -246,11 +257,18 @@ function defaultMetadataFor(path: string): DocumentMetadata {
 			purpose: ["planning", "implementation"],
 			tags: [],
 		};
-	if (path === "README.md" || path.endsWith("/README.md"))
+	if (path === "README.md")
 		return {
 			visibility: "public",
 			audience: ["consumer"],
 			purpose: ["guide"],
+			tags: [],
+		};
+	if (path.endsWith("/README.md"))
+		return {
+			visibility: "public",
+			audience: ["contributor"],
+			purpose: ["implementation", "reference"],
 			tags: [],
 		};
 	if (matchesGlob(path, "docs/**"))
@@ -263,7 +281,7 @@ function defaultMetadataFor(path: string): DocumentMetadata {
 	if (matchesGlob(path, "skills/**"))
 		return {
 			visibility: "public",
-			audience: ["consumer"],
+			audience: ["contributor", "maintainer"],
 			purpose: ["workflow"],
 			tags: [],
 		};
@@ -273,6 +291,12 @@ function defaultMetadataFor(path: string): DocumentMetadata {
 		purpose: ["implementation"],
 		tags: [],
 	};
+}
+
+function hasAtlasMetadata(frontmatter: FrontmatterData): boolean {
+	return ["audience", "purpose", "visibility"].some(
+		(field) => frontmatter[field] !== undefined,
+	);
 }
 
 function matchesAny(path: string, patterns: readonly string[]): boolean {

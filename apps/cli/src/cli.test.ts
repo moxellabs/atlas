@@ -3490,6 +3490,7 @@ Atlas self-indexing public artifact docs.
 `,
     );
     await writeFile(join(selfRoot, "docs", "archive", "old.md"), "# Old\n");
+    await writeFile(join(selfRoot, "docs", "architecture.md"), "# Architecture\n\nDefault consumer docs metadata.\n");
     await writeFile(join(selfRoot, ".planning", "ROADMAP.md"), "# Roadmap\n");
     await writeFile(
       join(selfRoot, "skills", "document-codebase", "SKILL.md"),
@@ -3511,6 +3512,21 @@ Use this skill to document codebases.
     await writeFile(
       join(selfRoot, "apps", "cli", "package.json"),
       JSON.stringify({ name: "@atlas/cli" }),
+    );
+    await writeFile(
+      join(selfRoot, "apps", "cli", "README.md"),
+      `---
+title: CLI README
+description: Contributor-facing app README.
+audience: [contributor, maintainer]
+purpose: [implementation]
+visibility: public
+---
+
+# CLI README
+
+Contributor-facing app README.
+`,
     );
     await writeFile(
       join(selfRoot, "apps", "cli", "docs", "index.md"),
@@ -3594,13 +3610,24 @@ Internal package docs.
     const artifactDir = join(selfRoot, ".moxel", "atlas");
     const docsIndex = JSON.parse(
       await readFile(join(artifactDir, "docs.index.json"), "utf8"),
-    ) as { documents: Array<{ path: string }> };
+    ) as {
+      counts: { documents: number; skills: number; packages: number; modules: number };
+      documents: Array<{ path: string }>;
+    };
     const paths = docsIndex.documents.map((doc) => doc.path);
+    expect(docsIndex.counts).toEqual({
+      documents: paths.length,
+      skills: 0,
+      packages: 0,
+      modules: 0,
+    });
     expect(paths).toContain("README.md");
     expect(paths).toContain("docs/self-indexing.md");
-    expect(paths).toContain("skills/document-codebase/SKILL.md");
-    expect(paths).toContain("apps/cli/docs/index.md");
-    expect(paths).toContain("packages/indexer/docs/index.md");
+    expect(paths).toContain("docs/architecture.md");
+    expect(paths).not.toContain("skills/document-codebase/SKILL.md");
+    expect(paths).not.toContain("apps/cli/docs/index.md");
+    expect(paths).not.toContain("packages/indexer/docs/index.md");
+    expect(paths).not.toContain("apps/cli/README.md");
     expect(paths).not.toContain("packages/indexer/docs/internal.md");
     expect(paths).not.toContain(".planning/ROADMAP.md");
     expect(paths).not.toContain("docs/archive/old.md");
@@ -3631,6 +3658,31 @@ Internal package docs.
       expect(
         artifactDb
           .query("SELECT COUNT(*) AS count FROM documents WHERE path = ?")
+          .get("skills/document-codebase/SKILL.md") as { count: number },
+      ).toMatchObject({ count: 0 });
+      expect(
+        artifactDb
+          .query("SELECT COUNT(*) AS count FROM documents WHERE path = ?")
+          .get("apps/cli/docs/index.md") as { count: number },
+      ).toMatchObject({ count: 0 });
+      expect(
+        artifactDb
+          .query("SELECT COUNT(*) AS count FROM documents WHERE path = ?")
+          .get("packages/indexer/docs/index.md") as { count: number },
+      ).toMatchObject({ count: 0 });
+      expect(
+        artifactDb
+          .query("SELECT COUNT(*) AS count FROM documents WHERE path = ?")
+          .get("docs/architecture.md") as { count: number },
+      ).toMatchObject({ count: 1 });
+      expect(
+        artifactDb
+          .query("SELECT COUNT(*) AS count FROM documents WHERE path = ?")
+          .get("apps/cli/README.md") as { count: number },
+      ).toMatchObject({ count: 0 });
+      expect(
+        artifactDb
+          .query("SELECT COUNT(*) AS count FROM documents WHERE path = ?")
           .get("packages/indexer/docs/internal.md") as { count: number },
       ).toMatchObject({ count: 0 });
       expect(
@@ -3650,6 +3702,36 @@ Internal package docs.
       "--fresh",
     ]);
     expect(fresh.exitCode).toBe(0);
+
+    const contributorBuild = await runWithCapture([
+      "build",
+      "--cwd",
+      selfRoot,
+      "--profile",
+      "contributor",
+      "--json",
+    ]);
+    expect(contributorBuild.exitCode).toBe(0);
+    const contributorDocsIndex = JSON.parse(
+      await readFile(join(artifactDir, "docs.index.json"), "utf8"),
+    ) as { documents: Array<{ path: string }> };
+    const contributorPaths = contributorDocsIndex.documents.map((doc) => doc.path);
+    expect(contributorPaths).toContain("README.md");
+    expect(contributorPaths).toContain("docs/self-indexing.md");
+    expect(contributorPaths).toContain("docs/architecture.md");
+    expect(contributorPaths).toContain("skills/document-codebase/SKILL.md");
+    expect(contributorPaths).toContain("apps/cli/docs/index.md");
+    expect(contributorPaths).toContain("apps/cli/README.md");
+    expect(contributorPaths).toContain("packages/indexer/docs/index.md");
+    expect(contributorPaths).not.toContain("packages/indexer/docs/internal.md");
+    const contributorManifest = JSON.parse(
+      await readFile(join(artifactDir, "manifest.json"), "utf8"),
+    );
+    expect(contributorManifest.profiles).toMatchObject({
+      default: "public",
+      applied: "contributor",
+      available: ["public", "contributor"],
+    });
     const home = join(rootDir, "self-index-home");
     expect(
       (
@@ -3685,6 +3767,25 @@ Internal package docs.
     expect(filteredSearch.stdout).toContain(
       "Filters: profile=public (default)",
     );
+
+    const contributorSearch = await runWithCapture(
+      [
+        "search",
+        "CLI README",
+        "--cwd",
+        rootDir,
+        "--profile",
+        "contributor",
+        "--json",
+      ],
+      { HOME: home },
+    );
+    expect(contributorSearch.exitCode).toBe(0);
+    const contributorSearchJson = JSON.parse(contributorSearch.stdout);
+    expect(contributorSearchJson.data.filters).toMatchObject({
+      profile: "contributor",
+    });
+    expect(contributorSearch.stdout).toContain("apps/cli/README.md");
 
     const anyProfileSearch = await runWithCapture(
       [

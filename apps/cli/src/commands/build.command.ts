@@ -3,6 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type AtlasConfig, defaultGithubHostConfig } from "@atlas/config";
 import {
+	type AtlasDocAudience,
+	type AtlasDocPurpose,
+	BUILT_IN_DOC_METADATA_PROFILES,
+	type DocumentMetadata,
+	documentMatchesMetadataFilters,
+} from "@atlas/core";
+import {
 	buildDocsIndex,
 	createIndexerServices,
 	exportCorpusDbSnapshot,
@@ -38,29 +45,64 @@ const REPO_METADATA_FILE = "atlas.repo.json";
 const COMMIT_HINT =
 	"Review and commit artifact root when ready; Atlas does not stage, commit, branch, or push.";
 
-function filterPublicArtifactCorpus(db: StoreDatabase): void {
-	db.run(
-		`UPDATE documents
-		 SET audience_json = '["consumer"]',
-		     purpose_json = '["guide","reference"]',
-		     profile = 'public'
-		 WHERE visibility = 'public'
-		   AND (
-		     path LIKE 'apps/%/docs/%'
-		     OR path LIKE 'packages/%/docs/%'
-		   )`,
+function filterArtifactCorpusByProfile(db: StoreDatabase, profile: string): void {
+	type Candidate = {
+		doc_id: string;
+		path: string;
+		audience_json: string;
+		purpose_json: string;
+		visibility: string;
+	};
+	const documents = db.all<Candidate>(
+		"SELECT doc_id, path, audience_json, purpose_json, visibility FROM documents",
 	);
-	db.run(
-		`DELETE FROM fts_entries
-		 WHERE doc_id IN (
-			 SELECT doc_id FROM documents
-			 WHERE visibility <> 'public'
-		 )`,
-	);
-	db.run(
-		`DELETE FROM documents
-		 WHERE visibility <> 'public'`,
-	);
+	const removeDocIds: string[] = [];
+	for (const document of documents) {
+		if (!documentMatchesMetadataFilters(documentMetadata(document), { profile })) {
+			removeDocIds.push(document.doc_id);
+		}
+	}
+	for (const docId of removeDocIds) {
+		db.run("DELETE FROM fts_entries WHERE doc_id = $docId", { $docId: docId });
+		db.run("DELETE FROM documents WHERE doc_id = $docId", { $docId: docId });
+	}
+}
+
+function documentMetadata(document: {
+	path: string;
+	audience_json: string;
+	purpose_json: string;
+	visibility: string;
+}): DocumentMetadata {
+	return {
+		audience: parseStringArray(document.audience_json) as AtlasDocAudience[],
+		purpose: parseStringArray(document.purpose_json) as AtlasDocPurpose[],
+		visibility:
+			document.visibility === "public" || document.visibility === "internal"
+				? document.visibility
+				: undefined,
+		tags: [],
+	};
+}
+
+function parseStringArray(json: string): string[] {
+	try {
+		const parsed = JSON.parse(json) as unknown;
+		return Array.isArray(parsed)
+			? parsed.filter((value): value is string => typeof value === "string")
+			: [];
+	} catch {
+		return [];
+	}
+}
+
+const AVAILABLE_ARTIFACT_PROFILES = Object.keys(BUILT_IN_DOC_METADATA_PROFILES);
+
+function availableArtifactProfilesFor(profile: string): string[] {
+	const index = AVAILABLE_ARTIFACT_PROFILES.indexOf(profile);
+	return index === -1
+		? []
+		: AVAILABLE_ARTIFACT_PROFILES.slice(0, index + 1);
 }
 
 interface BuildCommandInput {
@@ -294,9 +336,9 @@ async function runRepoLocalBuild(
 			| undefined;
 	},
 ): Promise<CliCommandResult> {
-	if (options.profile !== "public") {
+	if (!AVAILABLE_ARTIFACT_PROFILES.includes(options.profile)) {
 		throw new CliError(
-			`Profile ${options.profile} not available for repo; imported artifact contains public docs only.`,
+			`Profile ${options.profile} not available for repo-local artifact export. Available profiles: ${AVAILABLE_ARTIFACT_PROFILES.join(", ")}.`,
 			{ code: "CLI_ARTIFACT_PROFILE_UNAVAILABLE", exitCode: EXIT_INPUT_ERROR },
 		);
 	}
@@ -315,30 +357,7 @@ async function runRepoLocalBuild(
 			logLevel: "warn",
 			server: { transport: "stdio" },
 			hosts: [defaultGithubHostConfig()],
-			docs: {
-				metadata: {
-					rules: [
-						{
-							id: "repo-local-app-package-docs-public",
-							match: {
-								include: [
-									"apps/*/docs/**/*.md",
-									"apps/*/docs/**/*.mdx",
-									"packages/*/docs/**/*.md",
-									"packages/*/docs/**/*.mdx",
-								],
-							},
-							metadata: {
-								visibility: "public",
-								audience: ["consumer"],
-								purpose: ["guide", "reference"],
-							},
-							priority: 20,
-						},
-					],
-					profiles: {},
-				},
-			},
+			docs: { metadata: { rules: [], profiles: {} } },
 			repos: [
 				{
 					repoId: options.repoId,
@@ -437,10 +456,16 @@ async function runRepoLocalBuild(
 				},
 			);
 		}
-		filterPublicArtifactCorpus(db);
+		filterArtifactCorpusByProfile(db, options.profile);
 		await writePrettyJson(
 			join(repoLocal.artifactDir, "manifest.json"),
-			manifestFromStore(db, options.repoId, buildRef, "public"),
+			manifestFromStore(
+				db,
+				options.repoId,
+				buildRef,
+				options.profile,
+				availableArtifactProfilesFor(options.profile),
+			),
 		);
 		db.run("PRAGMA wal_checkpoint(TRUNCATE)");
 		await exportCorpusDbSnapshot(

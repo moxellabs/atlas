@@ -74,7 +74,7 @@ export function registerFindDocsTool(
 		{
 			title: "Find ATLAS docs",
 			description:
-				"Return ranked document, section, chunk, or skill hits for a query.",
+				"Return ranked document, section, chunk, or skill hits for a query. Prefer plan_context first when building an answer; pass repoId and profile (public, contributor, maintainer, internal) or explicit metadata filters to avoid searching the wrong corpus slice.",
 			inputSchema: findDocsInputSchema,
 			outputSchema: jsonOutputSchema,
 		},

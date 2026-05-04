@@ -32,6 +32,7 @@ import type { AtlasMcpDependencies, AtlasMcpDiagnostic, AtlasMcpServer } from ".
 import { ATLAS_MCP_CAPABILITIES, createAtlasMcpServerMetadata } from "./metadata";
 
 const TOOL_NAMES = [
+  PLAN_CONTEXT_TOOL,
   FIND_SCOPES_TOOL,
   FIND_DOCS_TOOL,
   READ_OUTLINE_TOOL,
@@ -42,7 +43,6 @@ const TOOL_NAMES = [
   GET_SKILL_TOOL,
   USE_SKILL_TOOL,
   GET_FRESHNESS_TOOL,
-  PLAN_CONTEXT_TOOL,
   WHAT_CHANGED_TOOL
 ] as const;
 
@@ -105,6 +105,7 @@ export function createAtlasMcpServer(dependencies: AtlasMcpDependencies): AtlasM
 }
 
 function registerTools(server: McpServer, dependencies: AtlasMcpDependencies): void {
+  registerPlanContextTool(server, dependencies);
   registerFindScopesTool(server, dependencies);
   registerFindDocsTool(server, dependencies);
   registerReadOutlineTool(server, dependencies);
@@ -115,7 +116,6 @@ function registerTools(server: McpServer, dependencies: AtlasMcpDependencies): v
   registerGetSkillTool(server, dependencies);
   registerUseSkillTool(server, dependencies);
   registerGetFreshnessTool(server, dependencies);
-  registerPlanContextTool(server, dependencies);
   registerWhatChangedTool(server, dependencies);
 }
 
