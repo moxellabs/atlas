@@ -1706,7 +1706,7 @@ describe("atlas cli", () => {
         code: "CLI_BUILD_FAILED",
         details: {
           repoId: "github.mycorp.com/platform/docs",
-          docsConsidered: 4,
+          docsConsidered: 5,
           diagnostics: expect.arrayContaining([
             expect.objectContaining({
               stage: "compile",
@@ -1806,8 +1806,8 @@ describe("atlas cli", () => {
       ok: true,
       command: "build",
       data: {
-        docsConsidered: 3,
-        docsRebuilt: 3,
+        docsConsidered: 4,
+        docsRebuilt: 4,
       },
     });
   });
@@ -2877,6 +2877,125 @@ repos:
       ).toBe(false);
     } finally {
       globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("repo add skip leaves repo untracked and later manual index imports it", async () => {
+    await writeFile(
+      join(originPath, "docs", "deep-dive.md"),
+      `# Deep Dive\n\n${"Manual local-only indexing imports cloned documentation. ".repeat(80)}`,
+    );
+    await git(originPath, ["add", "docs/deep-dive.md"]);
+    await git(originPath, ["commit", "-m", "add deep docs"]);
+
+    const cfg = join(rootDir, "manual-index.config.yaml");
+    await writeFile(
+      cfg,
+      `
+version: 1
+cacheDir: ${cacheDir}
+corpusDbPath: ${join(cacheDir, "corpus.db")}
+logLevel: info
+server:
+  transport: stdio
+hosts:
+  - name: github.com
+    webUrl: https://github.com
+    apiUrl: https://api.github.com
+    protocol: https
+    default: true
+    priority: 100
+repos: []
+`,
+    );
+    const gitRewriteEnv = {
+      GIT_CONFIG_COUNT: "1",
+      GIT_CONFIG_KEY_0: "url.file://" + originPath + ".insteadOf",
+      GIT_CONFIG_VALUE_0: "https://github.com/moxellabs/atlas.git",
+    };
+    const originalGitConfigCount = process.env.GIT_CONFIG_COUNT;
+    const originalGitConfigKey0 = process.env.GIT_CONFIG_KEY_0;
+    const originalGitConfigValue0 = process.env.GIT_CONFIG_VALUE_0;
+    process.env.GIT_CONFIG_COUNT = gitRewriteEnv.GIT_CONFIG_COUNT;
+    process.env.GIT_CONFIG_KEY_0 = gitRewriteEnv.GIT_CONFIG_KEY_0;
+    process.env.GIT_CONFIG_VALUE_0 = gitRewriteEnv.GIT_CONFIG_VALUE_0;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response("not found", { status: 404 })) as unknown as typeof fetch;
+    try {
+      const add = await runWithCapture(
+        [
+          "repo",
+          "add",
+          "moxellabs/atlas",
+          "--cwd",
+          rootDir,
+          "--config",
+          cfg,
+          "--skip-missing-artifact",
+          "--non-interactive",
+          "--json",
+        ],
+        gitRewriteEnv,
+      );
+      expect(add.exitCode).toBe(0);
+      expect(JSON.parse(add.stdout).data).toMatchObject({
+        missingArtifact: true,
+        selectedAction: "skip",
+        repoId: "github.com/moxellabs/atlas",
+      });
+      expect((await loadConfig({ cwd: rootDir, configPath: cfg })).config.repos).toEqual(
+        [],
+      );
+
+      const indexed = await runWithCapture(
+        [
+          "index",
+          "moxellabs/atlas",
+          "--cwd",
+          rootDir,
+          "--config",
+          cfg,
+          "--ref",
+          "main",
+          "--non-interactive",
+          "--json",
+        ],
+        gitRewriteEnv,
+      );
+      expect(indexed.exitCode).toBe(0);
+      const indexedJson = JSON.parse(indexed.stdout);
+      expect(indexedJson.data).toMatchObject({
+        repoId: "github.com/moxellabs/atlas",
+        imported: true,
+      });
+      expect(indexedJson.data.counts.docs).toBeGreaterThan(0);
+
+      const globalDb = new Database(join(cacheDir, "corpus.db"), {
+        readonly: true,
+      });
+      try {
+        expect(
+          globalDb
+            .query(
+              "SELECT COUNT(*) AS count FROM documents WHERE repo_id = ? AND path = ?",
+            )
+            .get("github.com/moxellabs/atlas", "docs/deep-dive.md") as {
+            count: number;
+          },
+        ).toMatchObject({ count: 1 });
+      } finally {
+        globalDb.close();
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalGitConfigCount === undefined) delete process.env.GIT_CONFIG_COUNT;
+      else process.env.GIT_CONFIG_COUNT = originalGitConfigCount;
+      if (originalGitConfigKey0 === undefined) delete process.env.GIT_CONFIG_KEY_0;
+      else process.env.GIT_CONFIG_KEY_0 = originalGitConfigKey0;
+      if (originalGitConfigValue0 === undefined)
+        delete process.env.GIT_CONFIG_VALUE_0;
+      else process.env.GIT_CONFIG_VALUE_0 = originalGitConfigValue0;
     }
   });
 

@@ -14,6 +14,7 @@ import { canUseInteractiveUi, createPrompts } from "../io/prompts";
 import { buildCliDependencies } from "../runtime/dependencies";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
+import { topologyTemplate } from "../utils/topology-templates";
 import { resolveRepoInput } from "./repo-resolver";
 import {
 	appendRepoConfig,
@@ -103,7 +104,7 @@ export async function runIndexCommand(
 			packageGlobs: ["packages/*"],
 			packageManifestFiles: ["package.json"],
 		},
-		topology: [],
+		topology: topologyTemplate("mixed-monorepo"),
 	};
 	const force = context.argv.includes("--force");
 	const result = await indexLocalOnlyRepo({
