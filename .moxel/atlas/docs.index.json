@@ -1,9 +1,9 @@
 {
   "schema": "moxel-atlas-docs-index/v1",
   "repoId": "github.com/moxellabs/atlas",
-  "generatedAt": "2026-05-01T14:41:19.697Z",
+  "generatedAt": "2026-05-04T05:26:58.231Z",
   "counts": {
-    "documents": 36,
+    "documents": 54,
     "skills": 8,
     "packages": 15,
     "modules": 57
@@ -28,7 +28,7 @@
       "order": 100,
       "profile": "public",
       "contentHash": "31127fd8755ed067ded486213d5e9feab0cd65757023384ab096586d2f1b6045",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -57,7 +57,7 @@
       "visibility": "public",
       "profile": "public",
       "contentHash": "63e11f97640801079103f0fbeeaa16b69b4cfba132123c00926435711f6fc9e4",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -65,6 +65,31 @@
           "repoId": "github.com/moxellabs/atlas",
           "packageId": "pkg_bf94a374346c5cdd52ae58ea",
           "skillId": "skill_4436778c959e2ee0844bc584"
+        }
+      ]
+    },
+    {
+      "path": "apps/cli/README.md",
+      "docId": "doc_4a04a7d44c4f560c5de5acd0",
+      "title": "@atlas/cli",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_bf94a374346c5cdd52ae58ea",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "a69b3dd1e55188e49247d5b7925476d9ea8aa3a3a6cead67635177f346895f7b",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_bf94a374346c5cdd52ae58ea"
         }
       ]
     },
@@ -87,7 +112,7 @@
       "order": 110,
       "profile": "public",
       "contentHash": "bb2dd61c1cb8923b9b1b38aa83c3b8e7e104bf4ffaca58e7d344d3f3867a4a7e",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -116,7 +141,7 @@
       "visibility": "public",
       "profile": "public",
       "contentHash": "a7ef1a8430c0b858303d693190a6a6b3db0b99c87b8662babc71deb03e6f166d",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -124,6 +149,31 @@
           "repoId": "github.com/moxellabs/atlas",
           "packageId": "pkg_6040b9d2d791d0970152c676",
           "skillId": "skill_e3e9f3519a662a767980827f"
+        }
+      ]
+    },
+    {
+      "path": "apps/server/README.md",
+      "docId": "doc_d2448a5bee1b21e0039dc780",
+      "title": "@atlas/server",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_6040b9d2d791d0970152c676",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "d35a9b6569c6b2243cbafd7dd568247fa04810528003ff954f4ce11e559795d4",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_6040b9d2d791d0970152c676"
         }
       ]
     },
@@ -142,7 +192,7 @@
       ],
       "visibility": "public",
       "contentHash": "eaffcd19e626a5d17d2b367a27e249bedeb189c8da838f28bf7a12fc2638d263",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -166,7 +216,7 @@
       ],
       "visibility": "public",
       "contentHash": "33da6cf877b07885e2fcc270b29c80ed268c21c9a322a28b5b363c69452facc5",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -193,7 +243,7 @@
       "visibility": "public",
       "order": 20,
       "contentHash": "40a4423b93bc26aaea5b3a455dc53ad5ec3c8eaa06bee37d98d743d7112676f7",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -220,7 +270,7 @@
       "visibility": "public",
       "order": 55,
       "contentHash": "64ed944ecbe06e620c6fad133535f1ee49ea522c061575b5793c3c45f11d52b4",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -247,7 +297,7 @@
       "visibility": "public",
       "order": 90,
       "contentHash": "1225d294f92b42dd74f3f73494211a71d408bc546774935cd8bf4812362d0054",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -275,7 +325,7 @@
       "visibility": "public",
       "order": 10,
       "contentHash": "2daafe2d2d4fb7ab3efe56ba017ac804ec28c3ae456c47301eb93d799928ef25",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -303,7 +353,7 @@
       "visibility": "public",
       "order": 30,
       "contentHash": "e78482684ce9509f2a2924eef64a0f720ebe70052b68110682a9fa3b215077b7",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -328,7 +378,7 @@
       "visibility": "public",
       "order": 12,
       "contentHash": "08f1947dad969d14420515fa4c604348dfb7d67598e57eb125cf278d49cbcad8",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -356,7 +406,7 @@
       "visibility": "public",
       "order": 40,
       "contentHash": "f3f96a689849d02a7d6d0a9c3d17e005c17e9ebd20385701b56f786c1cbd02cf",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -384,7 +434,7 @@
       "visibility": "public",
       "order": 50,
       "contentHash": "ee4847a31d5732dcda3d1deaff2b13a6839148aa16a8cdf387a890ef9aa7c2d9",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -411,7 +461,7 @@
       "visibility": "public",
       "order": 60,
       "contentHash": "d2efccad175ea2dea71f12a860754b55dc008ed88cedab668c6cbd677e4a5aed",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -438,7 +488,7 @@
       "visibility": "public",
       "order": 70,
       "contentHash": "c05e965fc04cfcfde730f3f18ce6871485b131944d6b3a791e9146fd805bf742",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -465,7 +515,30 @@
       "visibility": "public",
       "order": 90,
       "contentHash": "4805ba8348bc33d6377cfd592caac509b130a6f0ff2f5987531eba22f73f66ba",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "evals/README.md",
+      "docId": "doc_9970b2ba8aeba21aaf4a2437",
+      "title": "Retrieval eval workflow",
+      "kind": "repo-doc",
+      "authority": "supplemental",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "66e58c21b28821a58565792d414f14fcb6453462398fea73b5def1ab281dc375",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -493,7 +566,32 @@
       "order": 200,
       "profile": "public",
       "contentHash": "bcdd02e31f63b6df53138a6632e83568cd5230ea3547d5a51d7f68153ac05faa",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_52ef0abfa284a71633749c0b"
+        }
+      ]
+    },
+    {
+      "path": "packages/compiler/README.md",
+      "docId": "doc_54af7102adc35b941ab52f0c",
+      "title": "@atlas/compiler",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_52ef0abfa284a71633749c0b",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "1ff27c9747decec4a1f8d50547cc518e1c593a6d6f05ff31509e445bb094b4e2",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -522,7 +620,32 @@
       "order": 210,
       "profile": "public",
       "contentHash": "b3aa88d3bdb15144193690f8246c4e605d9aa689173a780f08159a4f6448274e",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_994e088f673c59a5bd29e300"
+        }
+      ]
+    },
+    {
+      "path": "packages/config/README.md",
+      "docId": "doc_882b0789adec8bfdf47b5606",
+      "title": "@atlas/config",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_994e088f673c59a5bd29e300",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "b8be90566c93169c35bbea90e44aff3d7fcbb7ca4eae4d4ecf8676cc773c707e",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -551,7 +674,32 @@
       "order": 220,
       "profile": "public",
       "contentHash": "7fb1795faf607cd851baae5355ebd84d8998a3eda977acf914fa4c07f35a05d2",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_6635f43a6576c6a52b170ecb"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/README.md",
+      "docId": "doc_5260534ceb2b422a48ac6498",
+      "title": "@atlas/core",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_6635f43a6576c6a52b170ecb",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "5bd77b2749348c8cec46b3f4df9cc5c9611a42ce0ca212d3f1200c1972f8b164",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -580,7 +728,32 @@
       "order": 230,
       "profile": "public",
       "contentHash": "f8703558075f7f2de8b74f66ec751bca339d6c6bfcb667f545f4b1df107cbf99",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_db1bc63ba6abd7035e4f8eda"
+        }
+      ]
+    },
+    {
+      "path": "packages/indexer/README.md",
+      "docId": "doc_fa32a78d5f46a71ab81d6a02",
+      "title": "@atlas/indexer",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_db1bc63ba6abd7035e4f8eda",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "41a0291c59fc3add475c65753f51c81480a5e0337e29c960b7421702ddc52080",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -610,7 +783,7 @@
       "visibility": "public",
       "profile": "public",
       "contentHash": "f87bcbbfb09337d6edf17fba5a21f8e7fbc2b30ca6a090f32919129e6ab62d95",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -641,7 +814,32 @@
       "order": 240,
       "profile": "public",
       "contentHash": "6473322ddaf2b8e31ce95f83d0a32bf8c96fb5e0ed7407249ed722d7a68e2c76",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_f09e3904238d52abefa5f789"
+        }
+      ]
+    },
+    {
+      "path": "packages/mcp/README.md",
+      "docId": "doc_dc37cc2fc5790085f34a73d6",
+      "title": "@atlas/mcp",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_f09e3904238d52abefa5f789",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "31cd3879a37a8397e3be283b1cf497245fcf82d30f8f5f58842d60166f4692a1",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -671,7 +869,7 @@
       "visibility": "public",
       "profile": "public",
       "contentHash": "f2e28a06a95231c56a1a1d7e50dcea5c13a8dea04f3c6c41feee09a9a6948beb",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -702,7 +900,32 @@
       "order": 250,
       "profile": "public",
       "contentHash": "430b7b18706f0cd18b2960b4f077f303c8276bbe4d338c20bbccdd8c9873a80e",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_575cf354ce5c9c77bf8a3c4f"
+        }
+      ]
+    },
+    {
+      "path": "packages/retrieval/README.md",
+      "docId": "doc_db54fc97277a32e0ff80c961",
+      "title": "@atlas/retrieval",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_575cf354ce5c9c77bf8a3c4f",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "338506091f9e8c3d88d16088e39119182f676afd46fce22835999f82d6aa93ce",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -731,7 +954,32 @@
       "order": 260,
       "profile": "public",
       "contentHash": "ee1dac1de5faff8bd52040bae108f99ee93ffe105114efd0027611eeda413810",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_8c87f190a37de62dfcc588c6"
+        }
+      ]
+    },
+    {
+      "path": "packages/source-ghes/README.md",
+      "docId": "doc_f3de24f9b63cdddb7da2dcae",
+      "title": "@atlas/source-ghes",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_8c87f190a37de62dfcc588c6",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "3ad42efadb591fa955124aab94cc8128bfd48411d535d14fb22444251ffe51e6",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -760,7 +1008,32 @@
       "order": 270,
       "profile": "public",
       "contentHash": "514ac7de15c1347263a854923c09afd3799272b924f2e55f90a165f09302afa3",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_74b1cf73fdf9744887765f2f"
+        }
+      ]
+    },
+    {
+      "path": "packages/source-git/README.md",
+      "docId": "doc_2e1967d9a379a3a6758656f2",
+      "title": "@atlas/source-git",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_74b1cf73fdf9744887765f2f",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "831b0776031d01d0452ae24fd97833f4da12bcd0901d1b6ec6f13e26a43c4616",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -789,7 +1062,59 @@
       "order": 280,
       "profile": "public",
       "contentHash": "dd9feb218e2dcdcb8fc738216bec00af54a36110ca893221fa97fe8171b81cd6",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_dced5e7ca00f81d277f8fb43"
+        }
+      ]
+    },
+    {
+      "path": "packages/store/README.md",
+      "docId": "doc_aad2a8cfdc38d835283aa942",
+      "title": "@atlas/store",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_dced5e7ca00f81d277f8fb43",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "a083b0512667f45d436e26afaedfc53382abb940246dd5349345ac7e66abd5c0",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_dced5e7ca00f81d277f8fb43"
+        }
+      ]
+    },
+    {
+      "path": "packages/store/src/docs/docs/index.md",
+      "docId": "doc_2a6a031116e2fa51517193c0",
+      "title": "Store Docs Module",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_dced5e7ca00f81d277f8fb43",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide",
+        "reference"
+      ],
+      "visibility": "public",
+      "profile": "public",
+      "contentHash": "cf02ceeb1b9b856a85c220dcc4c212fabe15c338d58cad45843a717928d2014f",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -818,7 +1143,32 @@
       "order": 290,
       "profile": "public",
       "contentHash": "44db678efc27287c15d2921d7343ddab258744c348b8b08d1ca0cce53b9a2fb4",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_13d295e4f46ffce7a38ddfef"
+        }
+      ]
+    },
+    {
+      "path": "packages/testkit/README.md",
+      "docId": "doc_c65c20317a966cd234dd95a3",
+      "title": "@atlas/testkit",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_13d295e4f46ffce7a38ddfef",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "126ce5d0593a35476e6a4c318a6b8080bcf9733816c403d5f1c02f617782beae",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -847,7 +1197,32 @@
       "order": 300,
       "profile": "public",
       "contentHash": "44461d92d4539dde34d36eac678c001984033a87c147f914eda0761cb4aee822",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_7801cc65135e961b3bd775f3"
+        }
+      ]
+    },
+    {
+      "path": "packages/tokenizer/README.md",
+      "docId": "doc_9a187af1fc6270c398eb87c4",
+      "title": "@atlas/tokenizer",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_7801cc65135e961b3bd775f3",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "2764ece48c871432ad32c3022d05fe26dc1571ffcfce14909a20fecab55e80a7",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -876,7 +1251,32 @@
       "order": 310,
       "profile": "public",
       "contentHash": "8e3a5b8893080fbc53bde76e34cd6e6eda1b0c8e9956a400c8a04dee87a93b41",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_e31de698ac98ed3d50937090"
+        }
+      ]
+    },
+    {
+      "path": "packages/topology/README.md",
+      "docId": "doc_cb310f1177028102f7fd7954",
+      "title": "@atlas/topology",
+      "kind": "package-doc",
+      "authority": "supplemental",
+      "packageId": "pkg_e31de698ac98ed3d50937090",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "guide"
+      ],
+      "visibility": "public",
+      "contentHash": "cca8beefd4d99823fb71b494592d561810818bfa1c83a23185ffa19c0e7db9c6",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -906,7 +1306,7 @@
       "visibility": "public",
       "profile": "public",
       "contentHash": "2b954ca4a78f3cf025abcc36f24d845698e3f95a1350ec7ae38d4bd589c8a80e",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -936,7 +1336,7 @@
       "visibility": "public",
       "order": 1,
       "contentHash": "64af32be8189c60980bafd566b91a5e31912303075ac7c7c0e04ea8151790d22",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
@@ -963,13 +1363,36 @@
       "visibility": "public",
       "order": 120,
       "contentHash": "1361005bf48db15843d2153a972ed53f19808c76c05789b6a91e8cf98681460c",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
           "level": "skill",
           "repoId": "github.com/moxellabs/atlas",
           "skillId": "skill_1d83c12ea8541c065fd171f9"
+        }
+      ]
+    },
+    {
+      "path": "skills/document-codebase/references/documentation-patterns.md",
+      "docId": "doc_e1ee125da52357f861bcd811",
+      "title": "Documentation Patterns",
+      "kind": "repo-doc",
+      "authority": "supplemental",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "workflow"
+      ],
+      "visibility": "public",
+      "contentHash": "54a52e522eb5b876309209711c26b4554f9fc5d7864469a9407d7ae4006d6876",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
         }
       ]
     },
@@ -991,13 +1414,36 @@
       "visibility": "public",
       "order": 100,
       "contentHash": "6629d7b887940d84fb6e270d158e452a7ac751b68e9710ec94aca163ff466bb6",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
           "level": "skill",
           "repoId": "github.com/moxellabs/atlas",
           "skillId": "skill_a53837078681ed949d292c0e"
+        }
+      ]
+    },
+    {
+      "path": "skills/skill-creator/references/skill-spec-template.md",
+      "docId": "doc_38dddba8dd79f65c4e7ce2af",
+      "title": "Skill Spec Template",
+      "kind": "repo-doc",
+      "authority": "supplemental",
+      "audience": [
+        "consumer"
+      ],
+      "purpose": [
+        "workflow"
+      ],
+      "visibility": "public",
+      "contentHash": "c5b11e62ff86170bf27711f6247980f2ed154fac2584773ddd6280e0b1fd84a0",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "repo",
+          "repoId": "github.com/moxellabs/atlas"
         }
       ]
     },
@@ -1019,7 +1465,7 @@
       "visibility": "public",
       "order": 110,
       "contentHash": "05e72505af32c589628909d5d04b7e25bf5fb334713708ebdcdd2990215d3ddf",
-      "sourceVersion": "73bad4061cae8434d66193cecd13fbc35579cdf3",
+      "sourceVersion": "4a5122466e48fa8e2c115b72e741afcba3f17deb",
       "tags": [],
       "scopes": [
         {
