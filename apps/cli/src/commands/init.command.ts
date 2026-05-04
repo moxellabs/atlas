@@ -261,12 +261,8 @@ async function runSetupCommand(
 					env: identityEnv,
 					configPath: explicitConfigPath,
 				});
-	if (await fileExists(configPath)) {
-		throw new CliError(`Config already exists at ${configPath}.`, {
-			code: "CLI_CONFIG_EXISTS",
-			exitCode: EXIT_INPUT_ERROR,
-		});
-	}
+	const force = context.argv.includes("--force");
+	const existingConfig = await fileExists(configPath);
 
 	const cacheDirFlag = readArgvString(context.argv, "--cache-dir");
 	const nonInteractive = context.argv.includes("--non-interactive");
@@ -309,19 +305,33 @@ async function runSetupCommand(
 			}
 		: defaultGithubHostConfig();
 
-	const created = await mutateAtlasConfig(
-		{
-			cwd: context.cwd,
-			env: context.env,
-			configPath,
-			createDefault: {
-				...defaultCliConfig(cacheDir),
-				identity: { root: identityProfile.identityRoot },
-				hosts: [setupHost],
-			},
-		},
-		(config) => ({ ...config, hosts: [setupHost] }),
-	);
+	const desiredConfig: AtlasConfig = {
+		...defaultCliConfig(cacheDir),
+		identity: { root: identityProfile.identityRoot },
+		hosts: [setupHost],
+	};
+	const created =
+		existingConfig && !force
+			? {
+					configPath,
+					config: (
+						await loadConfig({
+							cwd: context.cwd,
+							env: identityEnv,
+							configPath,
+							requireGhesAuth: false,
+						})
+					).config,
+				}
+			: await mutateAtlasConfig(
+					{
+						cwd: context.cwd,
+						env: identityEnv,
+						configPath,
+						createDefault: desiredConfig,
+					},
+					() => desiredConfig,
+				);
 	await mkdir(
 		parentDir(resolveCliPath(created.config.corpusDbPath, context.cwd)),
 		{ recursive: true },
@@ -362,9 +372,14 @@ async function runSetupCommand(
 			cacheDir: created.config.cacheDir,
 			corpusDbPath: created.config.corpusDbPath,
 			hosts: created.config.hosts,
+			existingConfig,
+			overwritten: existingConfig && force,
 		},
 		[
 			`Config: ${displayPath(configPath, context.cwd)}`,
+			...(existingConfig && !force
+				? ["Existing config detected; leaving it unchanged. Re-run with --force to overwrite."]
+				: []),
 			`Artifact root: ${identityProfile.identityRoot}`,
 			`Runtime root: ${displayPath(resolveCliPath(created.config.cacheDir, context.cwd), context.cwd)}`,
 			`Cache: ${displayPath(resolveCliPath(created.config.cacheDir, context.cwd), context.cwd)}`,
