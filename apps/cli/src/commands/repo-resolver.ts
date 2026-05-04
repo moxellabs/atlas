@@ -143,6 +143,20 @@ export interface ResolvedRepoInput {
 	remote?: string | undefined;
 	localPath?: string | undefined;
 	kind: ParsedRepoInput["kind"];
+	fallbacks?: ResolvedRepoInput[] | undefined;
+}
+
+function resolvedShorthand(
+	host: AtlasHostConfig,
+	parsed: Extract<ParsedRepoInput, { kind: "shorthand" }>,
+): ResolvedRepoInput {
+	return {
+		repoId: `${host.name}/${parsed.owner}/${parsed.name}`,
+		host,
+		owner: parsed.owner,
+		name: parsed.name,
+		kind: parsed.kind,
+	};
 }
 
 export async function resolveRepoInput(
@@ -214,6 +228,9 @@ export async function resolveRepoInput(
 		};
 	}
 	const hosts = configuredHosts(config);
+	if (parsed.kind !== "shorthand") {
+		throw new Error("Expected shorthand repo input after explicit inputs resolved.");
+	}
 	if (options.host) {
 		const host = hosts.find((h) => h.name === options.host?.toLowerCase());
 		if (!host) unknownHost(options.host.toLowerCase(), config);
@@ -231,11 +248,13 @@ export async function resolveRepoInput(
 			exitCode: EXIT_INPUT_ERROR,
 		});
 	const host = defaultHost(hosts) ?? hosts[0]!;
+	const publicGithub = hosts.find((candidate) => candidate.name === "github.com");
+	const fallbacks =
+		publicGithub === undefined || publicGithub.name === host.name
+			? []
+			: [resolvedShorthand(publicGithub, parsed)];
 	return {
-		repoId: `${host.name}/${parsed.owner}/${parsed.name}`,
-		host,
-		owner: parsed.owner,
-		name: parsed.name,
-		kind: parsed.kind,
+		...resolvedShorthand(host, parsed),
+		...(fallbacks.length === 0 ? {} : { fallbacks }),
 	};
 }
