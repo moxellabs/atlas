@@ -190,7 +190,12 @@ function assertNoContradictoryOwnership(options: {
 }
 
 function isFallbackDocPath(path: string): boolean {
-  return !path.startsWith("docs/archive/") && path.toLowerCase().endsWith(".md");
+  return (
+    !path.startsWith(".planning/") &&
+    !path.startsWith("docs/archive/") &&
+    !path.startsWith("docs/prd/") &&
+    path.toLowerCase().endsWith(".md")
+  );
 }
 
 function fallbackKind(path: string, hasPackageScope: boolean): DocKind {

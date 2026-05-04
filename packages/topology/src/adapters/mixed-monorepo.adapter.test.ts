@@ -185,9 +185,11 @@ describe("MixedMonorepoTopologyAdapter", () => {
     );
   });
 
-  test("does not classify archived root docs through fallback heuristics", async () => {
+  test("does not classify archived or internal docs through fallback heuristics", async () => {
     const docs = await new MixedMonorepoTopologyAdapter().classifyDocs({ ...ctx, rules: [] }, [
-      { path: "docs/archive/old-spec.md", type: "file" }
+      { path: "docs/archive/old-spec.md", type: "file" },
+      { path: "docs/prd/private-plan.md", type: "file" },
+      { path: ".planning/ROADMAP.md", type: "file" }
     ]);
 
     expect(docs).toEqual([]);
