@@ -408,8 +408,13 @@ describe("atlas cli", () => {
     ]);
 
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = (async () =>
-      new Response("not found", { status: 404 })) as unknown as typeof fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/api/v3/repos/platform/docs") {
+        return new Response(JSON.stringify({ id: 1, full_name: "platform/docs" }));
+      }
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
     try {
       const result = await runWithCapture(
         [
@@ -430,6 +435,95 @@ describe("atlas cli", () => {
       expect(JSON.parse(result.stdout).data.repoId).toBe(
         "github.mycorp.com/platform/docs",
       );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("add-repo falls back to github.com for shorthand when enterprise repo is absent", async () => {
+    const home = join(rootDir, "home-add-repo-enterprise-fallback");
+    await runWithCapture(
+      ["setup", "--cwd", rootDir, "--cache-dir", cacheDir, "--non-interactive"],
+      { HOME: home },
+    );
+    const cfg = join(home, ".moxel", "atlas", "config.yaml");
+    await runWithCapture([
+      "hosts",
+      "add",
+      "github.mycorp.com",
+      "--cwd",
+      rootDir,
+      "--config",
+      cfg,
+      "--web-url",
+      "https://github.mycorp.com",
+      "--api-url",
+      "https://github.mycorp.com/api/v3",
+      "--protocol",
+      "https",
+      "--priority",
+      "10",
+      "--default",
+    ]);
+    const publicArtifactRoot = join(rootDir, "public-fallback-artifact");
+    await createCliArtifactFixture(publicArtifactRoot, "public-fallback-revision");
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.hostname === "github.mycorp.com") {
+        return new Response(JSON.stringify({ message: "not found" }), {
+          status: 404,
+        });
+      }
+      if (url.hostname !== "api.github.com") {
+        return new Response(JSON.stringify({ message: "not found" }), {
+          status: 404,
+        });
+      }
+      if (url.pathname === "/repos/moxellabs/atlas/branches/main") {
+        return new Response(
+          JSON.stringify({ commit: { sha: "public-fallback-revision" } }),
+        );
+      }
+      const prefix = "/repos/moxellabs/atlas/contents/.moxel/atlas/";
+      if (!url.pathname.startsWith(prefix)) {
+        return new Response(JSON.stringify({ message: "not found" }), {
+          status: 404,
+        });
+      }
+      const file = url.pathname.slice(prefix.length);
+      const artifactFile = Bun.file(join(publicArtifactRoot, ".moxel", "atlas", file));
+      if (!(await artifactFile.exists())) {
+        return new Response(JSON.stringify({ message: "not found" }), {
+          status: 404,
+        });
+      }
+      return new Response(await artifactFile.arrayBuffer());
+    }) as unknown as typeof fetch;
+    try {
+      const result = await runWithCapture(
+        [
+          "add-repo",
+          "moxellabs/atlas",
+          "--cwd",
+          rootDir,
+          "--config",
+          cfg,
+          "--cache-dir",
+          cacheDir,
+          "--mode",
+          "ghes-api",
+          "--non-interactive",
+          "--json",
+        ],
+        { HOME: home },
+      );
+      expect(result.exitCode).toBe(0);
+      const data = JSON.parse(result.stdout).data;
+      expect(data.repo.repoId).toBe("github.com/moxellabs/atlas");
+      expect(data.repo.github.baseUrl).toBe("https://api.github.com");
+      expect(data.artifactFound).toBe(true);
     } finally {
       globalThis.fetch = originalFetch;
     }

@@ -361,11 +361,12 @@ async function resolveAddRepoInput(
 ): Promise<AddRepoResolvedInput | undefined> {
 	if (positional === undefined) return undefined;
 	const hostFlag = readArgvString(context.argv, "--host");
-	const resolved = await resolveRepoInput(context, loadedConfig.config, {
+	let resolved = await resolveRepoInput(context, loadedConfig.config, {
 		input: positional,
 		...(hostFlag === undefined ? {} : { host: hostFlag }),
 		nonInteractive: context.argv.includes("--non-interactive"),
 	});
+	resolved = await fallbackWhenPrimaryRepoMissing(resolved);
 	const explicitRepoId = readArgvString(context.argv, "--repo-id");
 	if (
 		explicitRepoId &&
@@ -378,6 +379,31 @@ async function resolveAddRepoInput(
 		);
 	}
 	return resolved;
+}
+
+async function fallbackWhenPrimaryRepoMissing(
+	resolved: AddRepoResolvedInput,
+): Promise<AddRepoResolvedInput> {
+	const fallback = resolved.fallbacks?.[0];
+	if (fallback === undefined) return resolved;
+	const primaryExists = await remoteRepoExists(resolved);
+	return primaryExists === false ? fallback : resolved;
+}
+
+async function remoteRepoExists(
+	resolved: AddRepoResolvedInput,
+): Promise<boolean | undefined> {
+	try {
+		const response = await globalThis.fetch(
+			`${resolved.host.apiUrl.replace(/\/+$/, "")}/repos/${resolved.owner}/${resolved.name}`,
+			{ method: "GET", headers: { Accept: "application/vnd.github+json" } },
+		);
+		if (response.status === 404) return false;
+		if (response.ok) return true;
+		return undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 async function buildAddRepoConfig(
