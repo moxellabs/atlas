@@ -360,8 +360,23 @@ describe("document metadata classification", () => {
 			compilePath("skills/example/SKILL.md").document.metadata,
 		).toMatchObject({
 			visibility: "public",
-			audience: ["consumer"],
+			audience: ["contributor", "maintainer"],
 			purpose: ["workflow"],
+		});
+		expect(compilePath("packages/core/README.md").document.metadata).toMatchObject({
+			visibility: "public",
+			audience: ["contributor"],
+			purpose: ["implementation", "reference"],
+		});
+		expect(
+			compilePath(
+				"docs/architecture/plan.md",
+				"---\ntitle: Draft plan\nstatus: Draft\n---\n# Draft plan\n",
+			).document.metadata,
+		).toMatchObject({
+			visibility: "internal",
+			audience: ["contributor"],
+			purpose: ["implementation"],
 		});
 		expect(
 			compilePath(".planning/phases/25/PLAN.md").document.metadata,

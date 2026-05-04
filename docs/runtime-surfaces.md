@@ -140,7 +140,7 @@ Maintainer committed artifact path is identity root directly: `<repo>/.moxel/atl
 
 ## Metadata-aware search and retrieval
 
-`atlas search` accepts `--profile`, `--audience`, `--purpose`, and `--visibility` filters. Imported public artifacts default to `--profile public`; requesting an unavailable profile reports `Profile contributor not available for repo; imported artifact contains public docs only.`. Retrieval and MCP context planning pass profile/audience/purpose/visibility filters into store search so excluded docs do not become ranked or selected context.
+`atlas search` accepts `--profile`, `--audience`, `--purpose`, and `--visibility` filters. Imported artifacts default to `--profile public`; pass `--profile contributor`, `--profile maintainer`, or `--profile internal` when the imported artifact was built for that access level. Use `--all-profiles` or `--profile any` to search without a profile filter. Retrieval and MCP context planning pass profile/audience/purpose/visibility filters into store search so excluded docs do not become ranked or selected context.
 
 ## First-Party Skills And Public Docs
 

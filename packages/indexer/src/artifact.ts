@@ -16,11 +16,8 @@ import {
 	deleteRepoCorpus,
 	getCurrentSchemaVersion,
 	ManifestRepository,
-	ModuleRepository,
 	migrateStore,
 	openStore,
-	PackageRepository,
-	SkillRepository,
 	STORE_SCHEMA_VERSION,
 	type StoreDatabase,
 } from "@atlas/store";
@@ -234,18 +231,18 @@ export function buildDocsIndex(
 	generatedAt = new Date().toISOString(),
 ): MoxelAtlasDocsIndex {
 	const docs = new DocRepository(db).listByRepo(repoId);
-	const skills = new SkillRepository(db).listByRepo(repoId);
-	const packages = new PackageRepository(db).listByRepo(repoId);
-	const modules = new ModuleRepository(db).listByRepo(repoId);
+	const skillIds = new Set(docs.flatMap((doc) => doc.skillId ?? []));
+	const packageIds = new Set(docs.flatMap((doc) => doc.packageId ?? []));
+	const moduleIds = new Set(docs.flatMap((doc) => doc.moduleId ?? []));
 	return {
 		schema: "moxel-atlas-docs-index/v1",
 		repoId,
 		generatedAt,
 		counts: {
 			documents: docs.length,
-			skills: skills.length,
-			packages: packages.length,
-			modules: modules.length,
+			skills: skillIds.size,
+			packages: packageIds.size,
+			modules: moduleIds.size,
 		},
 		documents: docs
 			.map((doc) => ({
@@ -430,6 +427,7 @@ export function manifestFromStore(
 	repoId: string,
 	ref: string,
 	profile = "public",
+	availableProfiles = [profile],
 ): MoxelAtlasArtifactManifest {
 	const manifest = new ManifestRepository(db).get(repoId);
 	return buildArtifactManifest({
@@ -438,7 +436,7 @@ export function manifestFromStore(
 		indexedRevision: manifest?.indexedRevision ?? ref,
 		corpusDbSchemaVersion: manifest?.schemaVersion ?? STORE_SCHEMA_VERSION,
 		profile,
-		availableProfiles: [profile],
+		availableProfiles,
 	});
 }
 

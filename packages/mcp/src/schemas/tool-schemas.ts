@@ -22,7 +22,13 @@ export const repoIdSchema = z
 	.trim()
 	.min(1)
 	.optional()
-	.describe("Optional repository identifier.");
+	.describe("Optional repository identifier such as github.com/owner/repo; pass it when the corpus has multiple repos.");
+const profileSchema = z
+	.string()
+	.trim()
+	.min(1)
+	.optional()
+	.describe("Metadata profile filter. Use public for consumer docs, contributor for public contributor docs, maintainer for maintainer docs, or internal for all indexed docs.");
 const docAudienceSchema = z.enum([
 	"consumer",
 	"contributor",
@@ -81,7 +87,7 @@ export const findDocsInputSchema = z
 			)
 			.max(10)
 			.optional(),
-		profile: z.string().trim().min(1).optional(),
+		profile: profileSchema,
 		audience: z.array(docAudienceSchema).optional(),
 		purpose: z.array(docPurposeSchema).optional(),
 		visibility: z.array(docVisibilitySchema).optional(),
@@ -162,7 +168,7 @@ export const planContextInputSchema = z
 		candidateLimit: limitSchema,
 		summaryLimit: limitSchema,
 		expansionLimit: limitSchema,
-		profile: z.string().trim().min(1).optional(),
+		profile: profileSchema,
 		audience: z.array(docAudienceSchema).optional(),
 		purpose: z.array(docPurposeSchema).optional(),
 		visibility: z.array(docVisibilitySchema).optional(),

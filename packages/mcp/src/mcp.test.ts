@@ -660,6 +660,7 @@ describe("mcp package", () => {
 
 		const atlasServer = createAtlasMcpServer({ db: store });
 		expect(atlasServer.tools).toEqual([
+			"plan_context",
 			"find_scopes",
 			"find_docs",
 			"read_outline",
@@ -670,7 +671,6 @@ describe("mcp package", () => {
 			"get_skill",
 			"use_skill",
 			"get_freshness",
-			"plan_context",
 			"what_changed",
 		]);
 		expect(atlasServer.resources).toContain("atlas-document");

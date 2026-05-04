@@ -27,12 +27,6 @@ export async function runSearchCommand(
 		...(configPath === undefined ? {} : { configPath }),
 	});
 	try {
-		if (filters.profile !== undefined && filters.profile !== "public") {
-			throw new CliError(
-				`Profile ${filters.profile} not available for repo; imported artifact contains public docs only. Use --all-profiles or --profile any to search without a profile filter.`,
-				{ code: "CLI_SEARCH_PROFILE_UNAVAILABLE", exitCode: EXIT_INPUT_ERROR },
-			);
-		}
 		const hits = lexicalSearch(deps.db, {
 			query,
 			...(repoId === undefined ? {} : { repoId }),
