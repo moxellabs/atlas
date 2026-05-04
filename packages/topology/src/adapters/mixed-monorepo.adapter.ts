@@ -93,13 +93,5 @@ export class MixedMonorepoTopologyAdapter implements RepoTopologyAdapter {
 
 function isDocumentationPath(path: string): boolean {
 	const normalizedPath = normalizeRepoPath(path);
-	const lowerPath = normalizedPath.toLowerCase();
-	return (
-		normalizedPath.endsWith(".md") &&
-		(lowerPath === "readme.md" ||
-			lowerPath.endsWith("/readme.md") ||
-			normalizedPath.startsWith("docs/") ||
-			normalizedPath.startsWith("skills/") ||
-			normalizedPath.includes("/docs/"))
-	);
+	return normalizedPath.toLowerCase().endsWith(".md");
 }

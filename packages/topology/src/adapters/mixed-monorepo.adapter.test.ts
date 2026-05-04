@@ -146,19 +146,43 @@ describe("MixedMonorepoTopologyAdapter", () => {
     await expect(new ModuleLocalDocsTopologyAdapter().detect(ctx)).resolves.toBe(true);
   });
 
-  test("classifies top-level docs with fallback diagnostics when rules are empty", async () => {
+  test("classifies markdown docs with fallback diagnostics when rules are empty", async () => {
     const docs = await new MixedMonorepoTopologyAdapter().classifyDocs({ ...ctx, rules: [] }, [
-      { path: "docs/fallback.md", type: "file" }
+      { path: "README.md", type: "file" },
+      { path: "docs/fallback.md", type: "file" },
+      { path: "packages/auth/README.MD", type: "file" },
+      { path: "guides/setup.MD", type: "file" }
     ]);
 
-    expect(docs).toEqual([
+    const packageId = createPackageId({ repoId: "atlas", path: "packages/auth" });
+
+    expect(docs.map((doc) => doc.path)).toEqual([
+      "docs/fallback.md",
+      "guides/setup.MD",
+      "packages/auth/README.MD",
+      "README.md"
+    ]);
+    expect(docs).toContainEqual(
       expect.objectContaining({
+        path: "README.md",
         kind: "repo-doc",
         authority: "supplemental",
         scopes: [{ level: "repo", repoId: "atlas" }],
         diagnostics: [expect.objectContaining({ reason: "Fallback structural documentation heuristic was used." })]
       })
-    ]);
+    );
+    expect(docs).toContainEqual(
+      expect.objectContaining({
+        path: "packages/auth/README.MD",
+        kind: "package-doc",
+        authority: "supplemental",
+        packageId,
+        scopes: [{ level: "package", repoId: "atlas", packageId }],
+        diagnostics: expect.arrayContaining([
+          expect.objectContaining({ reason: "Fallback structural documentation heuristic was used." })
+        ])
+      })
+    );
   });
 
   test("does not classify archived root docs through fallback heuristics", async () => {
