@@ -239,6 +239,79 @@ describe("atlas cli", () => {
     });
   });
 
+  test("setup is idempotent when config already exists and only overrides with force", async () => {
+    const home = join(rootDir, "home-setup-idempotent");
+    const firstCache = join(rootDir, "first-cache");
+    const secondCache = join(rootDir, "second-cache");
+    const config = join(home, ".moxel", "atlas", "config.yaml");
+    const first = await runWithCapture(
+      ["setup", "--cwd", rootDir, "--cache-dir", firstCache, "--non-interactive"],
+      { HOME: home },
+    );
+    expect(first.exitCode).toBe(0);
+
+    const second = await runWithCapture(
+      [
+        "setup",
+        "--cwd",
+        rootDir,
+        "--cache-dir",
+        secondCache,
+        "--host",
+        "github.enterprise.test",
+        "--protocol",
+        "https",
+        "--non-interactive",
+        "--json",
+      ],
+      { HOME: home },
+    );
+    expect(second.exitCode).toBe(0);
+    expect(JSON.parse(second.stdout).data).toMatchObject({
+      configPath: config,
+      cacheDir: firstCache,
+      existingConfig: true,
+      overwritten: false,
+    });
+    let loaded = await loadConfig({ cwd: rootDir, configPath: config, env: { HOME: home } });
+    expect(loaded.config.cacheDir).toBe(firstCache);
+    expect(loaded.config.hosts[0]?.name).toBe("github.com");
+
+    const forced = await runWithCapture(
+      [
+        "setup",
+        "--cwd",
+        rootDir,
+        "--cache-dir",
+        secondCache,
+        "--host",
+        "github.enterprise.test",
+        "--protocol",
+        "https",
+        "--force",
+        "--non-interactive",
+        "--json",
+      ],
+      { HOME: home },
+    );
+    expect(forced.exitCode).toBe(0);
+    expect(JSON.parse(forced.stdout).data).toMatchObject({
+      configPath: config,
+      cacheDir: secondCache,
+      existingConfig: true,
+      overwritten: true,
+    });
+    loaded = await loadConfig({ cwd: rootDir, configPath: config, env: { HOME: home } });
+    expect(loaded.config.cacheDir).toBe(secondCache);
+    expect(loaded.config.hosts).toEqual([
+      expect.objectContaining({
+        name: "github.enterprise.test",
+        protocol: "https",
+        default: true,
+      }),
+    ]);
+  });
+
   test("next recommends setup, repo add, and build from detected state", async () => {
     const noSetup = await runWithCapture(["next", "--cwd", rootDir, "--json"], {
       HOME: join(rootDir, "home-next-empty"),
