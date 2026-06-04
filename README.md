@@ -7,7 +7,7 @@ visibility: public
 order: 1
 ---
 
-![Atlas README header](docs/assets/atlas-readme-header.png)
+<!-- ![Atlas README header](docs/assets/atlas-readme-header.png) -->
 
 # Atlas
 
