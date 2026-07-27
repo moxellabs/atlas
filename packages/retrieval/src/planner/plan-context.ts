@@ -45,6 +45,7 @@ import type {
 	PlanningSelectionState,
 	RetrievalCandidate,
 	RetrievalDiagnostic,
+	RetrievalRepositories,
 	ScopeCandidate,
 	ScopeContext,
 } from "../types";
@@ -53,12 +54,17 @@ import { finalizeContext } from "./finalize-context";
 import { selectSummaries } from "./select-summaries";
 
 const DEFAULT_CANDIDATE_LIMIT = 40;
+/** Max documents broad fallback will score before ranking the top slice. */
+const BROAD_FALLBACK_SCAN_LIMIT = 120;
+/** Max repos scanned when no repoId filter is present. */
+const BROAD_FALLBACK_REPO_LIMIT = 8;
 
 /** Builds a staged, scope-aware, token-budgeted context plan over persisted ATLAS artifacts. */
 export function planContext(input: PlanContextInput): PlannedContext {
 	validatePlanInput(input);
 	const encoder = input.encoder ?? createTextEncoder();
 	const diagnostics: RetrievalDiagnostic[] = [];
+	const repositories = resolveRepositories(input);
 	const classification = classifyQuery(input.query);
 	diagnostics.push({
 		stage: "classification",
@@ -79,7 +85,7 @@ export function planContext(input: PlanContextInput): PlannedContext {
 	diagnostics.push(...scopeResult.diagnostics);
 
 	const expandedQuery = expandQuery(input.query);
-	const candidates = gatherCandidates(input.db, {
+	const candidates = gatherCandidates(input.db, repositories, {
 		query: input.query,
 		expandedQuery,
 		repoId: input.repoId,
@@ -107,7 +113,7 @@ export function planContext(input: PlanContextInput): PlannedContext {
 		classification,
 		candidates,
 		scopes: scopeResult.scopes,
-		freshnessByRepo: freshnessScores(input.db),
+		freshnessByRepo: freshnessScores(repositories),
 		limit: input.candidateLimit ?? DEFAULT_CANDIDATE_LIMIT,
 	});
 	diagnostics.push({
@@ -296,12 +302,12 @@ function recommendedNextActions(planned: PlannedContext): string[] {
 	}
 	return [...new Set(actions)];
 }
-
-function freshnessScores(db: StoreDatabase): ReadonlyMap<string, number> {
-	const manifests = new ManifestRepository(db);
+function freshnessScores(
+	repositories: RetrievalRepositories,
+): ReadonlyMap<string, number> {
 	return new Map(
-		new RepoRepository(db).list().map((repo) => {
-			const manifest = manifests.get(repo.repoId);
+		repositories.repos.list().map((repo) => {
+			const manifest = repositories.manifests.get(repo.repoId);
 			const freshness = computeFreshness({
 				repoId: repo.repoId,
 				repoRevision: repo.revision,
@@ -313,6 +319,22 @@ function freshnessScores(db: StoreDatabase): ReadonlyMap<string, number> {
 			];
 		}),
 	);
+}
+
+function resolveRepositories(input: PlanContextInput): RetrievalRepositories {
+	if (input.repositories !== undefined) {
+		return input.repositories;
+	}
+	const db = input.db;
+	return {
+		docs: new DocRepository(db),
+		summaries: new SummaryRepository(db),
+		chunks: new ChunkRepository(db),
+		sections: new SectionRepository(db),
+		skills: new SkillRepository(db),
+		repos: new RepoRepository(db),
+		manifests: new ManifestRepository(db),
+	};
 }
 
 interface GatherContext {
@@ -327,11 +349,12 @@ interface GatherContext {
 
 function gatherCandidates(
 	db: StoreDatabase,
+	repositories: RetrievalRepositories,
 	context: GatherContext,
 ): RetrievalCandidate[] {
 	try {
-		const docRepo = new DocRepository(db);
-		const summaryRepo = new SummaryRepository(db);
+		const { docs: docRepo, summaries: summaryRepo, skills: skillRepo } =
+			repositories;
 		const candidates: RetrievalCandidate[] = [];
 		const expandedQuery = context.expandedQuery;
 		const lexicalQuery = toLexicalQuery(expandedQuery);
@@ -346,7 +369,7 @@ function gatherCandidates(
 			const lexicalScores = normalizedLexicalScores(lexicalHits);
 			for (const hit of lexicalHits) {
 				const hydrated = candidateFromLexicalHit({
-					db,
+					repositories,
 					docRepo,
 					hit,
 					score: lexicalScores.get(lexicalHitKey(hit)) ?? 0.35,
@@ -407,7 +430,7 @@ function gatherCandidates(
 				);
 			}
 			if (scope.level === "skill" && scope.skillId !== undefined) {
-				const skill = new SkillRepository(db).get(scope.skillId);
+				const skill = skillRepo.get(scope.skillId);
 				if (skill !== undefined) {
 					candidates.push(
 						skillCandidate(
@@ -435,13 +458,7 @@ function gatherCandidates(
 		if (deduped.length < Math.min(context.candidateLimit, 3)) {
 			return dedupeCandidates([
 				...deduped,
-				...broadFallbackCandidates(
-					db,
-					docRepo,
-					summaryRepo,
-					context,
-					deduped.length,
-				),
+				...broadFallbackCandidates(repositories, context, deduped.length),
 			]);
 		}
 		return deduped;
@@ -458,9 +475,7 @@ function gatherCandidates(
 }
 
 function broadFallbackCandidates(
-	db: StoreDatabase,
-	docRepo: DocRepository,
-	summaryRepo: SummaryRepository,
+	repositories: RetrievalRepositories,
 	context: GatherContext,
 	existingCount: number,
 ): RetrievalCandidate[] {
@@ -468,23 +483,30 @@ function broadFallbackCandidates(
 	if (terms.length === 0) {
 		return [];
 	}
-	const documents =
-		context.repoId === undefined
-			? new RepoRepository(db)
-					.list()
-					.flatMap((repo) => docRepo.listByRepo(repo.repoId))
-			: docRepo.listByRepo(context.repoId);
+	const needed = Math.max(0, context.candidateLimit - existingCount);
+	if (needed === 0) {
+		return [];
+	}
+	const scanLimit = Math.min(
+		BROAD_FALLBACK_SCAN_LIMIT,
+		Math.max(needed * 4, needed),
+	);
+	const documents = collectBroadFallbackDocuments(
+		repositories,
+		context,
+		scanLimit,
+	);
 	const scored = documents
 		.map((document) => ({
 			document,
-			score: broadDocumentScore(document, summaryRepo, terms),
+			score: broadDocumentScore(document, repositories.summaries, terms),
 		}))
 		.filter((item) => item.score > 0)
 		.sort(
 			(a, b) =>
 				b.score - a.score || a.document.path.localeCompare(b.document.path),
 		)
-		.slice(0, Math.max(0, context.candidateLimit - existingCount));
+		.slice(0, needed);
 	const candidates: RetrievalCandidate[] = [];
 	for (const { document, score } of scored) {
 		candidates.push(
@@ -496,9 +518,63 @@ function broadFallbackCandidates(
 				context.countTokens,
 			),
 		);
-		candidates.push(...documentSummaries(summaryRepo, document, 0.34));
+		candidates.push(
+			...documentSummaries(repositories.summaries, document, 0.34),
+		);
 	}
 	return candidates;
+}
+
+function collectBroadFallbackDocuments(
+	repositories: RetrievalRepositories,
+	context: GatherContext,
+	scanLimit: number,
+): DocumentRecord[] {
+	if (context.repoId !== undefined) {
+		return repositories.docs.listByRepo(context.repoId, { limit: scanLimit });
+	}
+
+	// Prefer repos already suggested by scope inference, then fill from the
+	// registry. Never scan every document across every configured repo.
+	const preferredRepoIds: string[] = [];
+	const seen = new Set<string>();
+	for (const scope of context.scopes) {
+		if (!seen.has(scope.repoId)) {
+			seen.add(scope.repoId);
+			preferredRepoIds.push(scope.repoId);
+		}
+		if (preferredRepoIds.length >= BROAD_FALLBACK_REPO_LIMIT) {
+			break;
+		}
+	}
+	if (preferredRepoIds.length < BROAD_FALLBACK_REPO_LIMIT) {
+		for (const repo of repositories.repos.list()) {
+			if (!seen.has(repo.repoId)) {
+				seen.add(repo.repoId);
+				preferredRepoIds.push(repo.repoId);
+			}
+			if (preferredRepoIds.length >= BROAD_FALLBACK_REPO_LIMIT) {
+				break;
+			}
+		}
+	}
+
+	const perRepo = Math.max(
+		1,
+		Math.ceil(scanLimit / Math.max(preferredRepoIds.length, 1)),
+	);
+	const documents: DocumentRecord[] = [];
+	for (const repoId of preferredRepoIds) {
+		for (const document of repositories.docs.listByRepo(repoId, {
+			limit: perRepo,
+		})) {
+			documents.push(document);
+			if (documents.length >= scanLimit) {
+				return documents;
+			}
+		}
+	}
+	return documents;
 }
 
 function broadDocumentScore(
@@ -506,24 +582,36 @@ function broadDocumentScore(
 	summaryRepo: SummaryRepository,
 	terms: readonly string[],
 ): number {
-	const summaries = summaryRepo.listForTarget("document", document.docId);
-	const weightedText = [
+	const metadataText = [
 		(document.title ?? "").repeat(3),
 		document.path.repeat(2),
 		document.description ?? "",
 		document.tags.join(" ").repeat(2),
-		summaries.map((summary) => summary.text).join(" "),
 	]
 		.join("\n")
 		.toLowerCase();
-	return terms.reduce(
-		(score, term) => score + (weightedText.includes(term) ? 1 : 0),
+	const metadataScore = terms.reduce(
+		(score, term) => score + (metadataText.includes(term) ? 1 : 0),
 		0,
 	);
+	// Skip summary loads when title/path/tags already match enough terms.
+	if (metadataScore >= Math.min(2, terms.length)) {
+		return metadataScore;
+	}
+	const summaries = summaryRepo.listForTarget("document", document.docId);
+	const summaryText = summaries
+		.map((summary) => summary.text)
+		.join(" ")
+		.toLowerCase();
+	const summaryScore = terms.reduce(
+		(score, term) => score + (summaryText.includes(term) ? 1 : 0),
+		0,
+	);
+	return metadataScore + summaryScore;
 }
 
 function candidateFromLexicalHit(input: {
-	readonly db: StoreDatabase;
+	readonly repositories: RetrievalRepositories;
 	readonly docRepo: DocRepository;
 	readonly hit: LexicalSearchHit;
 	readonly score: number;
@@ -540,7 +628,7 @@ function candidateFromLexicalHit(input: {
 	}
 	const baseScore = input.score;
 	if (input.hit.entityType === "chunk" && input.hit.chunkId !== undefined) {
-		const chunk = new ChunkRepository(input.db).getById(input.hit.chunkId);
+		const chunk = input.repositories.chunks.getById(input.hit.chunkId);
 		return chunk === undefined
 			? undefined
 			: {
@@ -549,7 +637,7 @@ function candidateFromLexicalHit(input: {
 				};
 	}
 	if (input.hit.entityType === "section" && input.hit.sectionId !== undefined) {
-		const section = new SectionRepository(input.db).getById(input.hit.sectionId);
+		const section = input.repositories.sections.getById(input.hit.sectionId);
 		return section === undefined
 			? undefined
 			: {
