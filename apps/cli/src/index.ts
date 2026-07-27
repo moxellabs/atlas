@@ -1,4 +1,5 @@
 import { Command, CommanderError } from "commander";
+import packageJson from "../../../package.json" with { type: "json" };
 import { runAddRepoCommand } from "./commands/add-repo.command";
 import { runAdoptionTemplateCommand } from "./commands/adoption-template.command";
 import { runArtifactCommand } from "./commands/artifact.command";
@@ -121,7 +122,11 @@ async function handleCommanderError(input: {
 	output: { json: boolean; verbose: boolean; quiet: boolean };
 	error: CommanderError;
 }): Promise<number> {
-	if (input.error.code === "commander.helpDisplayed") return 0;
+	if (
+		input.error.code === "commander.helpDisplayed" ||
+		input.error.code === "commander.version"
+	)
+		return 0;
 	const failure = toFailureResult(
 		commandNameFromArgv(input.argv),
 		commanderCliError(input.argv, input.error),
@@ -524,6 +529,7 @@ export function createAtlasBaseCommand(
 	const command = new Command()
 		.name(options.name)
 		.description(options.description)
+		.version(packageJson.version, "-v, --version", "Display version")
 		.exitOverride()
 		.configureOutput({
 			writeOut: (str) => runtime.stdout.write(str),
