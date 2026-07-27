@@ -11,9 +11,12 @@ export async function buildAll(options: BuildOptions, deps: IndexerDependencies)
   const startedAt = Date.now();
   validateMultiRepoOptions(options);
   const repoIds = resolveRepoIds(options, deps);
-  const reports = await Promise.all(
-    repoIds.map((repoId) =>
-      buildRepo(
+  // Shared SQLite client is not concurrent-safe across nested transactions.
+  // Keep multi-repo builds sequential so each repo's persist owns the connection.
+  const reports = [];
+  for (const repoId of repoIds) {
+    reports.push(
+      await buildRepo(
         repoId,
         {
           force: options.force,
@@ -21,8 +24,8 @@ export async function buildAll(options: BuildOptions, deps: IndexerDependencies)
         },
         deps
       )
-    )
-  );
+    );
+  }
   return createBuildBatchReport(repoIds, reports, createTimings(startedAt));
 }
 
