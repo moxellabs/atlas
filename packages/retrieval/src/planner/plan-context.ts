@@ -542,17 +542,13 @@ function candidateFromLexicalHit(input: {
 	}
 	const baseScore = input.score;
 	if (input.hit.entityType === "chunk" && input.hit.chunkId !== undefined) {
-		const chunk = new ChunkRepository(input.db)
-			.listByDocument(input.hit.docId)
-			.find((record) => record.chunkId === input.hit.chunkId);
+		const chunk = new ChunkRepository(input.db).getById(input.hit.chunkId);
 		return chunk === undefined
 			? undefined
 			: chunkCandidate(document, chunk, baseScore);
 	}
 	if (input.hit.entityType === "section" && input.hit.sectionId !== undefined) {
-		const section = new SectionRepository(input.db)
-			.listByDocument(input.hit.docId)
-			.find((record) => record.sectionId === input.hit.sectionId);
+		const section = new SectionRepository(input.db).getById(input.hit.sectionId);
 		return section === undefined
 			? undefined
 			: sectionCandidate(document, section, baseScore, input.countTokens);
