@@ -43,6 +43,7 @@ describe("atlas cli", () => {
   test("repo target inference canonicalizes supported git remotes", () => {
     const cases = [
       ["git@github.com:Owner/Repo.git", "github.com/owner/repo"],
+      ["http://github.com/Owner/Repo.git", "github.com/owner/repo"],
       ["https://github.com/Owner/Repo.git", "github.com/owner/repo"],
       [
         "ssh://git@github.mycorp.com/Platform/Docs.git",
@@ -61,7 +62,12 @@ describe("atlas cli", () => {
       "github.com/owner/repo",
       "../owner/repo",
       "git@github.com:Owner/Repo.git?x=1",
+      "git@github.com:owner/repo.git#fragment",
+      "git@github.com:owner/repo%2Fextra.git",
+      "git@github.com:owner/repo/extra.git",
+      "git@github.com:owner",
       "https://github.com/Owner/Repo.git?x=1",
+      "https://github.com/Owner/Repo.git#fragment",
       "https://github.com/Owner/Repo.git%2Fextra",
       "https://github.com/Owner",
       "https://github.com//Owner/Repo.git",
