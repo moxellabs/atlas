@@ -49,6 +49,7 @@ export async function buildServerDependencies(
 			? {}
 			: { mcp: runtime.mcp, mcpServer: runtime.mcp.atlasMcpServer }),
 		reloadConfig(nextConfig) {
+			const previousMcp = dependencies.mcp;
 			const nextRuntime = createConfigBoundServices(env, nextConfig, db);
 			dependencies.config = nextConfig;
 			dependencies.operations = nextRuntime.operations;
@@ -58,6 +59,9 @@ export async function buildServerDependencies(
 			} else {
 				dependencies.mcp = nextRuntime.mcp;
 				dependencies.mcpServer = nextRuntime.mcp.atlasMcpServer;
+			}
+			if (previousMcp !== undefined && previousMcp !== nextRuntime.mcp) {
+				void previousMcp.close();
 			}
 		},
 	};
@@ -129,8 +133,11 @@ function createSourceDiffProvider(
 
 /** Closes server resources owned by dependencies. */
 export function closeServerDependencies(
-	dependencies: Pick<AtlasServerDependencies, "db">,
+	dependencies: Pick<AtlasServerDependencies, "db" | "mcp">,
 ): void {
+	if (dependencies.mcp !== undefined) {
+		void dependencies.mcp.close();
+	}
 	dependencies.db.close();
 }
 
