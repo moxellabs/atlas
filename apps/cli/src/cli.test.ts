@@ -23,6 +23,7 @@ import {
 } from "./commander";
 import { runMcpCommandWithDependencies } from "./commands/mcp.command";
 import { runServeCommandWithDependencies } from "./commands/serve.command";
+import { buildCliDependencies } from "./runtime/dependencies";
 import { buildFailureLines } from "./commands/shared";
 import {
   createCommandContext,
@@ -2374,8 +2375,14 @@ repos:
     );
     expect(setup.exitCode).toBe(0);
 
-    const serve = await runWithCapture(
-      [
+    // Serve waits for SIGINT/SIGTERM in production. Drive the injectable
+    // lifecycle so the HOME config discovery path stays unit-testable.
+    const deps = await buildCliDependencies({
+      cwd: rootDir,
+      env: { HOME: home },
+    });
+    try {
+      const context = createCommandContext([
         "serve",
         "--cwd",
         rootDir,
@@ -2384,12 +2391,23 @@ repos:
         "--port",
         "48765",
         "--json",
-      ],
-      { HOME: home },
-    );
-
-    expect(serve.exitCode).toBe(0);
-    expect(JSON.parse(serve.stdout).data.dbPath).toContain("serve-cache");
+      ]);
+      context.env = { HOME: home };
+      context.cwd = rootDir;
+      const result = await runServeCommandWithDependencies(
+        context,
+        deps,
+        async () => {},
+        async () => {},
+      );
+      expect(result.ok).toBe(true);
+      if (!result.ok) {
+        throw new Error("expected serve success");
+      }
+      expect(String(result.data.dbPath)).toContain("serve-cache");
+    } finally {
+      deps.close();
+    }
   });
 
   test("serve reports startup metadata, open result, and closes CLI dependencies", async () => {
