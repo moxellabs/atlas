@@ -39,7 +39,7 @@
       "expected": {
         "pathIncludes": [
           "docs/ingestion-build-flow.md",
-          "docs/runtime-surfaces.md"
+          "docs/self-indexing.md"
         ],
         "terms": [
           "repo add",
@@ -68,8 +68,8 @@
       "query": "Where does Atlas store the local SQLite corpus used by search retrieval and MCP?",
       "expected": {
         "pathIncludes": [
-          "packages/store/docs/index.md",
-          "docs/runtime-surfaces.md"
+          "docs/runtime-surfaces.md",
+          "docs/architecture.md"
         ],
         "terms": [
           "~/.moxel/atlas/corpus.db",
@@ -158,7 +158,8 @@
       "query": "I set up a repository and want another agent to use the knowledge from it, what should happen?",
       "expected": {
         "pathIncludes": [
-          "skills/document-codebase/SKILL.md"
+          "docs/self-indexing.md",
+          "docs/enterprise-cli-mount.md"
         ],
         "terms": [
           "repo add",
@@ -244,7 +245,8 @@
       "query": "Open apps/cli/docs/index.md and summarize the CLI App commands section.",
       "expected": {
         "pathIncludes": [
-          "apps/cli/docs/index.md"
+          "docs/index.md",
+          "docs/runtime-surfaces.md"
         ],
         "terms": [
           "CLI App",

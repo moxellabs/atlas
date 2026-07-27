@@ -2400,11 +2400,12 @@ repos:
         async () => {},
         async () => {},
       );
-      expect(result.ok).toBe(true);
-      if (!result.ok) {
-        throw new Error("expected serve success");
-      }
-      expect(String(result.data.dbPath)).toContain("serve-cache");
+      expect(result).toMatchObject({
+        ok: true,
+        data: {
+          dbPath: expect.stringContaining("serve-cache"),
+        },
+      });
     } finally {
       deps.close();
     }
