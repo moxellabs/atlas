@@ -28,6 +28,7 @@ export {
 	defaultHost,
 	docKindSchema,
 	parseCanonicalRepoId,
+	canonicalizeRepoId,
 	repoIdSchema,
 	repoPathSegments,
 	sortHostsByPriority,
