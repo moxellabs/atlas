@@ -208,12 +208,16 @@ function skillScopeCandidates(
 			skill.sourceDocPath,
 			skill.description ?? "",
 		]);
-		if (score + skillBoost <= 0) {
+		// Skills are high-priority scopes; require a stronger metadata match unless
+		// the classifier already decided this is a skill invocation.
+		const effective = score + skillBoost;
+		const minScore = skillBoost > 0 ? 0 : 0.45;
+		if (effective <= minScore) {
 			return [];
 		}
 		return [
 			{
-				level: "skill",
+				level: "skill" as const,
 				id: skill.skillId,
 				repoId: skill.repoId,
 				...(skill.packageId === undefined
@@ -222,7 +226,7 @@ function skillScopeCandidates(
 				...(skill.moduleId === undefined ? {} : { moduleId: skill.moduleId }),
 				skillId: skill.skillId,
 				label: skill.title ?? skill.skillId,
-				score: clampScore(score + skillBoost),
+				score: clampScore(effective),
 				rationale: [
 					`Matched skill metadata for ${skill.title ?? skill.skillId}.`,
 					...(skillBoost === 0
@@ -286,12 +290,14 @@ function scoreLabel(
 		if (query === value) {
 			score += 1;
 		} else if (query.includes(value) || value.includes(query)) {
-			score += 0.72;
+			// Only treat full phrase containment as strong when the value is
+			// specific enough to avoid short-token false positives.
+			if (value.length >= 6 || query.length >= 6) {
+				score += 0.72;
+			}
 		}
 		const valueTerms = new Set(terms(value));
-		const overlap = queryTerms.filter(
-			(term) => valueTerms.has(term) || value.includes(term),
-		);
+		const overlap = queryTerms.filter((term) => valueTerms.has(term));
 		score += Math.min(0.42, overlap.length * 0.14);
 	}
 	return clampScore(score);
