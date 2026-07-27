@@ -1,3 +1,5 @@
+import { canonicalizeRepoId } from "@atlas/config";
+
 export function repoIdFromGitRemote(remote: string): string | undefined {
 	const scp = remote.match(/^git@([^:/\s]+):([^/\s]+)\/([^/\s]+)$/i);
 	if (scp) return normalize(scp[1]!, scp[2]!, scp[3]!);
@@ -7,18 +9,28 @@ export function repoIdFromGitRemote(remote: string): string | undefined {
 		if (!["ssh:", "http:", "https:"].includes(url.protocol)) {
 			return undefined;
 		}
-		const parts = url.pathname.replace(/^\/+|\/+$/g, "").split("/");
-		if (!url.hostname || parts.length !== 2 || !parts[0] || !parts[1]) {
+		const parts = url.pathname.split("/");
+		if (
+			!url.hostname ||
+			url.search ||
+			url.hash ||
+			parts.length !== 3 ||
+			parts[0] !== "" ||
+			!parts[1] ||
+			!parts[2]
+		) {
 			return undefined;
 		}
-		return normalize(url.hostname, parts[0], parts[1]);
+		return normalize(url.hostname, parts[1], parts[2]);
 	} catch {
 		return undefined;
 	}
 }
 
 function normalize(host: string, owner: string, name: string): string | undefined {
-	const normalizedName = name.replace(/\.git$/i, "");
-	if (!normalizedName) return undefined;
-	return `${host.toLowerCase()}/${owner.toLowerCase()}/${normalizedName.toLowerCase()}`;
+	try {
+		return canonicalizeRepoId(`${host}/${owner}/${name}`);
+	} catch {
+		return undefined;
+	}
 }

@@ -40,11 +40,36 @@ import type { CliCommandContext } from "./runtime/types";
 import { CliError, toFailureResult } from "./utils/errors";
 
 describe("atlas cli", () => {
-  test("repo target inference parses SSH URL remotes and rejects file remotes", () => {
-    expect(
-      repoIdFromGitRemote("ssh://git@github.mycorp.com/Platform/Docs.git"),
-    ).toBe("github.mycorp.com/platform/docs");
-    expect(repoIdFromGitRemote("file:///tmp/platform/docs.git")).toBeUndefined();
+  test("repo target inference canonicalizes supported git remotes", () => {
+    const cases = [
+      ["git@github.com:Owner/Repo.git", "github.com/owner/repo"],
+      ["https://github.com/Owner/Repo.git", "github.com/owner/repo"],
+      [
+        "ssh://git@github.mycorp.com/Platform/Docs.git",
+        "github.mycorp.com/platform/docs",
+      ],
+    ] as const;
+
+    for (const [remote, repoId] of cases) {
+      expect(repoIdFromGitRemote(remote)).toBe(repoId);
+    }
+  });
+
+  test("repo target inference rejects unsafe and malformed git remotes", () => {
+    const cases = [
+      "file:///tmp/platform/docs.git",
+      "github.com/owner/repo",
+      "../owner/repo",
+      "git@github.com:Owner/Repo.git?x=1",
+      "https://github.com/Owner/Repo.git?x=1",
+      "https://github.com/Owner/Repo.git%2Fextra",
+      "https://github.com/Owner",
+      "https://github.com//Owner/Repo.git",
+    ];
+
+    for (const remote of cases) {
+      expect(repoIdFromGitRemote(remote)).toBeUndefined();
+    }
   });
 
   test("CLI_BUILD_FAILED diagnostics keep stacks verbose-only and render cause chain", () => {
