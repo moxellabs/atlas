@@ -114,10 +114,11 @@ function queryKindWeight(
 ): number {
 	if (kind === "overview") {
 		return targetTypeWeight(candidate.targetType, {
-			summary: 0.72,
-			document: 0.62,
+			summary: candidate.provenance.skillId === undefined ? 0.72 : 0.2,
+			document: candidate.provenance.skillId === undefined ? 0.62 : 0.22,
 			section: 0.34,
 			chunk: 0.34,
+			skill: 0.12,
 			fallback: 0.18,
 		});
 	}
@@ -126,8 +127,8 @@ function queryKindWeight(
 			section: 0.9,
 			chunk: 0.9,
 			document: 0.48,
-			skill: 0.18,
-			summary: 0.26,
+			skill: 0.12,
+			summary: candidate.provenance.skillId === undefined ? 0.26 : 0.1,
 			fallback: 0.22,
 		});
 	}
@@ -213,13 +214,54 @@ function evidenceMatchWeight(
 	if (isCanonicalDocsPath(path)) {
 		weight += canonicalDocsBoost(candidate, queryKind, queryText);
 	}
+	weight += pathQualityAdjustment(path, queryKind, queryText);
 	if (
 		candidate.provenance.skillId !== undefined &&
 		queryKind !== "skill-invocation"
 	) {
-		weight -= 0.38;
+		weight -= 0.7;
 	}
 	return Number(Math.max(0, Math.min(1.4, weight)).toFixed(3));
+}
+
+function pathQualityAdjustment(
+	path: string,
+	queryKind: QueryKind,
+	queryText: string,
+): number {
+	if (queryKind === "skill-invocation") {
+		return 0;
+	}
+	let adjustment = 0;
+	// Prefer architecture/design docs for product questions.
+	if (
+		/(^|\/)(architecture|design|overview|guide|reference)(\/|\.md$)/.test(path)
+	) {
+		adjustment += 0.16;
+	}
+	// Demote common monorepo noise unless the query asks for it.
+	const wantsChangelog = /\b(changelog|release notes|what's new|whats new)\b/.test(
+		queryText,
+	);
+	const wantsSkill = /\b(skill|agent prompt|playbook)\b/.test(queryText);
+	const wantsTracking = /\b(jira|ticket|tracking|backlog)\b/.test(queryText);
+	if (!wantsChangelog && /(^|\/)changelog(\.md)?$/.test(path)) {
+		adjustment -= 0.85;
+	}
+	if (
+		!wantsSkill &&
+		(path.includes("/skills/") ||
+			path.startsWith("skills/") ||
+			path.includes("/.agents/") ||
+			path.startsWith(".agents/") ||
+			/(^|\/)skill\.md$/.test(path))
+	) {
+		adjustment -= 0.75;
+	}
+	if (!wantsTracking && /(jira|tracking|todo|backlog)/.test(path)) {
+		adjustment -= 0.4;
+	}
+	return adjustment;
 }
 
 function pathSegmentOverlap(path: string, queryText: string): number {
