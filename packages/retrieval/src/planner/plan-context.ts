@@ -78,8 +78,10 @@ export function planContext(input: PlanContextInput): PlannedContext {
 	});
 	diagnostics.push(...scopeResult.diagnostics);
 
+	const expandedQuery = expandQuery(input.query);
 	const candidates = gatherCandidates(input.db, {
 		query: input.query,
+		expandedQuery,
 		repoId: input.repoId,
 		scopes: scopeResult.scopes,
 		candidateLimit: input.candidateLimit ?? DEFAULT_CANDIDATE_LIMIT,
@@ -101,6 +103,7 @@ export function planContext(input: PlanContextInput): PlannedContext {
 
 	const rankedHits = rankCandidates({
 		query: input.query,
+		expandedQuery,
 		classification,
 		candidates,
 		scopes: scopeResult.scopes,
@@ -314,6 +317,7 @@ function freshnessScores(db: StoreDatabase): ReadonlyMap<string, number> {
 
 interface GatherContext {
 	readonly query: string;
+	readonly expandedQuery: string;
 	readonly repoId?: string | undefined;
 	readonly scopes: readonly ScopeCandidate[];
 	readonly candidateLimit: number;
@@ -329,7 +333,7 @@ function gatherCandidates(
 		const docRepo = new DocRepository(db);
 		const summaryRepo = new SummaryRepository(db);
 		const candidates: RetrievalCandidate[] = [];
-		const expandedQuery = expandQuery(context.query);
+		const expandedQuery = context.expandedQuery;
 		const lexicalQuery = toLexicalQuery(expandedQuery);
 
 		if (lexicalQuery.length > 0) {
