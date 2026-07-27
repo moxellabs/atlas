@@ -470,12 +470,16 @@ export async function appendRepoConfig(
 			};
 		},
 	);
-	await mkdir(resolveCliPath(result.config.cacheDir, context.cwd), {
+	const atlasHome = resolveCliPath(
+		options.cacheDir ?? result.config.cacheDir,
+		context.cwd,
+	);
+	await mkdir(atlasHome, {
 		recursive: true,
 	});
 	await mkdir(
 		resolveCliPath(
-			`${result.config.cacheDir}/${DEFAULT_MOXEL_ATLAS_REPOS_RELATIVE_PATH}`,
+			`${atlasHome}/${DEFAULT_MOXEL_ATLAS_REPOS_RELATIVE_PATH}`,
 			context.cwd,
 		),
 		{ recursive: true },
@@ -485,10 +489,7 @@ export async function appendRepoConfig(
 		{ recursive: true },
 	);
 	await writeRepoMetadata(
-		repoMetadataPath(
-			resolveCliPath(result.config.cacheDir, context.cwd),
-			repo.repoId,
-		),
+		repoMetadataPath(atlasHome, repo.repoId),
 		createRepoMetadata(repo),
 	);
 	return result;
@@ -626,7 +627,37 @@ export async function writeRepoArtifactMetadata(
 	>,
 ): Promise<void> {
 	const path = repoMetadataPath(atlasHome, repoId);
-	const metadata = await readRepoMetadata(path);
+	let metadata: RepoMetadata;
+	try {
+		metadata = await readRepoMetadata(path);
+	} catch (error) {
+		if (
+			!(error instanceof Error) ||
+			!("code" in error) ||
+			(error as NodeJS.ErrnoException).code !== "ENOENT"
+		) {
+			throw error;
+		}
+		// First write can race before appendRepoConfig metadata lands; seed a shell.
+		const { host, owner, name } = parseCanonicalRepoId(repoId);
+		metadata = {
+			schemaVersion: 1,
+			repoId,
+			host,
+			owner,
+			name,
+			source: {
+				mode: "local-git",
+				remote: "",
+				localPath: "",
+				ref: "",
+				refMode: "remote",
+			},
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+			artifactPath: null,
+		};
+	}
 	await writeRepoMetadata(path, {
 		...metadata,
 		...artifact,
