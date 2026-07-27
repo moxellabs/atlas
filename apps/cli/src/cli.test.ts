@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import packageJson from "../../../package.json" with { type: "json" };
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -399,6 +400,15 @@ describe("atlas cli", () => {
       expect(lower).not.toContain(forbidden);
     }
   });
+
+	test("prints the package version with short and long version flags", async () => {
+		for (const flag of ["-v", "--version"]) {
+			const result = await runWithCapture([flag]);
+			expect(result.exitCode).toBe(0);
+			expect(result.stdout.trim()).toBe(packageJson.version);
+			expect(result.stderr).toBe("");
+		}
+	});
 
   test("repo add alias preserves add-repo JSON result shape", async () => {
     const home = join(rootDir, "home-repo-add-alias");
