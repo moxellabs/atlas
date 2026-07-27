@@ -61,3 +61,5 @@ atlas.config.yml
 *.temp
 .gitkeep
 .fallow
+
+references
