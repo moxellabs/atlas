@@ -3,6 +3,7 @@ import { join } from "node:path";
 import {
 	AtlasConfigNotFoundError,
 	buildDefaultConfig,
+	canonicalizeRepoId,
 	DEFAULT_MOXEL_ATLAS_CONFIG_RELATIVE_PATH,
 	loadConfig,
 	resolveGhesToken,
@@ -368,15 +369,24 @@ async function resolveAddRepoInput(
 	});
 	resolved = await fallbackWhenPrimaryRepoMissing(resolved);
 	const explicitRepoId = readArgvString(context.argv, "--repo-id");
-	if (
-		explicitRepoId &&
-		explicitRepoId !== resolved.repoId &&
-		!context.argv.includes("--force")
-	) {
-		throw new CliError(
-			`Explicit --repo-id ${explicitRepoId} does not match resolved ${resolved.repoId}.`,
-			{ code: "CLI_REPO_ID_MISMATCH", exitCode: EXIT_INPUT_ERROR },
-		);
+	if (explicitRepoId && !context.argv.includes("--force")) {
+		let canonicalExplicit: string;
+		try {
+			canonicalExplicit = canonicalizeRepoId(explicitRepoId);
+		} catch (error) {
+			throw new CliError(
+				error instanceof Error
+					? error.message
+					: "Repository ID must be host/owner/name.",
+				{ code: "CLI_REPO_ID_REQUIRED", exitCode: EXIT_INPUT_ERROR },
+			);
+		}
+		if (canonicalExplicit !== resolved.repoId) {
+			throw new CliError(
+				`Explicit --repo-id ${canonicalExplicit} does not match resolved ${resolved.repoId}.`,
+				{ code: "CLI_REPO_ID_MISMATCH", exitCode: EXIT_INPUT_ERROR },
+			);
+		}
 	}
 	return resolved;
 }
