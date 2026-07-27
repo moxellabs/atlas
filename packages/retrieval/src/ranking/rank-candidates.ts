@@ -7,6 +7,7 @@ import type {
 	RankedHit,
 	RankingFactors,
 	RetrievalCandidate,
+	ScopeCandidate,
 } from "../types";
 import { authorityWeight } from "./authority-weight";
 import { localityWeight } from "./locality-weight";
@@ -71,7 +72,7 @@ function scoreCandidate(
 	candidate: RetrievalCandidate,
 	query: string,
 	queryKind: QueryKind,
-	scopes: RankCandidatesInput["scopes"],
+	scopes: readonly ScopeCandidate[],
 	freshnessByRepo: RankCandidatesInput["freshnessByRepo"],
 	previous: readonly RetrievalCandidate[],
 ): RankingFactors {

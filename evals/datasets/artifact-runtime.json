@@ -100,7 +100,7 @@
       "expected": {
         "pathIncludes": [
           "docs/ingestion-build-flow.md",
-          "apps/cli/docs/index.md"
+          "docs/troubleshooting.md"
         ],
         "terms": [
           "manifest schema",
