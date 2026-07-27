@@ -16,40 +16,46 @@ import { redundancyPenalty } from "./redundancy-penalty";
 export function rankCandidates(input: RankCandidatesInput): RankedHit[] {
 	const candidates = dedupeCandidates(input.candidates);
 	const evidenceQuery = expandQuery(input.query);
+	const scopes = input.scopes ?? [];
+	const kind = input.classification.kind;
+
+	// Score independent factors once, then apply redundancy only against the
+	// progressive accepted list. Avoids a full second score of every candidate.
 	const baseRanked: RankedHit[] = candidates
 		.map((candidate) => {
 			const factors = scoreCandidate(
 				candidate,
 				evidenceQuery,
-				input.classification.kind,
-				input.scopes ?? [],
+				kind,
+				scopes,
 				input.freshnessByRepo,
 				[],
 			);
-			const score = composeScore(factors);
 			return {
 				...candidate,
-				score,
+				score: composeScore(factors),
 				rationale: buildHitRationale(candidate, factors),
 				factors,
 			};
 		})
 		.sort(sortRankedHits);
-	const ranked: RankedHit[] = [];
 
+	const ranked: RankedHit[] = [];
 	for (const candidate of baseRanked) {
-		const factors = scoreCandidate(
-			candidate,
-			evidenceQuery,
-			input.classification.kind,
-			input.scopes ?? [],
-			input.freshnessByRepo,
-			ranked,
-		);
-		const score = composeScore(factors);
+		const baseFactors = candidate.factors;
+		if (baseFactors === undefined) {
+			ranked.push(candidate);
+			continue;
+		}
+		const redundancy = redundancyPenalty(candidate, ranked);
+		if (redundancy === baseFactors.redundancyPenalty) {
+			ranked.push(candidate);
+			continue;
+		}
+		const factors = { ...baseFactors, redundancyPenalty: redundancy };
 		ranked.push({
 			...candidate,
-			score,
+			score: composeScore(factors),
 			rationale: buildHitRationale(candidate, factors),
 			factors,
 		});
@@ -57,7 +63,7 @@ export function rankCandidates(input: RankCandidatesInput): RankedHit[] {
 
 	return diversifyRankedHits(
 		ranked.sort(sortRankedHits),
-		input.classification.kind,
+		kind,
 	).slice(0, input.limit ?? ranked.length);
 }
 
