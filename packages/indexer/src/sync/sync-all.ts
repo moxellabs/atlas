@@ -7,7 +7,12 @@ import { syncRepo } from "./sync-repo";
 export async function syncAll(options: SyncOptions, deps: IndexerDependencies): Promise<SyncBatchReport> {
   const startedAt = Date.now();
   const repoIds = resolveRepoIds(options, deps);
-  const reports = await Promise.all(repoIds.map((repoId) => syncRepo(repoId, deps)));
+  // Shared SQLite client is not concurrent-safe across nested transactions.
+  // Keep multi-repo sync sequential so each repo owns the connection.
+  const reports = [];
+  for (const repoId of repoIds) {
+    reports.push(await syncRepo(repoId, deps));
+  }
   return createSyncBatchReport(repoIds, reports, createTimings(startedAt));
 }
 
