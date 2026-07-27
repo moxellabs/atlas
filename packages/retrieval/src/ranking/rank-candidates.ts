@@ -15,7 +15,7 @@ import { redundancyPenalty } from "./redundancy-penalty";
 /** Ranks raw candidates with explicit authority, locality, redundancy, and query-kind factors. */
 export function rankCandidates(input: RankCandidatesInput): RankedHit[] {
 	const candidates = dedupeCandidates(input.candidates);
-	const evidenceQuery = expandQuery(input.query);
+	const evidenceQuery = input.expandedQuery ?? expandQuery(input.query);
 	const scopes = input.scopes ?? [];
 	const kind = input.classification.kind;
 

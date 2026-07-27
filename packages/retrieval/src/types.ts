@@ -300,6 +300,11 @@ export interface PlanContextInput extends RetrievalStore {
 export interface RankCandidatesInput {
 	/** Raw user query. */
 	query: string;
+	/**
+	 * Optional pre-expanded query text. When provided, rankers reuse it instead
+	 * of calling expandQuery again.
+	 */
+	expandedQuery?: string | undefined;
 	/** Query classification used for query-kind boosts. */
 	classification: QueryClassification;
 	/** Raw candidates to rank. */
