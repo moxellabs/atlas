@@ -132,11 +132,11 @@ function createSourceDiffProvider(
 }
 
 /** Closes server resources owned by dependencies. */
-export function closeServerDependencies(
+export async function closeServerDependencies(
 	dependencies: Pick<AtlasServerDependencies, "db" | "mcp">,
-): void {
+): Promise<void> {
 	if (dependencies.mcp !== undefined) {
-		void dependencies.mcp.close();
+		await dependencies.mcp.close();
 	}
 	dependencies.db.close();
 }
