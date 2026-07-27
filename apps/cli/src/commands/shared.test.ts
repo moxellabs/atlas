@@ -50,8 +50,16 @@ describe("resolveRepoConfigInput", () => {
 		expect(prompts.inputs.map(({ question }) => question)).not.toContain("Repository ID");
 	});
 
-	test("uses a format-helpful Repository ID prompt when origin has no parseable default", async () => {
-		const root = await createGitCheckout();
+	test("requires an explicit repository ID in noninteractive local-git mode despite a parseable origin", async () => {
+		const root = await createGitCheckout("https://github.com/MoxelLabs/Atlas.git");
+
+		await expect(
+			resolveRepoConfigInput(commandContext(root), { ...input(), nonInteractive: true }),
+		).rejects.toMatchObject({ code: "CLI_REPO_ID_REQUIRED" });
+	});
+
+	test("uses a format-helpful Repository ID prompt when origin is unparseable", async () => {
+		const root = await createGitCheckout("file:///tmp/atlas.git");
 		const prompts = promptRecorder({
 			"Repository ID (host/owner/name, e.g. github.com/owner/repo)": "github.com/example/manual",
 		});

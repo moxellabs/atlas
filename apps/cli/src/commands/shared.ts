@@ -242,7 +242,9 @@ export async function resolveRepoConfigInput(
 	const repoId = await resolveRepoConfigRepoId(
 		input,
 		resolution,
-		gitDefaults?.repoId,
+		resolution.interactive && mode === "local-git"
+			? gitDefaults?.repoId
+			: undefined,
 	);
 	const workspace = resolveRepoWorkspaceInput(input);
 	return mode === "local-git"
