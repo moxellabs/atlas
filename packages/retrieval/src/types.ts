@@ -6,7 +6,16 @@ import type {
 	Provenance,
 	QueryKind,
 } from "@atlas/core";
-import type { StoreDatabase } from "@atlas/store";
+import type {
+	ChunkRepository,
+	DocRepository,
+	ManifestRepository,
+	RepoRepository,
+	SectionRepository,
+	SkillRepository,
+	StoreDatabase,
+	SummaryRepository,
+} from "@atlas/store";
 import type { TextEncoder } from "@atlas/tokenizer";
 
 /** Retrieval target kinds that can be ranked and placed into planned context. */
@@ -274,6 +283,23 @@ export interface PlannedContext {
 export interface RetrievalStore {
 	/** Initialized ATLAS store database. */
 	db: StoreDatabase;
+	/**
+	 * Optional pre-built repository port for the plan. When omitted, planContext
+	 * constructs one repository set for the request instead of ad-hoc news on
+	 * every gather step.
+	 */
+	repositories?: RetrievalRepositories | undefined;
+}
+
+/** Repository handles used by planner hot paths. */
+export interface RetrievalRepositories {
+	docs: DocRepository;
+	summaries: SummaryRepository;
+	chunks: ChunkRepository;
+	sections: SectionRepository;
+	skills: SkillRepository;
+	repos: RepoRepository;
+	manifests: ManifestRepository;
 }
 
 /** Input accepted by end-to-end context planning. */

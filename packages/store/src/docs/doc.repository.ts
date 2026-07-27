@@ -126,20 +126,33 @@ export class DocRepository {
 	}
 
 	/** Lists documents by repository in deterministic path order. */
-	listByRepo(repoId: string): DocumentRecord[] {
-		return this.withRepositoryErrors("listDocumentsByRepo", () =>
-			this.db
-				.all<DocumentRow>(
-					`SELECT ${documentRowSelect()}
+	listByRepo(repoId: string, options: { limit?: number } = {}): DocumentRecord[] {
+		return this.withRepositoryErrors("listDocumentsByRepo", () => {
+			const limit =
+				options.limit !== undefined && options.limit > 0
+					? Math.floor(options.limit)
+					: undefined;
+			const rows =
+				limit === undefined
+					? this.db.all<DocumentRow>(
+							`SELECT ${documentRowSelect()}
            FROM documents
            WHERE repo_id = $repoId
            ORDER BY path`,
-					{ $repoId: repoId },
-				)
-				.map((row) =>
-					mapDocumentRow(row, listScopes(this.db, row.doc_id), "document"),
-				),
-		);
+							{ $repoId: repoId },
+						)
+					: this.db.all<DocumentRow>(
+							`SELECT ${documentRowSelect()}
+           FROM documents
+           WHERE repo_id = $repoId
+           ORDER BY path
+           LIMIT $limit`,
+							{ $repoId: repoId, $limit: limit },
+						);
+			return rows.map((row) =>
+				mapDocumentRow(row, listScopes(this.db, row.doc_id), "document"),
+			);
+		});
 	}
 
 	/** Lists documents by kind within a repository. */
