@@ -341,21 +341,20 @@ function gatherCandidates(
 			});
 			const lexicalScores = normalizedLexicalScores(lexicalHits);
 			for (const hit of lexicalHits) {
-				const candidate = candidateFromLexicalHit({
+				const hydrated = candidateFromLexicalHit({
 					db,
 					docRepo,
 					hit,
 					score: lexicalScores.get(lexicalHitKey(hit)) ?? 0.35,
 					countTokens: context.countTokens,
 				});
-				if (candidate !== undefined) {
-					candidates.push(candidate);
+				if (hydrated !== undefined) {
+					candidates.push(hydrated.candidate);
 					candidates.push(
 						...documentSummaries(
-							docRepo,
 							summaryRepo,
-							candidate.provenance.docId,
-							candidate.score ?? 0.4,
+							hydrated.document,
+							hydrated.candidate.score ?? 0.4,
 						),
 					);
 				}
@@ -383,12 +382,7 @@ function gatherCandidates(
 					),
 				);
 				candidates.push(
-					...documentSummaries(
-						docRepo,
-						summaryRepo,
-						document.docId,
-						score * 0.72,
-					),
+					...documentSummaries(summaryRepo, document, score * 0.72),
 				);
 			}
 		}
@@ -405,12 +399,7 @@ function gatherCandidates(
 					),
 				);
 				candidates.push(
-					...documentSummaries(
-						docRepo,
-						summaryRepo,
-						document.docId,
-						0.68 * scope.score,
-					),
+					...documentSummaries(summaryRepo, document, 0.68 * scope.score),
 				);
 			}
 			if (scope.level === "skill" && scope.skillId !== undefined) {
@@ -424,14 +413,16 @@ function gatherCandidates(
 							context.countTokens,
 						),
 					);
-					candidates.push(
-						...documentSummaries(
-							docRepo,
-							summaryRepo,
-							skill.sourceDocId,
-							0.7 * scope.score,
-						),
-					);
+					const skillDoc = docRepo.get(skill.sourceDocId);
+					if (skillDoc !== undefined) {
+						candidates.push(
+							...documentSummaries(
+								summaryRepo,
+								skillDoc,
+								0.7 * scope.score,
+							),
+						);
+					}
 				}
 			}
 		}
@@ -501,9 +492,7 @@ function broadFallbackCandidates(
 				context.countTokens,
 			),
 		);
-		candidates.push(
-			...documentSummaries(docRepo, summaryRepo, document.docId, 0.34),
-		);
+		candidates.push(...documentSummaries(summaryRepo, document, 0.34));
 	}
 	return candidates;
 }
@@ -535,49 +524,61 @@ function candidateFromLexicalHit(input: {
 	readonly hit: LexicalSearchHit;
 	readonly score: number;
 	readonly countTokens: (text: string) => number;
-}): RetrievalCandidate | undefined {
+}):
+	| {
+			candidate: RetrievalCandidate;
+			document: DocumentRecord;
+	  }
+	| undefined {
 	const document = input.docRepo.get(input.hit.docId);
 	if (document === undefined) {
 		return undefined;
 	}
 	const baseScore = input.score;
 	if (input.hit.entityType === "chunk" && input.hit.chunkId !== undefined) {
-		const chunk = new ChunkRepository(input.db)
-			.listByDocument(input.hit.docId)
-			.find((record) => record.chunkId === input.hit.chunkId);
+		const chunk = new ChunkRepository(input.db).getById(input.hit.chunkId);
 		return chunk === undefined
 			? undefined
-			: chunkCandidate(document, chunk, baseScore);
+			: {
+					candidate: chunkCandidate(document, chunk, baseScore),
+					document,
+				};
 	}
 	if (input.hit.entityType === "section" && input.hit.sectionId !== undefined) {
-		const section = new SectionRepository(input.db)
-			.listByDocument(input.hit.docId)
-			.find((record) => record.sectionId === input.hit.sectionId);
+		const section = new SectionRepository(input.db).getById(
+			input.hit.sectionId,
+		);
 		return section === undefined
 			? undefined
-			: sectionCandidate(document, section, baseScore, input.countTokens);
+			: {
+					candidate: sectionCandidate(
+						document,
+						section,
+						baseScore,
+						input.countTokens,
+					),
+					document,
+				};
 	}
-	return documentCandidate(
+	return {
+		candidate: documentCandidate(
+			document,
+			"lexical",
+			baseScore,
+			["Matched document full-text index."],
+			input.countTokens,
+		),
 		document,
-		"lexical",
-		baseScore,
-		["Matched document full-text index."],
-		input.countTokens,
-	);
+	};
 }
 
 function documentSummaries(
-	docRepo: DocRepository,
 	summaryRepo: SummaryRepository,
-	docId: string,
+	document: DocumentRecord,
 	score: number,
 ): RetrievalCandidate[] {
-	const document = docRepo.get(docId);
-	if (document === undefined) {
-		return [];
-	}
 	return summaryRepo
-		.listForTarget("document", docId)
+		.listForTarget("document", document.docId)
 		.map((summary) => summaryCandidate(document, summary, score));
 }
 
