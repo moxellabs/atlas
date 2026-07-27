@@ -2433,6 +2433,7 @@ repos:
       async (url) => {
         opened.push(url);
       },
+      async () => {},
     );
 
     expect(result).toMatchObject({

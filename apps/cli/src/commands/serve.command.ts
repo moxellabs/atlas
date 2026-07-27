@@ -1,3 +1,4 @@
+import type { AtlasRunningServer } from "../../../server/src/start-server";
 import { buildCliDependencies } from "../runtime/dependencies";
 import type {
 	AtlasCliDependencies,
@@ -25,11 +26,13 @@ export async function runServeCommandWithDependencies(
 	context: CliCommandContext,
 	deps: Pick<AtlasCliDependencies, "server" | "close">,
 	openBrowser: (url: string) => Promise<void>,
+	waitForShutdown: () => Promise<void> = waitForProcessShutdownSignal,
 ): Promise<CliCommandResult> {
+	let server: AtlasRunningServer | undefined;
 	try {
 		const host = readArgvString(context.argv, "--host");
 		const portValue = readArgvString(context.argv, "--port");
-		const server = await deps.server.start({
+		server = await deps.server.start({
 			...(host === undefined ? {} : { host }),
 			...(portValue === undefined
 				? {}
@@ -40,6 +43,23 @@ export async function runServeCommandWithDependencies(
 		const openResult = openRequested
 			? await tryOpenUrl(url, openBrowser)
 			: undefined;
+
+		if (!context.output.json && !context.output.quiet) {
+			await writeStdoutLine(context.stdout, `Server listening on ${url}`);
+			await writeStdoutLine(context.stdout, `DB: ${server.dbPath}`);
+			if (openResult !== undefined) {
+				await writeStdoutLine(
+					context.stdout,
+					openResult.ok
+						? "Opened browser."
+						: `Browser launch failed: ${openResult.error}`,
+				);
+			}
+		}
+
+		// Keep the process alive until interrupt. Tests inject an immediate wait.
+		await waitForShutdown();
+
 		return renderSuccess(
 			context,
 			"serve",
@@ -66,8 +86,39 @@ export async function runServeCommandWithDependencies(
 			],
 		);
 	} finally {
-		deps.close();
+		try {
+			server?.stop();
+		} finally {
+			deps.close();
+		}
 	}
+}
+
+async function waitForProcessShutdownSignal(): Promise<void> {
+	const { promise, resolve } = Promise.withResolvers<void>();
+	const shutdown = () => {
+		process.off("SIGINT", shutdown);
+		process.off("SIGTERM", shutdown);
+		resolve();
+	};
+	process.on("SIGINT", shutdown);
+	process.on("SIGTERM", shutdown);
+	await promise;
+}
+
+function writeStdoutLine(
+	stdout: NodeJS.WriteStream,
+	line: string,
+): Promise<void> {
+	const { promise, resolve, reject } = Promise.withResolvers<void>();
+	stdout.write(`${line}\n`, (error) => {
+		if (error) {
+			reject(error);
+			return;
+		}
+		resolve();
+	});
+	return promise;
 }
 
 async function tryOpenUrl(
