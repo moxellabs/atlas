@@ -25,7 +25,7 @@ import {
 	SummaryRepository,
 } from "@atlas/store";
 import { CliConsole } from "../io/console";
-import { canPrompt, createPrompts } from "../io/prompts";
+import { canPrompt, createPrompts, type CliPrompts } from "../io/prompts";
 import { renderTable } from "../io/table";
 import {
 	buildCliDependencies,
@@ -45,6 +45,7 @@ import {
 } from "../utils/errors";
 import { runProcess } from "../utils/node-runtime";
 import { parentDir, resolveCliPath } from "../utils/paths";
+import { repoIdFromGitRemote } from "./git-remote";
 import {
 	type TopologyTemplate,
 	topologyTemplate,
@@ -191,7 +192,7 @@ export function defaultCliConfig(cacheDir?: string): AtlasConfig {
 }
 
 type RepoConfigMode = "local-git" | "ghes-api";
-type RepoConfigPrompts = ReturnType<typeof createPrompts> | undefined;
+type RepoConfigPrompts = CliPrompts | undefined;
 
 interface RepoConfigInput {
 	repoId?: string | undefined;
@@ -217,6 +218,11 @@ interface RepoConfigResolutionContext {
 	prompts: RepoConfigPrompts;
 }
 
+/** Test-only prompt seam for repository configuration resolution. */
+export interface RepoConfigResolutionOptions {
+	prompts?: CliPrompts | undefined;
+}
+
 interface RepoWorkspaceInput {
 	packageGlobs: string[];
 	packageManifestFiles: string[];
@@ -227,10 +233,17 @@ interface RepoWorkspaceInput {
 export async function resolveRepoConfigInput(
 	context: CliCommandContext,
 	input: RepoConfigInput,
+	options: RepoConfigResolutionOptions = {},
 ): Promise<AtlasRepoConfig> {
-	const resolution = createRepoConfigResolutionContext(context, input);
+	const resolution = createRepoConfigResolutionContext(context, input, options);
 	const mode = await resolveRepoConfigMode(input, resolution);
-	const repoId = await resolveRepoConfigRepoId(input, resolution);
+	const gitDefaults =
+		mode === "local-git" ? await detectLocalGitDefaults(context.cwd) : undefined;
+	const repoId = await resolveRepoConfigRepoId(
+		input,
+		resolution,
+		gitDefaults?.repoId,
+	);
 	const workspace = resolveRepoWorkspaceInput(input);
 	return mode === "local-git"
 		? await resolveLocalGitRepoConfig(
@@ -239,6 +252,7 @@ export async function resolveRepoConfigInput(
 				resolution,
 				repoId,
 				workspace,
+				gitDefaults,
 			)
 		: await resolveGhesRepoConfig(input, resolution, repoId, workspace);
 }
@@ -246,12 +260,13 @@ export async function resolveRepoConfigInput(
 function createRepoConfigResolutionContext(
 	context: CliCommandContext,
 	input: RepoConfigInput,
+	options: RepoConfigResolutionOptions,
 ): RepoConfigResolutionContext {
-	const interactive = canPrompt() && !input.nonInteractive;
+	const interactive = canPrompt(context, { nonInteractive: input.nonInteractive });
 	return {
 		cwd: context.cwd,
 		interactive,
-		prompts: interactive ? createPrompts() : undefined,
+		prompts: interactive ? (options.prompts ?? createPrompts()) : undefined,
 	};
 }
 
@@ -274,9 +289,17 @@ async function resolveRepoConfigMode(
 async function resolveRepoConfigRepoId(
 	input: RepoConfigInput,
 	context: RepoConfigResolutionContext,
+	defaultRepoId?: string,
 ): Promise<string> {
 	const repoId =
-		input.repoId ?? (await promptIfInteractive(context, "Repository ID"));
+		input.repoId ??
+		(await promptIfInteractive(
+			context,
+			defaultRepoId === undefined
+				? "Repository ID (host/owner/name, e.g. github.com/owner/repo)"
+				: "Repository ID",
+			defaultRepoId,
+		));
 	if (repoId === undefined || repoId.length === 0) {
 		throw new CliError("Missing repository ID.", {
 			code: "CLI_REPO_ID_REQUIRED",
@@ -304,8 +327,8 @@ async function resolveLocalGitRepoConfig(
 	context: RepoConfigResolutionContext,
 	repoId: string,
 	workspace: RepoWorkspaceInput,
+	gitDefaults: LocalGitDefaults | undefined,
 ): Promise<AtlasRepoConfig> {
-	const gitDefaults = await detectLocalGitDefaults(cliContext.cwd);
 	const defaultRef = gitDefaults?.ref ?? "main";
 	const defaultLocalPath = resolveCliPath(
 		repoCheckoutDir(input.cacheDir, repoId),
@@ -748,6 +771,7 @@ interface LocalGitDefaults {
 	rootPath: string;
 	ref: string;
 	remote: string;
+	repoId?: string | undefined;
 }
 
 async function detectLocalGitDefaults(
@@ -767,6 +791,10 @@ async function detectLocalGitDefaults(
 		rootPath,
 		ref: currentBranch ?? "HEAD",
 		remote: configuredRemote ?? pathToFileURL(rootPath).href,
+		repoId:
+			configuredRemote === undefined
+				? undefined
+				: repoIdFromGitRemote(configuredRemote),
 	};
 }
 
