@@ -26,6 +26,7 @@ import { runMcpCommandWithDependencies } from "./commands/mcp.command";
 import { runServeCommandWithDependencies } from "./commands/serve.command";
 import { buildCliDependencies } from "./runtime/dependencies";
 import { buildFailureLines } from "./commands/shared";
+import { repoIdFromGitRemote } from "./commands/git-remote";
 import {
   createCommandContext,
   exists,
@@ -39,6 +40,13 @@ import type { CliCommandContext } from "./runtime/types";
 import { CliError, toFailureResult } from "./utils/errors";
 
 describe("atlas cli", () => {
+  test("repo target inference parses SSH URL remotes and rejects file remotes", () => {
+    expect(
+      repoIdFromGitRemote("ssh://git@github.mycorp.com/Platform/Docs.git"),
+    ).toBe("github.mycorp.com/platform/docs");
+    expect(repoIdFromGitRemote("file:///tmp/platform/docs.git")).toBeUndefined();
+  });
+
   test("CLI_BUILD_FAILED diagnostics keep stacks verbose-only and render cause chain", () => {
     const report = {
       repoId: "github.mycorp.com/platform/docs",

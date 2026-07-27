@@ -8,6 +8,7 @@ import { canPrompt, createPrompts } from "../io/prompts";
 import type { CliCommandContext } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { runProcess } from "../utils/node-runtime";
+import { repoIdFromGitRemote } from "./git-remote";
 import { readArgvString, readRepoLocalArtifactMetadata } from "./shared";
 
 export type RepoTargetSource =
@@ -270,49 +271,30 @@ async function repoIdFromGitOrigin(
 ): Promise<Candidate | undefined> {
 	const remote = await gitOutput(cwd, ["config", "--get", "remote.origin.url"]);
 	if (remote === undefined) return undefined;
-	const parsed = parseGitRemote(remote);
-	if (parsed === undefined) return undefined;
-	const status = hostStatusFor(parsed.host, config);
+	const repoId = repoIdFromGitRemote(remote);
+	if (repoId === undefined) return undefined;
+	const [host] = repoId.split("/");
+	const status = hostStatusFor(host!, config);
 	if (status === "unknown") {
 		throw new CliError(
-			`Git origin host ${parsed.host} is not configured. GitHub.com works by default; for GHES run atlas hosts add ${parsed.host} --web-url https://${parsed.host} --api-url https://${parsed.host}/api/v3 --protocol ssh.`,
+			`Git origin host ${host} is not configured. GitHub.com works by default; for GHES run atlas hosts add ${host} --web-url https://${host} --api-url https://${host}/api/v3 --protocol ssh.`,
 			{
 				code: "CLI_REPO_HOST_UNKNOWN",
 				exitCode: EXIT_INPUT_ERROR,
 				details: {
-					host: parsed.host,
-					repoId: `${parsed.host}/${parsed.owner}/${parsed.name}`,
+					host,
+					repoId,
 					checked: ["git origin"],
 				},
 			},
 		);
 	}
 	return {
-		repoId: `${parsed.host}/${parsed.owner}/${parsed.name}`,
+		repoId,
 		source: "git-origin",
 		reason: `parsed remote.origin.url ${remote}`,
 		hostStatus: status,
 	};
-}
-
-function parseGitRemote(
-	remote: string,
-): { host: string; owner: string; name: string } | undefined {
-	const normalize = (host: string, owner: string, name: string) => ({
-		host: host.toLowerCase(),
-		owner: owner.toLowerCase(),
-		name: name.replace(/\.git$/i, "").toLowerCase(),
-	});
-	const ssh = remote.match(/^git@([^:]+):([^/]+)\/(.+)$/i);
-	if (ssh) return normalize(ssh[1]!, ssh[2]!, ssh[3]!);
-	if (remote.startsWith("http://") || remote.startsWith("https://")) {
-		try {
-			const url = new URL(remote);
-			const [owner, name] = url.pathname.replace(/^\/+|\/+$/g, "").split("/");
-			if (owner && name) return normalize(url.hostname, owner, name);
-		} catch {}
-	}
-	return undefined;
 }
 
 async function gitOutput(
