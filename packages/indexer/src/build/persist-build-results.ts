@@ -1,5 +1,4 @@
 import type { RepoConfig } from "@atlas/core";
-import { reindexDocumentText } from "@atlas/store";
 
 import { IndexerPersistenceError } from "../errors/indexer-errors";
 import type { IndexerDependencies } from "../services/create-indexer-services";
@@ -55,16 +54,10 @@ export function persistBuildResults(
 			}
 
 			for (const rebuilt of input.artifacts.selectedDocs) {
-				deps.store.docs.upsert(rebuilt.document);
-				deps.store.sections.replaceForDocument(
-					rebuilt.document.docId,
-					rebuilt.document.sections,
-				);
-				deps.store.chunks.replaceForDocument(
-					rebuilt.document.docId,
-					rebuilt.chunks,
-				);
-				reindexDocumentText(deps.db, rebuilt.document, rebuilt.chunks);
+				deps.store.docs.replaceDocumentBundle({
+					document: rebuilt.document,
+					chunks: rebuilt.chunks,
+				});
 
 				deps.store.summaries.replaceForTarget(
 					"document",
