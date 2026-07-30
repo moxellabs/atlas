@@ -27,7 +27,7 @@ Atlas exposes the same local corpus through a CLI, an embeddable Commander comma
 - `mcp` starts a stdio MCP session backed by local store/retrieval services.
 - `eval` runs deterministic retrieval evaluation scenarios and MCP adoption call/no-call scenarios.
 
-The CLI supports human output, JSON output, stable exit codes, and non-interactive operation for tests. Enterprise Commander CLIs can mount the full Atlas command tree with `@moxellabs/atlas/commander`; see [Enterprise CLI Mount](enterprise-cli-mount.md). `apps/cli/package.json` declares the local Bun binary entrypoint as `bin.atlas = ./src/index.ts`; Distribution smoke validation executes that entrypoint with `--help`.
+The CLI supports human output, JSON output, stable exit codes, and non-interactive operation for tests. Enterprise Commander CLIs can mount the full Atlas command tree with `@mrmendez/atlas/commander`; see [Enterprise CLI Mount](enterprise-cli-mount.md). `apps/cli/package.json` declares the local Bun binary entrypoint as `bin.atlas = ./src/index.ts`; Distribution smoke validation executes that entrypoint with `--help`.
 
 Maintainer artifact flow:
 

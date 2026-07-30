@@ -92,7 +92,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install
       - run: bun run typecheck
-      - run: bunx @moxellabs/atlas artifact verify --fresh
+      - run: bunx @mrmendez/atlas artifact verify --fresh
 ```
 
 For monorepos using this checkout before package publishing, replace last step with `bun run cli -- artifact verify --fresh` or equivalent local command. Manual alternatives remain valid:

@@ -530,59 +530,67 @@ describe("atlas cli", () => {
 	});
 
   test("repo add alias preserves add-repo JSON result shape", async () => {
-    const home = join(rootDir, "home-repo-add-alias");
+    const topLevelHome = join(rootDir, "home-repo-add-alias-top-level");
+    const nestedHome = join(rootDir, "home-repo-add-alias-nested");
     await runWithCapture(
       ["setup", "--cwd", rootDir, "--cache-dir", cacheDir, "--non-interactive"],
-      { HOME: home },
+      { HOME: topLevelHome },
     );
-    const cfg = join(home, ".moxel", "atlas", "config.yaml");
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = (async () =>
-      new Response("not found", { status: 404 })) as unknown as typeof fetch;
-    try {
-      const topLevel = await runWithCapture(
-        [
-          "add-repo",
-          "moxellabs/atlas",
-          "--cwd",
-          rootDir,
-          "--config",
-          cfg,
-          "--cache-dir",
-          join(rootDir, "alias-top"),
-          "--non-interactive",
-          "--json",
-        ],
-        { HOME: home },
-      );
-      const nested = await runWithCapture(
-        [
-          "repo",
-          "add",
-          "moxellabs/atlas",
-          "--cwd",
-          rootDir,
-          "--config",
-          cfg,
-          "--cache-dir",
-          join(rootDir, "alias-nested"),
-          "--non-interactive",
-          "--json",
-        ],
-        { HOME: home },
-      );
-      expect(topLevel.exitCode).toBe(0);
-      expect(nested.exitCode).toBe(0);
-      expect(Object.keys(JSON.parse(nested.stdout).data).sort()).toEqual(
-        Object.keys(JSON.parse(topLevel.stdout).data).sort(),
-      );
-      expect(JSON.parse(nested.stdout).data.repoId).toBe(
-        "github.com/moxellabs/atlas",
-      );
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
-  });
+    await runWithCapture(
+      ["setup", "--cwd", rootDir, "--cache-dir", cacheDir, "--non-interactive"],
+      { HOME: nestedHome },
+    );
+    const topLevelConfig = join(topLevelHome, ".moxel", "atlas", "config.yaml");
+    const nestedConfig = join(nestedHome, ".moxel", "atlas", "config.yaml");
+    const origin = join(rootDir, "repo-add-alias-origin");
+    await createOriginRepo(origin);
+    await createCliArtifactFixture(origin, "repo-add-alias-revision");
+    await git(origin, ["add", ".moxel/atlas"]);
+    await git(origin, ["commit", "-m", "publish atlas artifact"]);
+    const topLevel = await runWithCapture(
+      [
+        "add-repo",
+        "moxellabs/atlas",
+        "--cwd",
+        rootDir,
+        "--config",
+        topLevelConfig,
+        "--cache-dir",
+        join(rootDir, "alias-top"),
+        "--remote",
+        origin,
+        "--non-interactive",
+        "--json",
+      ],
+      { HOME: topLevelHome },
+    );
+    const nested = await runWithCapture(
+      [
+        "repo",
+        "add",
+        "moxellabs/atlas",
+        "--cwd",
+        rootDir,
+        "--config",
+        nestedConfig,
+        "--cache-dir",
+        join(rootDir, "alias-nested"),
+        "--remote",
+        origin,
+        "--non-interactive",
+        "--json",
+      ],
+      { HOME: nestedHome },
+    );
+    expect(topLevel.exitCode).toBe(0);
+    expect(nested.exitCode).toBe(0);
+    expect(Object.keys(JSON.parse(nested.stdout).data).sort()).toEqual(
+      Object.keys(JSON.parse(topLevel.stdout).data).sort(),
+    );
+    expect(JSON.parse(nested.stdout).data.repo.repoId).toBe(
+      "github.com/moxellabs/atlas",
+    );
+  }, 30_000);
 
   test("shorthand repo input uses configured default host before public GitHub", async () => {
     const home = join(rootDir, "home-default-host");

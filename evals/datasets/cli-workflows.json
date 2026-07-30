@@ -270,7 +270,7 @@
     {
       "id": "cli-production-build-triage",
       "category": "cli-workflow",
-      "query": "For production build triage, what command uses bunx @moxellabs/atlas build --json --verbose?",
+      "query": "For production build triage, what command uses bunx @mrmendez/atlas build --json --verbose?",
       "expected": {
         "pathIncludes": [
           "docs/index.md"

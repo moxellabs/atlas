@@ -55,8 +55,8 @@ async function assertCheckoutMatchesTag(releaseTag: string): Promise<void> {
 
 async function assertPackageVersion(version: string): Promise<void> {
 	const pkg = await Bun.file("package.json").json();
-	if (pkg.name !== "@moxellabs/atlas") {
-		throw new Error(`package name must be @moxellabs/atlas, got ${pkg.name}`);
+	if (pkg.name !== "@mrmendez/atlas") {
+		throw new Error(`package name must be @mrmendez/atlas, got ${pkg.name}`);
 	}
 	if (pkg.version !== version) {
 		throw new Error(
@@ -64,10 +64,10 @@ async function assertPackageVersion(version: string): Promise<void> {
 		);
 	}
 	if (pkg.private === true) {
-		throw new Error("@moxellabs/atlas package must not be private");
+		throw new Error("@mrmendez/atlas package must not be private");
 	}
 	if (pkg.publishConfig?.access !== "public") {
-		throw new Error("@moxellabs/atlas publishConfig.access must be public");
+		throw new Error("@mrmendez/atlas publishConfig.access must be public");
 	}
 }
 
