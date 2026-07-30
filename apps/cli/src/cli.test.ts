@@ -35,11 +35,36 @@ import {
   gitOutput,
   runWithCapture,
 } from "./cli.test-helpers";
-import { collectCommandPositionals } from "./index";
+import {
+  collectCommandPositionals,
+  shouldStartFirstRunOnboarding,
+} from "./index";
 import type { CliCommandContext } from "./runtime/types";
 import { CliError, toFailureResult } from "./utils/errors";
 
 describe("atlas cli", () => {
+
+  test("starts onboarding only for an interactive bare first run", async () => {
+    const home = join(rootDir, "home-first-run");
+    const context = createCommandContext([]);
+    context.cwd = rootDir;
+    context.output = { json: false, verbose: false, quiet: false };
+    context.env = { HOME: home };
+    Object.assign(context.stdin, { isTTY: true });
+    Object.assign(context.stdout, { isTTY: true });
+
+    expect(await shouldStartFirstRunOnboarding(context)).toBe(true);
+
+    await runWithCapture(
+      ["setup", "--cwd", rootDir, "--non-interactive"],
+      { HOME: home },
+    );
+    expect(await shouldStartFirstRunOnboarding(context)).toBe(false);
+
+    context.output = { json: true, verbose: false, quiet: false };
+    expect(await shouldStartFirstRunOnboarding(context)).toBe(false);
+  });
+
   test("repo target inference canonicalizes supported git remotes", () => {
     const cases = [
       ["git@github.com:Owner/Repo.git", "github.com/owner/repo"],
@@ -268,6 +293,8 @@ describe("atlas cli", () => {
       { HOME: home },
     );
     expect(setup.exitCode).toBe(0);
+    expect(setup.stdout).toContain("\nAtlas setup complete\n");
+    expect(setup.stdout).toContain("Next: atlas repo add <repo>");
 
     const next = await runWithCapture(["next", "--cwd", rootDir, "--json"], {
       HOME: home,
@@ -370,13 +397,66 @@ describe("atlas cli", () => {
     );
     expect(setup.exitCode).toBe(0);
     const nextConfig = join(home, ".moxel", "atlas", "config.yaml");
+		const emptyCorpusPath = (await loadConfig({
+			cwd: rootDir,
+			configPath: nextConfig,
+			env: { HOME: home },
+		})).config.corpusDbPath;
+		expect(await exists(emptyCorpusPath)).toBe(false);
     const emptySetup = await runWithCapture(
       ["next", "--cwd", rootDir, "--config", nextConfig, "--json"],
       { HOME: home },
     );
-    expect(JSON.parse(emptySetup.stdout).data).toMatchObject({
+		const emptySetupData = JSON.parse(emptySetup.stdout).data;
+		expect(emptySetupData).toMatchObject({
       recommendedCommand: "atlas repo add <repo>",
       state: { configFound: true, repoCount: 0 },
+    });
+		expect(emptySetupData.candidates).toContainEqual(
+			expect.objectContaining({ command: "atlas repo add <repo>" }),
+		);
+		expect(await exists(emptyCorpusPath)).toBe(false);
+		const humanNext = await runWithCapture(
+			["next", "--cwd", rootDir, "--config", nextConfig],
+			{ HOME: home },
+		);
+		expect(humanNext.stdout).toContain("Next: atlas repo add <repo>");
+		expect(humanNext.stdout).toContain("Why:");
+		expect(humanNext.stdout).not.toContain("Alternatives:");
+
+    await writeFile(
+      nextConfig,
+      (await readFile(nextConfig, "utf8")).replace(
+        "repos: []",
+        `repos:
+  - repoId: github.com/moxellabs/atlas
+    mode: local-git
+    git:
+      remote: https://github.com/moxellabs/atlas.git
+      localPath: ${join(rootDir, "next-cache", "atlas")}
+      ref: main
+      refMode: remote
+    workspace:
+      packageGlobs: ["packages/*"]
+      packageManifestFiles: ["package.json"]
+    topology:
+      - id: repo-docs
+        kind: repo-doc
+        match:
+          include: ["docs/**/*.md"]
+        ownership:
+          attachTo: repo
+        authority: canonical
+        priority: 10`,
+      ),
+    );
+    const configuredRepo = await runWithCapture(
+      ["next", "--cwd", rootDir, "--config", nextConfig, "--json"],
+      { HOME: home },
+    );
+    expect(JSON.parse(configuredRepo.stdout).data).toMatchObject({
+      recommendedCommand: "atlas build --repo github.com/moxellabs/atlas",
+      state: { configFound: true, repoCount: 1, documentCount: 0 },
     });
 
     const checkout = join(rootDir, "next-checkout");
