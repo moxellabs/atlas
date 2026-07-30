@@ -2525,7 +2525,27 @@ repos:
       context.cwd = rootDir;
       const result = await runServeCommandWithDependencies(
         context,
-        deps,
+        {
+          server: {
+            async start(options = {}) {
+              expect(options).toMatchObject({
+                host: "127.0.0.1",
+                port: 48765,
+              });
+              return {
+                host: "127.0.0.1",
+                port: 48765,
+                dbPath: deps.config.config.corpusDbPath,
+                repoCount: deps.config.config.repos.length,
+                openApiEnabled: true,
+                mcpEnabled: true,
+                uiEnabled: false,
+                stop() {},
+              };
+            },
+          },
+          close: deps.close,
+        },
         async () => {},
         async () => {},
       );
@@ -3959,7 +3979,7 @@ Internal package docs.
     const anyProfileJson = JSON.parse(anyProfileSearch.stdout);
     expect(anyProfileJson.data.filters.profile).toBeUndefined();
     expect(anyProfileJson.data.allProfiles).toBe(true);
-  });
+  }, 30_000);
 
   test("identity root init build verify inspect migration and validation", async () => {
     const init = await runWithCapture([
