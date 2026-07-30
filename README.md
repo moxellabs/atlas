@@ -36,15 +36,15 @@ Engineering docs often live across many repos, private hosts, and local checkout
 - Git for local checkout workflows
 - GitHub CLI or token env var only when explicit GHES/GitHub artifact fetch is needed
 
-Atlas uses Bun in this repository for development, builds, tests, and source-run commands such as `bun run cli`. The published `@moxellabs/atlas` package is a Node 24+ runtime bundle. Its `better-sqlite3` dependency is intentional for Node runtime compatibility; do not casually replace it with `bun:sqlite` unless the project deliberately plans a Bun-only package/runtime migration.
+Atlas uses Bun in this repository for development, builds, tests, and source-run commands such as `bun run cli`. The published `@mrmendez/atlas` package is a Node 24+ runtime bundle. Its `better-sqlite3` dependency is intentional for Node runtime compatibility; do not casually replace it with `bun:sqlite` unless the project deliberately plans a Bun-only package/runtime migration.
 
 ## Install / run
 
-Atlas publishes one public npm package, `@moxellabs/atlas`, with the `atlas` CLI binary. The npm tarball contains runtime assets only (`bin`, `dist`, README/license/security notices). It does not ship full `docs/**` or `.moxel/atlas/**`; import Atlas docs through the public repo artifact instead.
+Atlas publishes one public npm package, `@mrmendez/atlas`, with the `atlas` CLI binary. The npm tarball contains runtime assets only (`bin`, `dist`, README/license/security notices). It does not ship full `docs/**` or `.moxel/atlas/**`; import Atlas docs through the public repo artifact instead.
 
 ```bash
-bunx @moxellabs/atlas --help
-bunx @moxellabs/atlas repo add moxellabs/atlas
+bunx @mrmendez/atlas --help
+bunx @mrmendez/atlas repo add moxellabs/atlas
 ```
 
 If installed globally or through another package manager, run the binary as `atlas`:

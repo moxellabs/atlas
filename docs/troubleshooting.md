@@ -16,8 +16,8 @@ order: 90
 When build fails:
 
 ```bash
-bunx @moxellabs/atlas inspect topology --live --repo <repo-id> --config <config>
-bunx @moxellabs/atlas build --json --verbose --repo <repo-id> --config <config>
+bunx @mrmendez/atlas inspect topology --live --repo <repo-id> --config <config>
+bunx @mrmendez/atlas build --json --verbose --repo <repo-id> --config <config>
 ```
 
 If running inside the configured checkout, omit `--repo`; Atlas can infer it from repo metadata, the configured `localPath`, or Git origin. If multiple configured repos share the same final name, pass the full canonical ID.
