@@ -134,7 +134,7 @@ Partial failures should surface as recovery metadata and diagnostics rather than
 
 ## Consumer repo consumption workflow
 
-When unsure, start with `atlas next`; it inspects setup, repo metadata, registry state, and corpus contents, then recommends one command.
+When unsure, start with `atlas next`; it reads setup, checkout metadata, registry state, and the selected repository's local corpus without changing runtime files. It ranks one deterministic action: setup, a maintainer lifecycle step, targeted build/import repair, a repo choice when context is ambiguous, or scoped search when the corpus is ready.
 
 ```bash
 atlas setup
