@@ -9,27 +9,27 @@ order: 55
 
 # Enterprise CLI Mount
 
-Enterprise CLIs can mount Atlas under an existing Commander program with `@moxellabs/atlas/commander`. The wrapper owns product naming, command placement, distribution, and enterprise defaults; Atlas owns the maintained command tree, validation, JSON output, exit codes, local artifact build, search, MCP, and server behavior.
+Enterprise CLIs can mount Atlas under an existing Commander program with `@mrmendez/atlas/commander`. The wrapper owns product naming, command placement, distribution, and enterprise defaults; Atlas owns the maintained command tree, validation, JSON output, exit codes, local artifact build, search, MCP, and server behavior.
 
 Use this when an internal CLI such as `acme` or `userCli` should expose local knowledge commands without asking users to install and learn the standalone `atlas` binary.
 
 ## Install
 
 ```sh
-npm install @moxellabs/atlas commander
+npm install @mrmendez/atlas commander
 ```
 
 Atlas declares `commander` as a dependency, but most host CLIs already own their Commander version. Keep the wrapper and Atlas on compatible Commander versions and import the mount API from the subpath export:
 
 ```ts
-import { attachAtlas, createAtlasCommand } from "@moxellabs/atlas/commander";
+import { attachAtlas, createAtlasCommand } from "@mrmendez/atlas/commander";
 ```
 
 ## One-minute setup
 
 ```ts
 import { Command } from "commander";
-import { attachAtlas } from "@moxellabs/atlas/commander";
+import { attachAtlas } from "@mrmendez/atlas/commander";
 
 const program = new Command();
 program.name("userCli");

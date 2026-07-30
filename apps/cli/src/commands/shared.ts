@@ -6,6 +6,7 @@ import {
 	type AtlasRepoConfig,
 	buildDefaultConfig,
 	buildDefaultCorpusDbPath,
+	canonicalizeRepoId,
 	DEFAULT_ATLAS_ARTIFACT_ROOT,
 	DEFAULT_MOXEL_ATLAS_REPOS_RELATIVE_PATH,
 	IDENTITY_ROOT_ERROR,
@@ -25,7 +26,7 @@ import {
 	SummaryRepository,
 } from "@atlas/store";
 import { CliConsole } from "../io/console";
-import { canPrompt, createPrompts } from "../io/prompts";
+import { canPrompt, createPrompts, type CliPrompts } from "../io/prompts";
 import { renderTable } from "../io/table";
 import {
 	buildCliDependencies,
@@ -45,6 +46,7 @@ import {
 } from "../utils/errors";
 import { runProcess } from "../utils/node-runtime";
 import { parentDir, resolveCliPath } from "../utils/paths";
+import { repoIdFromGitRemote } from "./git-remote";
 import {
 	type TopologyTemplate,
 	topologyTemplate,
@@ -191,7 +193,7 @@ export function defaultCliConfig(cacheDir?: string): AtlasConfig {
 }
 
 type RepoConfigMode = "local-git" | "ghes-api";
-type RepoConfigPrompts = ReturnType<typeof createPrompts> | undefined;
+type RepoConfigPrompts = CliPrompts | undefined;
 
 interface RepoConfigInput {
 	repoId?: string | undefined;
@@ -217,6 +219,11 @@ interface RepoConfigResolutionContext {
 	prompts: RepoConfigPrompts;
 }
 
+/** Test-only prompt seam for repository configuration resolution. */
+export interface RepoConfigResolutionOptions {
+	prompts?: CliPrompts | undefined;
+}
+
 interface RepoWorkspaceInput {
 	packageGlobs: string[];
 	packageManifestFiles: string[];
@@ -227,10 +234,20 @@ interface RepoWorkspaceInput {
 export async function resolveRepoConfigInput(
 	context: CliCommandContext,
 	input: RepoConfigInput,
+	options: RepoConfigResolutionOptions = {},
 ): Promise<AtlasRepoConfig> {
-	const resolution = createRepoConfigResolutionContext(context, input);
+	const resolution = createRepoConfigResolutionContext(context, input, options);
 	const mode = await resolveRepoConfigMode(input, resolution);
-	const repoId = await resolveRepoConfigRepoId(input, resolution);
+	const gitDefaults =
+		mode === "local-git" ? await detectLocalGitDefaults(context.cwd) : undefined;
+	const rawRepoId = await resolveRepoConfigRepoId(
+		input,
+		resolution,
+		resolution.interactive && mode === "local-git"
+			? gitDefaults?.repoId
+			: undefined,
+	);
+	const repoId = canonicalizeRepoIdIfValid(rawRepoId);
 	const workspace = resolveRepoWorkspaceInput(input);
 	return mode === "local-git"
 		? await resolveLocalGitRepoConfig(
@@ -239,6 +256,7 @@ export async function resolveRepoConfigInput(
 				resolution,
 				repoId,
 				workspace,
+				gitDefaults,
 			)
 		: await resolveGhesRepoConfig(input, resolution, repoId, workspace);
 }
@@ -246,12 +264,13 @@ export async function resolveRepoConfigInput(
 function createRepoConfigResolutionContext(
 	context: CliCommandContext,
 	input: RepoConfigInput,
+	options: RepoConfigResolutionOptions,
 ): RepoConfigResolutionContext {
-	const interactive = canPrompt() && !input.nonInteractive;
+	const interactive = canPrompt(context, { nonInteractive: input.nonInteractive });
 	return {
 		cwd: context.cwd,
 		interactive,
-		prompts: interactive ? createPrompts() : undefined,
+		prompts: interactive ? (options.prompts ?? createPrompts()) : undefined,
 	};
 }
 
@@ -274,9 +293,17 @@ async function resolveRepoConfigMode(
 async function resolveRepoConfigRepoId(
 	input: RepoConfigInput,
 	context: RepoConfigResolutionContext,
+	defaultRepoId?: string,
 ): Promise<string> {
 	const repoId =
-		input.repoId ?? (await promptIfInteractive(context, "Repository ID"));
+		input.repoId ??
+		(await promptIfInteractive(
+			context,
+			defaultRepoId === undefined
+				? "Repository ID (host/owner/name, e.g. github.com/owner/repo)"
+				: "Repository ID",
+			defaultRepoId,
+		));
 	if (repoId === undefined || repoId.length === 0) {
 		throw new CliError("Missing repository ID.", {
 			code: "CLI_REPO_ID_REQUIRED",
@@ -284,6 +311,27 @@ async function resolveRepoConfigRepoId(
 		});
 	}
 	return repoId;
+}
+
+function canonicalizeRepoIdIfValid(repoId: string): string {
+	try {
+		return canonicalizeRepoId(repoId);
+	} catch {
+		return repoId;
+	}
+}
+
+function requireCanonicalRepoId(repoId: string): string {
+	try {
+		return canonicalizeRepoId(repoId);
+	} catch (error) {
+		throw new CliError(
+			error instanceof Error
+				? error.message
+				: "Repository ID must be host/owner/name.",
+			{ code: "CLI_REPO_ID_REQUIRED", exitCode: EXIT_INPUT_ERROR },
+		);
+	}
 }
 
 function resolveRepoWorkspaceInput(input: RepoConfigInput): RepoWorkspaceInput {
@@ -304,8 +352,8 @@ async function resolveLocalGitRepoConfig(
 	context: RepoConfigResolutionContext,
 	repoId: string,
 	workspace: RepoWorkspaceInput,
+	gitDefaults: LocalGitDefaults | undefined,
 ): Promise<AtlasRepoConfig> {
-	const gitDefaults = await detectLocalGitDefaults(cliContext.cwd);
 	const defaultRef = gitDefaults?.ref ?? "main";
 	const defaultLocalPath = resolveCliPath(
 		repoCheckoutDir(input.cacheDir, repoId),
@@ -333,7 +381,7 @@ async function resolveLocalGitRepoConfig(
 		gitDefaults?.remote;
 	const git = requireLocalGitFields(remote, localPath, ref);
 	return {
-		repoId,
+		repoId: requireCanonicalRepoId(repoId),
 		mode: "local-git",
 		git: { ...git, refMode: input.refMode ?? "remote" },
 		workspace: repoWorkspaceConfig(workspace),
@@ -359,7 +407,7 @@ async function resolveGhesRepoConfig(
 		input.name ?? (await promptIfInteractive(context, "GHES repository name"));
 	const ghes = requireGhesFields(baseUrl, owner, name);
 	return {
-		repoId,
+		repoId: requireCanonicalRepoId(repoId),
 		mode: "ghes-api",
 		github: {
 			...ghes,
@@ -470,12 +518,16 @@ export async function appendRepoConfig(
 			};
 		},
 	);
-	await mkdir(resolveCliPath(result.config.cacheDir, context.cwd), {
+	const atlasHome = resolveCliPath(
+		options.cacheDir ?? result.config.cacheDir,
+		context.cwd,
+	);
+	await mkdir(atlasHome, {
 		recursive: true,
 	});
 	await mkdir(
 		resolveCliPath(
-			`${result.config.cacheDir}/${DEFAULT_MOXEL_ATLAS_REPOS_RELATIVE_PATH}`,
+			`${atlasHome}/${DEFAULT_MOXEL_ATLAS_REPOS_RELATIVE_PATH}`,
 			context.cwd,
 		),
 		{ recursive: true },
@@ -485,10 +537,7 @@ export async function appendRepoConfig(
 		{ recursive: true },
 	);
 	await writeRepoMetadata(
-		repoMetadataPath(
-			resolveCliPath(result.config.cacheDir, context.cwd),
-			repo.repoId,
-		),
+		repoMetadataPath(atlasHome, repo.repoId),
 		createRepoMetadata(repo),
 	);
 	return result;
@@ -626,7 +675,37 @@ export async function writeRepoArtifactMetadata(
 	>,
 ): Promise<void> {
 	const path = repoMetadataPath(atlasHome, repoId);
-	const metadata = await readRepoMetadata(path);
+	let metadata: RepoMetadata;
+	try {
+		metadata = await readRepoMetadata(path);
+	} catch (error) {
+		if (
+			!(error instanceof Error) ||
+			!("code" in error) ||
+			(error as NodeJS.ErrnoException).code !== "ENOENT"
+		) {
+			throw error;
+		}
+		// First write can race before appendRepoConfig metadata lands; seed a shell.
+		const { host, owner, name } = parseCanonicalRepoId(repoId);
+		metadata = {
+			schemaVersion: 1,
+			repoId,
+			host,
+			owner,
+			name,
+			source: {
+				mode: "local-git",
+				remote: "",
+				localPath: "",
+				ref: "",
+				refMode: "remote",
+			},
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+			artifactPath: null,
+		};
+	}
 	await writeRepoMetadata(path, {
 		...metadata,
 		...artifact,
@@ -717,6 +796,7 @@ interface LocalGitDefaults {
 	rootPath: string;
 	ref: string;
 	remote: string;
+	repoId?: string | undefined;
 }
 
 async function detectLocalGitDefaults(
@@ -736,6 +816,10 @@ async function detectLocalGitDefaults(
 		rootPath,
 		ref: currentBranch ?? "HEAD",
 		remote: configuredRemote ?? pathToFileURL(rootPath).href,
+		repoId:
+			configuredRemote === undefined
+				? undefined
+				: repoIdFromGitRemote(configuredRemote),
 	};
 }
 

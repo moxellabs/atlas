@@ -29,18 +29,29 @@ export interface CanonicalRepoIdParts {
 
 const repoIdSegmentPattern = /^[a-z0-9][a-z0-9._-]*$/;
 const canonicalRepoIdMessage =
-	"must be canonical repo ID: host/owner/name with lowercase safe segments";
+	"must be canonical repo ID: host/owner/name with safe path segments (stored lowercase)";
 
 export function parseCanonicalRepoId(repoId: string): CanonicalRepoIdParts {
-	if (repoId.includes("://") || repoId.includes("\\") || /\s/.test(repoId)) {
+	const trimmed = repoId.trim();
+	if (
+		trimmed.includes("://") ||
+		trimmed.includes("\\") ||
+		/\s/.test(trimmed)
+	) {
 		throw new Error(canonicalRepoIdMessage);
 	}
-	const segments = repoId.split("/");
+	const segments = trimmed.split("/");
 	if (segments.length !== 3) {
 		throw new Error(canonicalRepoIdMessage);
 	}
-	const [host, owner, name] = segments;
-	for (const segment of segments) {
+	const [hostRaw, ownerRaw, nameRaw] = segments;
+	if (hostRaw === undefined || ownerRaw === undefined || nameRaw === undefined) {
+		throw new Error(canonicalRepoIdMessage);
+	}
+	const host = hostRaw.toLowerCase();
+	const owner = ownerRaw.toLowerCase();
+	const name = nameRaw.replace(/\.git$/i, "").toLowerCase();
+	for (const segment of [host, owner, name]) {
 		if (
 			segment === "" ||
 			segment === "." ||
@@ -50,7 +61,13 @@ export function parseCanonicalRepoId(repoId: string): CanonicalRepoIdParts {
 			throw new Error(canonicalRepoIdMessage);
 		}
 	}
-	return { host: host as string, owner: owner as string, name: name as string };
+	return { host, owner, name };
+}
+
+/** Returns the stable lowercase host/owner/name form used in config and storage. */
+export function canonicalizeRepoId(repoId: string): string {
+	const { host, owner, name } = parseCanonicalRepoId(repoId);
+	return `${host}/${owner}/${name}`;
 }
 
 export function repoPathSegments(repoId: string): [string, string, string] {
@@ -58,14 +75,17 @@ export function repoPathSegments(repoId: string): [string, string, string] {
 	return [host, owner, name];
 }
 
-export const repoIdSchema = nonEmptyTrimmedString.refine((value) => {
+export const repoIdSchema = nonEmptyTrimmedString.transform((value, ctx) => {
 	try {
-		parseCanonicalRepoId(value);
-		return true;
+		return canonicalizeRepoId(value);
 	} catch {
-		return false;
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			message: canonicalRepoIdMessage,
+		});
+		return z.NEVER;
 	}
-}, canonicalRepoIdMessage);
+});
 
 export const docKindSchema = z.enum([
 	"repo-doc",

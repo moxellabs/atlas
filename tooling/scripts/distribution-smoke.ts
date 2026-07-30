@@ -38,9 +38,9 @@ async function packAtlas(): Promise<PackEntry> {
 }
 
 function assertPackageContents(entry: PackEntry): void {
-  if (entry.name !== "@moxellabs/atlas") {
+  if (entry.name !== "@mrmendez/atlas") {
     throw new Error(
-      `expected packed package @moxellabs/atlas, got ${entry.name}`,
+      `expected packed package @mrmendez/atlas, got ${entry.name}`,
     );
   }
   const paths = new Set(
@@ -88,10 +88,10 @@ async function assertInstalledCli(tarball: string): Promise<void> {
     await $`bun init -y`.cwd(tempRoot).quiet();
     await $`bun add ${tarball}`.cwd(tempRoot).quiet();
     await $`bun node_modules/.bin/atlas --help`.cwd(tempRoot);
-    await $`bun -e ${"import { attachAtlas, createAtlasCommand } from '@moxellabs/atlas/commander'; if (typeof attachAtlas !== 'function' || typeof createAtlasCommand !== 'function') throw new Error('commander subpath missing exports');"}`.cwd(
+    await $`bun -e ${"import { attachAtlas, createAtlasCommand } from '@mrmendez/atlas/commander'; if (typeof attachAtlas !== 'function' || typeof createAtlasCommand !== 'function') throw new Error('commander subpath missing exports');"}`.cwd(
       tempRoot,
     );
-    await $`bun -e ${"const pkg = require('./node_modules/@moxellabs/atlas/package.json'); if (pkg.types !== './dist/atlas.d.ts') throw new Error('root types missing'); if (!pkg.exports['./commander']?.types) throw new Error('commander export types missing');"}`.cwd(
+    await $`bun -e ${"const pkg = require('./node_modules/@mrmendez/atlas/package.json'); if (pkg.types !== './dist/atlas.d.ts') throw new Error('root types missing'); if (!pkg.exports['./commander']?.types) throw new Error('commander export types missing');"}`.cwd(
       tempRoot,
     );
   } finally {

@@ -266,8 +266,9 @@ async function runSetupCommand(
 
 	const cacheDirFlag = readArgvString(context.argv, "--cache-dir");
 	const nonInteractive = context.argv.includes("--non-interactive");
-	const interactive = canPrompt() && !nonInteractive;
+	const interactive = canPrompt(context, { nonInteractive });
 	const prompts = interactive ? createPrompts() : undefined;
+	if (interactive) prompts?.intro("Atlas setup");
 	const defaultRuntimeRoot = identityProfile.runtimeRoot.startsWith("~/")
 		? join(
 				context.env.HOME ?? process.env.HOME ?? "~",
@@ -347,6 +348,7 @@ async function runSetupCommand(
 		{ recursive: true },
 	);
 
+	let addedRepo: AtlasConfig["repos"][number] | undefined;
 	if (
 		interactive &&
 		(await prompts?.confirm("Add the first repository now?", true))
@@ -361,8 +363,13 @@ async function runSetupCommand(
 			configPath,
 			cacheDir: created.config.cacheDir,
 		});
+		addedRepo = repo;
 	}
-	return renderSuccess(
+	const nextCommand =
+		addedRepo === undefined
+			? "atlas repo add <repo>"
+			: `atlas build --repo ${addedRepo.repoId}`;
+	const result = await renderSuccess(
 		context,
 		command,
 		{
@@ -372,10 +379,13 @@ async function runSetupCommand(
 			cacheDir: created.config.cacheDir,
 			corpusDbPath: created.config.corpusDbPath,
 			hosts: created.config.hosts,
+			...(addedRepo === undefined ? {} : { addedRepoId: addedRepo.repoId }),
 			existingConfig,
 			overwritten: existingConfig && force,
 		},
 		[
+			"",
+			"Atlas setup complete",
 			`Config: ${displayPath(configPath, context.cwd)}`,
 			...(existingConfig && !force
 				? ["Existing config detected; leaving it unchanged. Re-run with --force to overwrite."]
@@ -383,9 +393,17 @@ async function runSetupCommand(
 			`Artifact root: ${identityProfile.identityRoot}`,
 			`Runtime root: ${displayPath(resolveCliPath(created.config.cacheDir, context.cwd), context.cwd)}`,
 			`Cache: ${displayPath(resolveCliPath(created.config.cacheDir, context.cwd), context.cwd)}`,
-			"Next: atlas repo add <repo>",
+			`Next: ${nextCommand}`,
 		],
 	);
+	if (interactive && !context.output.quiet) {
+		prompts?.outro(
+			addedRepo === undefined
+				? "Atlas is ready. Add a repository when you are ready to index documentation."
+				: `Atlas is ready. Build ${addedRepo.repoId} to create its knowledge bundle.`,
+		);
+	}
+	return result;
 }
 
 async function gitOutput(

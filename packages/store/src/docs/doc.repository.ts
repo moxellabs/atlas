@@ -1,5 +1,6 @@
 import {
 	type CanonicalDocument,
+	type CorpusChunk,
 	type DocScope,
 	stableHash,
 	stableJson,
@@ -34,25 +35,36 @@ export class DocRepository {
 		return toDocumentRecord(document);
 	}
 
-	/** Replaces a document, its scopes, sections, and full-text index rows in one transaction. */
-	replaceCanonicalDocument(document: CanonicalDocument): DocumentRecord {
-		this.withRepositoryErrors("replaceCanonicalDocument", () => {
+	/**
+	 * Replaces one document aggregate: metadata, scopes, sections, chunks, and FTS.
+	 * Callers that only need sections/FTS without chunks can pass an empty chunk list.
+	 */
+	replaceDocumentBundle(input: {
+		document: CanonicalDocument;
+		chunks?: readonly CorpusChunk[] | undefined;
+	}): DocumentRecord {
+		const chunks = input.chunks ?? [];
+		this.withRepositoryErrors("replaceDocumentBundle", () => {
 			this.db.transaction(() => {
-				upsertDocumentRow(this.db, document);
-				replaceDocumentScopes(this.db, document.docId, document.scopes);
+				upsertDocumentRow(this.db, input.document);
+				replaceDocumentScopes(
+					this.db,
+					input.document.docId,
+					input.document.scopes,
+				);
 				this.db.run("DELETE FROM chunks WHERE doc_id = $docId", {
-					$docId: document.docId,
+					$docId: input.document.docId,
 				});
 				this.db.run("DELETE FROM sections WHERE doc_id = $docId", {
-					$docId: document.docId,
+					$docId: input.document.docId,
 				});
-				for (const section of document.sections) {
+				for (const section of input.document.sections) {
 					this.db.run(
 						`INSERT INTO sections (section_id, doc_id, ordinal, heading_path_json, text, code_blocks_json)
              VALUES ($sectionId, $docId, $ordinal, $headingPathJson, $text, $codeBlocksJson)`,
 						{
 							$sectionId: section.sectionId,
-							$docId: document.docId,
+							$docId: input.document.docId,
 							$ordinal: section.ordinal,
 							$headingPathJson: encodeJson(section.headingPath),
 							$text: section.text,
@@ -60,10 +72,42 @@ export class DocRepository {
 						},
 					);
 				}
-				reindexDocumentText(this.db, document);
+				for (const chunk of chunks) {
+					this.db.run(
+						`INSERT INTO chunks (
+               chunk_id, doc_id, repo_id, package_id, module_id, skill_id, section_id, kind, authority,
+               ordinal, heading_path_json, text, token_count
+             )
+             VALUES (
+               $chunkId, $docId, $repoId, $packageId, $moduleId, $skillId, $sectionId, $kind, $authority,
+               $ordinal, $headingPathJson, $text, $tokenCount
+             )`,
+						{
+							$chunkId: chunk.chunkId,
+							$docId: chunk.docId,
+							$repoId: chunk.repoId,
+							$packageId: chunk.packageId ?? null,
+							$moduleId: chunk.moduleId ?? null,
+							$skillId: chunk.skillId ?? null,
+							$sectionId: null,
+							$kind: chunk.kind,
+							$authority: chunk.authority,
+							$ordinal: chunk.ordinal,
+							$headingPathJson: encodeJson(chunk.headingPath),
+							$text: chunk.text,
+							$tokenCount: chunk.tokenCount,
+						},
+					);
+				}
+				reindexDocumentText(this.db, input.document, chunks);
 			});
 		});
-		return toDocumentRecord(document);
+		return toDocumentRecord(input.document);
+	}
+
+	/** Replaces a document, its scopes, sections, and full-text index rows in one transaction. */
+	replaceCanonicalDocument(document: CanonicalDocument): DocumentRecord {
+		return this.replaceDocumentBundle({ document, chunks: [] });
 	}
 
 	/** Returns a document record by ID, including scope rows. */
@@ -82,20 +126,33 @@ export class DocRepository {
 	}
 
 	/** Lists documents by repository in deterministic path order. */
-	listByRepo(repoId: string): DocumentRecord[] {
-		return this.withRepositoryErrors("listDocumentsByRepo", () =>
-			this.db
-				.all<DocumentRow>(
-					`SELECT ${documentRowSelect()}
+	listByRepo(repoId: string, options: { limit?: number } = {}): DocumentRecord[] {
+		return this.withRepositoryErrors("listDocumentsByRepo", () => {
+			const limit =
+				options.limit !== undefined && options.limit > 0
+					? Math.floor(options.limit)
+					: undefined;
+			const rows =
+				limit === undefined
+					? this.db.all<DocumentRow>(
+							`SELECT ${documentRowSelect()}
            FROM documents
            WHERE repo_id = $repoId
            ORDER BY path`,
-					{ $repoId: repoId },
-				)
-				.map((row) =>
-					mapDocumentRow(row, listScopes(this.db, row.doc_id), "document"),
-				),
-		);
+							{ $repoId: repoId },
+						)
+					: this.db.all<DocumentRow>(
+							`SELECT ${documentRowSelect()}
+           FROM documents
+           WHERE repo_id = $repoId
+           ORDER BY path
+           LIMIT $limit`,
+							{ $repoId: repoId, $limit: limit },
+						);
+			return rows.map((row) =>
+				mapDocumentRow(row, listScopes(this.db, row.doc_id), "document"),
+			);
+		});
 	}
 
 	/** Lists documents by kind within a repository. */

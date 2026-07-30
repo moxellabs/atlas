@@ -91,6 +91,30 @@ describe("store integration", () => {
 		await rm(rootPath, { recursive: true, force: true });
 	});
 
+	test("read-only open never creates a missing corpus path", async () => {
+		const rootPath = await mkdtemp(join(tmpdir(), "atlas-store-read-only-"));
+		const nestedDbPath = join(rootPath, "nested", "corpus", "atlas.db");
+
+		expect(() => openStore({ path: nestedDbPath, readOnly: true })).toThrow();
+		await expect(stat(join(rootPath, "nested"))).rejects.toThrow();
+		await rm(rootPath, { recursive: true, force: true });
+	});
+
+	test("rejects migrations on a read-only store", () => {
+		expect(() =>
+			openStore({ path: dbPath, readOnly: true, migrate: true }),
+		).toThrow("Read-only stores cannot run migrations.");
+	});
+
+	test("opens existing stores for read-only diagnostics", () => {
+		const readOnlyStore = openStore({ path: dbPath, readOnly: true });
+		try {
+			expect(getStoreDiagnostics(readOnlyStore).documentCount).toBe(0);
+		} finally {
+			readOnlyStore.close();
+		}
+	});
+
 	test("stores slash-bearing canonical repo IDs unchanged", () => {
 		const repos = new RepoRepository(store);
 		const canonicalRepoId = "github.mycorp.com/platform/docs";

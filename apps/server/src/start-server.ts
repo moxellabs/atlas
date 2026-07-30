@@ -20,7 +20,7 @@ export interface AtlasRunningServer {
   /** Whether the legacy UI toggle is enabled. */
   uiEnabled: boolean;
   /** Stops the server and closes owned dependencies. */
-  stop(): void;
+  stop(): void | Promise<void>;
 }
 
 /** Starts the ATLAS HTTP server from reusable boot primitives. */
@@ -43,9 +43,9 @@ export async function startAtlasServer(options: {
     openApiEnabled: dependencies.env.enableOpenApi,
     mcpEnabled: dependencies.env.enableMcp,
     uiEnabled: dependencies.env.enableUi,
-    stop(): void {
+    stop() {
       app.stop();
-      closeServerDependencies(dependencies);
+      return closeServerDependencies(dependencies);
     }
   };
 }

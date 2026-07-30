@@ -9,11 +9,11 @@ order: 12
 
 # Release process
 
-Atlas publishes exactly one public npm package: `@moxellabs/atlas`. Workspace internals remain private until their APIs are intentionally stabilized.
+Atlas publishes exactly one public npm package: `@mrmendez/atlas`. Workspace internals remain private until their APIs are intentionally stabilized.
 
 ## Prerequisites
 
-- GitHub repository secret `NPM_TOKEN` contains an npm token with publish rights for `@moxellabs/atlas`.
+- GitHub repository secret `NPM_TOKEN` contains an npm token with publish rights for `@mrmendez/atlas` and bypass 2FA enabled for non-interactive publishing.
 - `package.json` version matches the release tag without leading `v`.
 - Local preflight passes:
 

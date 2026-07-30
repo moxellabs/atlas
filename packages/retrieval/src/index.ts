@@ -34,6 +34,7 @@ export type {
   RetrievalCandidate,
   RetrievalDiagnostic,
   RetrievalScopeLevel,
+  RetrievalRepositories,
   RetrievalStore,
   RetrievalTargetType,
   ScopeCandidate,

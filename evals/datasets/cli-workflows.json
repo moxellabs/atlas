@@ -68,7 +68,7 @@
       "expected": {
         "pathIncludes": [
           "docs/ingestion-build-flow.md",
-          "apps/cli/docs/index.md"
+          "docs/index.md"
         ],
         "terms": [
           "atlas repo add",
@@ -126,7 +126,8 @@
       "query": "How does atlas repo show share repo target inference with init and build?",
       "expected": {
         "pathIncludes": [
-          "apps/cli/docs/index.md"
+          "docs/ingestion-build-flow.md",
+          "docs/troubleshooting.md"
         ],
         "terms": [
           "repo show",
@@ -185,7 +186,7 @@
       "query": "Which Atlas CLI command inspects retrieval with --query and --repo?",
       "expected": {
         "pathIncludes": [
-          "apps/cli/docs/index.md"
+          "docs/index.md"
         ],
         "terms": [
           "atlas inspect retrieval",
@@ -269,10 +270,10 @@
     {
       "id": "cli-production-build-triage",
       "category": "cli-workflow",
-      "query": "For production build triage, what command uses bunx @moxellabs/atlas build --json --verbose?",
+      "query": "For production build triage, what command uses bunx @mrmendez/atlas build --json --verbose?",
       "expected": {
         "pathIncludes": [
-          "apps/cli/docs/index.md"
+          "docs/index.md"
         ],
         "terms": [
           "production build triage",
@@ -332,7 +333,7 @@
       "expected": {
         "pathIncludes": [
           "docs/ingestion-build-flow.md",
-          "apps/cli/docs/index.md"
+          "docs/index.md"
         ],
         "terms": [
           "adoption-template",
