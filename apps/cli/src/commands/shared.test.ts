@@ -50,6 +50,19 @@ describe("resolveRepoConfigInput", () => {
 		expect(prompts.inputs.map(({ question }) => question)).not.toContain("Repository ID");
 	});
 
+	test("canonicalizes an explicit mixed-case repository ID", async () => {
+		const root = await createGitCheckout("https://github.com/MoxelLabs/Atlas.git");
+		const prompts = promptRecorder();
+
+		const repo = await resolveRepoConfigInput(
+			commandContext(root),
+			{ ...input(), repoId: "GitHub.com/Example/Override.git" },
+			{ prompts: prompts.adapter },
+		);
+
+		expect(repo.repoId).toBe("github.com/example/override");
+	});
+
 	test("requires an explicit repository ID in noninteractive local-git mode despite a parseable origin", async () => {
 		const root = await createGitCheckout("https://github.com/MoxelLabs/Atlas.git");
 

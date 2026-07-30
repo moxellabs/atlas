@@ -6,6 +6,7 @@ import {
 	type AtlasRepoConfig,
 	buildDefaultConfig,
 	buildDefaultCorpusDbPath,
+	canonicalizeRepoId,
 	DEFAULT_ATLAS_ARTIFACT_ROOT,
 	DEFAULT_MOXEL_ATLAS_REPOS_RELATIVE_PATH,
 	IDENTITY_ROOT_ERROR,
@@ -239,13 +240,14 @@ export async function resolveRepoConfigInput(
 	const mode = await resolveRepoConfigMode(input, resolution);
 	const gitDefaults =
 		mode === "local-git" ? await detectLocalGitDefaults(context.cwd) : undefined;
-	const repoId = await resolveRepoConfigRepoId(
+	const rawRepoId = await resolveRepoConfigRepoId(
 		input,
 		resolution,
 		resolution.interactive && mode === "local-git"
 			? gitDefaults?.repoId
 			: undefined,
 	);
+	const repoId = canonicalizeRepoIdIfValid(rawRepoId);
 	const workspace = resolveRepoWorkspaceInput(input);
 	return mode === "local-git"
 		? await resolveLocalGitRepoConfig(
@@ -311,6 +313,27 @@ async function resolveRepoConfigRepoId(
 	return repoId;
 }
 
+function canonicalizeRepoIdIfValid(repoId: string): string {
+	try {
+		return canonicalizeRepoId(repoId);
+	} catch {
+		return repoId;
+	}
+}
+
+function requireCanonicalRepoId(repoId: string): string {
+	try {
+		return canonicalizeRepoId(repoId);
+	} catch (error) {
+		throw new CliError(
+			error instanceof Error
+				? error.message
+				: "Repository ID must be host/owner/name.",
+			{ code: "CLI_REPO_ID_REQUIRED", exitCode: EXIT_INPUT_ERROR },
+		);
+	}
+}
+
 function resolveRepoWorkspaceInput(input: RepoConfigInput): RepoWorkspaceInput {
 	return {
 		packageGlobs:
@@ -358,7 +381,7 @@ async function resolveLocalGitRepoConfig(
 		gitDefaults?.remote;
 	const git = requireLocalGitFields(remote, localPath, ref);
 	return {
-		repoId,
+		repoId: requireCanonicalRepoId(repoId),
 		mode: "local-git",
 		git: { ...git, refMode: input.refMode ?? "remote" },
 		workspace: repoWorkspaceConfig(workspace),
@@ -384,7 +407,7 @@ async function resolveGhesRepoConfig(
 		input.name ?? (await promptIfInteractive(context, "GHES repository name"));
 	const ghes = requireGhesFields(baseUrl, owner, name);
 	return {
-		repoId,
+		repoId: requireCanonicalRepoId(repoId),
 		mode: "ghes-api",
 		github: {
 			...ghes,
