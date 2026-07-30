@@ -1168,7 +1168,7 @@ describe("atlas cli", () => {
           "--config",
           configPath,
           "--repo",
-          "github.mycorp.com/platform/docs",
+          "GitHub.MyCorp.com/Platform/Docs",
           "--json",
         ])
       ).stdout,
@@ -2475,6 +2475,8 @@ repos:
     }> = [];
     const opened: string[] = [];
     let closed = false;
+    let stopped = false;
+    let closeObservedStopped = false;
 
     const result = await runServeCommandWithDependencies(
       context,
@@ -2490,12 +2492,16 @@ repos:
               openApiEnabled: true,
               mcpEnabled: true,
               uiEnabled: false,
-              stop() {},
+              async stop() {
+                await Promise.resolve();
+                stopped = true;
+              },
             };
           },
         },
         close() {
           closed = true;
+          closeObservedStopped = stopped;
         },
       },
       async (url) => {
@@ -2515,6 +2521,7 @@ repos:
     expect(startedWith).toEqual([{ host: "0.0.0.0", port: 40789 }]);
     expect(opened).toEqual(["http://0.0.0.0:40789"]);
     expect(closed).toBe(true);
+    expect(closeObservedStopped).toBe(true);
   });
 
   test("mcp starts without requiring GitHub token config for public repos", async () => {

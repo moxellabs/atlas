@@ -87,7 +87,7 @@ export async function runServeCommandWithDependencies(
 		);
 	} finally {
 		try {
-			server?.stop();
+			await server?.stop();
 		} finally {
 			deps.close();
 		}

@@ -1,4 +1,4 @@
-import { loadConfig } from "@atlas/config";
+import { canonicalizeRepoId, loadConfig } from "@atlas/config";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import {
@@ -97,7 +97,7 @@ function resolveListRepoId(
 ): string {
 	const explicit = readArgvString(context.argv, "--repo");
 	if (explicit !== undefined && explicit.length > 0) {
-		return explicit;
+		return canonicalizeListRepoId(explicit);
 	}
 	const repoIds = artifacts.repos.list().map((repo) => repo.repoId);
 	if (repoIds.length === 1) {
@@ -113,6 +113,19 @@ function resolveListRepoId(
 		`list ${entity} requires --repo when multiple repositories are indexed (${repoIds.length} found).`,
 		{ code: "CLI_REPO_REQUIRED", exitCode: EXIT_INPUT_ERROR },
 	);
+}
+
+function canonicalizeListRepoId(repoId: string): string {
+	try {
+		return canonicalizeRepoId(repoId);
+	} catch (error) {
+		throw new CliError(
+			error instanceof Error
+				? error.message
+				: "Repository ID must be host/owner/name.",
+			{ code: "CLI_REPO_REQUIRED", exitCode: EXIT_INPUT_ERROR },
+		);
+	}
 }
 
 function listPackages(
@@ -195,7 +208,9 @@ function listFreshness(
 	context: CliCommandContext,
 	artifacts: ListArtifacts,
 ): Promise<CliCommandResult> {
-	const repoId = readArgvString(context.argv, "--repo");
+	const rawRepoId = readArgvString(context.argv, "--repo");
+	const repoId =
+		rawRepoId === undefined ? undefined : canonicalizeListRepoId(rawRepoId);
 	const repos =
 		repoId === undefined
 			? artifacts.repos.list()
@@ -223,7 +238,9 @@ function listSkills(
 	artifacts: ListArtifacts,
 	repos: readonly ConfiguredRepo[],
 ): Promise<CliCommandResult> {
-	const repoId = readArgvString(context.argv, "--repo");
+	const rawRepoId = readArgvString(context.argv, "--repo");
+	const repoId =
+		rawRepoId === undefined ? undefined : canonicalizeListRepoId(rawRepoId);
 	const packageId = readArgvString(context.argv, "--package");
 	const moduleId = readArgvString(context.argv, "--module");
 	if (packageId !== undefined && moduleId !== undefined) {
