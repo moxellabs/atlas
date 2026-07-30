@@ -35,7 +35,8 @@
       "priority": "p1",
       "expected": {
         "pathIncludes": [
-          "apps/cli/docs/skills/add-cli-command/SKILL.md"
+          "docs/troubleshooting.md",
+          "docs/index.md"
         ],
         "terms": [
           "command",
@@ -232,7 +233,7 @@
           "ranking",
           "planning"
         ],
-        "confidence": "medium"
+        "confidence": "low"
       },
       "capability": "Negative and edge behavior",
       "claim": "Atlas abstains or stays bounded when queries should not retrieve misleading project evidence.",

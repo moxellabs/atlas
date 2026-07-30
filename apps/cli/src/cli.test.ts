@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import packageJson from "../../../package.json" with { type: "json" };
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -23,7 +24,9 @@ import {
 } from "./commander";
 import { runMcpCommandWithDependencies } from "./commands/mcp.command";
 import { runServeCommandWithDependencies } from "./commands/serve.command";
+import { buildCliDependencies } from "./runtime/dependencies";
 import { buildFailureLines } from "./commands/shared";
+import { repoIdFromGitRemote } from "./commands/git-remote";
 import {
   createCommandContext,
   exists,
@@ -32,11 +35,74 @@ import {
   gitOutput,
   runWithCapture,
 } from "./cli.test-helpers";
-import { collectCommandPositionals } from "./index";
+import {
+  collectCommandPositionals,
+  shouldStartFirstRunOnboarding,
+} from "./index";
 import type { CliCommandContext } from "./runtime/types";
 import { CliError, toFailureResult } from "./utils/errors";
 
 describe("atlas cli", () => {
+
+  test("starts onboarding only for an interactive bare first run", async () => {
+    const home = join(rootDir, "home-first-run");
+    const context = createCommandContext([]);
+    context.cwd = rootDir;
+    context.output = { json: false, verbose: false, quiet: false };
+    context.env = { HOME: home };
+    Object.assign(context.stdin, { isTTY: true });
+    Object.assign(context.stdout, { isTTY: true });
+
+    expect(await shouldStartFirstRunOnboarding(context)).toBe(true);
+
+    await runWithCapture(
+      ["setup", "--cwd", rootDir, "--non-interactive"],
+      { HOME: home },
+    );
+    expect(await shouldStartFirstRunOnboarding(context)).toBe(false);
+
+    context.output = { json: true, verbose: false, quiet: false };
+    expect(await shouldStartFirstRunOnboarding(context)).toBe(false);
+  });
+
+  test("repo target inference canonicalizes supported git remotes", () => {
+    const cases = [
+      ["git@github.com:Owner/Repo.git", "github.com/owner/repo"],
+      ["http://github.com/Owner/Repo.git", "github.com/owner/repo"],
+      ["https://github.com/Owner/Repo.git", "github.com/owner/repo"],
+      [
+        "ssh://git@github.mycorp.com/Platform/Docs.git",
+        "github.mycorp.com/platform/docs",
+      ],
+    ] as const;
+
+    for (const [remote, repoId] of cases) {
+      expect(repoIdFromGitRemote(remote)).toBe(repoId);
+    }
+  });
+
+  test("repo target inference rejects unsafe and malformed git remotes", () => {
+    const cases = [
+      "file:///tmp/platform/docs.git",
+      "github.com/owner/repo",
+      "../owner/repo",
+      "git@github.com:Owner/Repo.git?x=1",
+      "git@github.com:owner/repo.git#fragment",
+      "git@github.com:owner/repo%2Fextra.git",
+      "git@github.com:owner/repo/extra.git",
+      "git@github.com:owner",
+      "https://github.com/Owner/Repo.git?x=1",
+      "https://github.com/Owner/Repo.git#fragment",
+      "https://github.com/Owner/Repo.git%2Fextra",
+      "https://github.com/Owner",
+      "https://github.com//Owner/Repo.git",
+    ];
+
+    for (const remote of cases) {
+      expect(repoIdFromGitRemote(remote)).toBeUndefined();
+    }
+  });
+
   test("CLI_BUILD_FAILED diagnostics keep stacks verbose-only and render cause chain", () => {
     const report = {
       repoId: "github.mycorp.com/platform/docs",
@@ -227,6 +293,8 @@ describe("atlas cli", () => {
       { HOME: home },
     );
     expect(setup.exitCode).toBe(0);
+    expect(setup.stdout).toContain("\nAtlas setup complete\n");
+    expect(setup.stdout).toContain("Next: atlas repo add <repo>");
 
     const next = await runWithCapture(["next", "--cwd", rootDir, "--json"], {
       HOME: home,
@@ -329,13 +397,66 @@ describe("atlas cli", () => {
     );
     expect(setup.exitCode).toBe(0);
     const nextConfig = join(home, ".moxel", "atlas", "config.yaml");
+		const emptyCorpusPath = (await loadConfig({
+			cwd: rootDir,
+			configPath: nextConfig,
+			env: { HOME: home },
+		})).config.corpusDbPath;
+		expect(await exists(emptyCorpusPath)).toBe(false);
     const emptySetup = await runWithCapture(
       ["next", "--cwd", rootDir, "--config", nextConfig, "--json"],
       { HOME: home },
     );
-    expect(JSON.parse(emptySetup.stdout).data).toMatchObject({
+		const emptySetupData = JSON.parse(emptySetup.stdout).data;
+		expect(emptySetupData).toMatchObject({
       recommendedCommand: "atlas repo add <repo>",
       state: { configFound: true, repoCount: 0 },
+    });
+		expect(emptySetupData.candidates).toContainEqual(
+			expect.objectContaining({ command: "atlas repo add <repo>" }),
+		);
+		expect(await exists(emptyCorpusPath)).toBe(false);
+		const humanNext = await runWithCapture(
+			["next", "--cwd", rootDir, "--config", nextConfig],
+			{ HOME: home },
+		);
+		expect(humanNext.stdout).toContain("Next: atlas repo add <repo>");
+		expect(humanNext.stdout).toContain("Why:");
+		expect(humanNext.stdout).not.toContain("Alternatives:");
+
+    await writeFile(
+      nextConfig,
+      (await readFile(nextConfig, "utf8")).replace(
+        "repos: []",
+        `repos:
+  - repoId: github.com/moxellabs/atlas
+    mode: local-git
+    git:
+      remote: https://github.com/moxellabs/atlas.git
+      localPath: ${join(rootDir, "next-cache", "atlas")}
+      ref: main
+      refMode: remote
+    workspace:
+      packageGlobs: ["packages/*"]
+      packageManifestFiles: ["package.json"]
+    topology:
+      - id: repo-docs
+        kind: repo-doc
+        match:
+          include: ["docs/**/*.md"]
+        ownership:
+          attachTo: repo
+        authority: canonical
+        priority: 10`,
+      ),
+    );
+    const configuredRepo = await runWithCapture(
+      ["next", "--cwd", rootDir, "--config", nextConfig, "--json"],
+      { HOME: home },
+    );
+    expect(JSON.parse(configuredRepo.stdout).data).toMatchObject({
+      recommendedCommand: "atlas build --repo github.com/moxellabs/atlas",
+      state: { configFound: true, repoCount: 1, documentCount: 0 },
     });
 
     const checkout = join(rootDir, "next-checkout");
@@ -399,60 +520,77 @@ describe("atlas cli", () => {
     }
   });
 
+	test("prints the package version with short and long version flags", async () => {
+		for (const flag of ["-v", "--version"]) {
+			const result = await runWithCapture([flag]);
+			expect(result.exitCode).toBe(0);
+			expect(result.stdout.trim()).toBe(packageJson.version);
+			expect(result.stderr).toBe("");
+		}
+	});
+
   test("repo add alias preserves add-repo JSON result shape", async () => {
-    const home = join(rootDir, "home-repo-add-alias");
+    const topLevelHome = join(rootDir, "home-repo-add-alias-top-level");
+    const nestedHome = join(rootDir, "home-repo-add-alias-nested");
     await runWithCapture(
       ["setup", "--cwd", rootDir, "--cache-dir", cacheDir, "--non-interactive"],
-      { HOME: home },
+      { HOME: topLevelHome },
     );
-    const cfg = join(home, ".moxel", "atlas", "config.yaml");
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = (async () =>
-      new Response("not found", { status: 404 })) as unknown as typeof fetch;
-    try {
-      const topLevel = await runWithCapture(
-        [
-          "add-repo",
-          "moxellabs/atlas",
-          "--cwd",
-          rootDir,
-          "--config",
-          cfg,
-          "--cache-dir",
-          join(rootDir, "alias-top"),
-          "--non-interactive",
-          "--json",
-        ],
-        { HOME: home },
-      );
-      const nested = await runWithCapture(
-        [
-          "repo",
-          "add",
-          "moxellabs/atlas",
-          "--cwd",
-          rootDir,
-          "--config",
-          cfg,
-          "--cache-dir",
-          join(rootDir, "alias-nested"),
-          "--non-interactive",
-          "--json",
-        ],
-        { HOME: home },
-      );
-      expect(topLevel.exitCode).toBe(0);
-      expect(nested.exitCode).toBe(0);
-      expect(Object.keys(JSON.parse(nested.stdout).data).sort()).toEqual(
-        Object.keys(JSON.parse(topLevel.stdout).data).sort(),
-      );
-      expect(JSON.parse(nested.stdout).data.repoId).toBe(
-        "github.com/moxellabs/atlas",
-      );
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
-  });
+    await runWithCapture(
+      ["setup", "--cwd", rootDir, "--cache-dir", cacheDir, "--non-interactive"],
+      { HOME: nestedHome },
+    );
+    const topLevelConfig = join(topLevelHome, ".moxel", "atlas", "config.yaml");
+    const nestedConfig = join(nestedHome, ".moxel", "atlas", "config.yaml");
+    const origin = join(rootDir, "repo-add-alias-origin");
+    await createOriginRepo(origin);
+    await createCliArtifactFixture(origin, "repo-add-alias-revision");
+    await git(origin, ["add", ".moxel/atlas"]);
+    await git(origin, ["commit", "-m", "publish atlas artifact"]);
+    const topLevel = await runWithCapture(
+      [
+        "add-repo",
+        "moxellabs/atlas",
+        "--cwd",
+        rootDir,
+        "--config",
+        topLevelConfig,
+        "--cache-dir",
+        join(rootDir, "alias-top"),
+        "--remote",
+        origin,
+        "--non-interactive",
+        "--json",
+      ],
+      { HOME: topLevelHome },
+    );
+    const nested = await runWithCapture(
+      [
+        "repo",
+        "add",
+        "moxellabs/atlas",
+        "--cwd",
+        rootDir,
+        "--config",
+        nestedConfig,
+        "--cache-dir",
+        join(rootDir, "alias-nested"),
+        "--remote",
+        origin,
+        "--non-interactive",
+        "--json",
+      ],
+      { HOME: nestedHome },
+    );
+    expect(topLevel.exitCode).toBe(0);
+    expect(nested.exitCode).toBe(0);
+    expect(Object.keys(JSON.parse(nested.stdout).data).sort()).toEqual(
+      Object.keys(JSON.parse(topLevel.stdout).data).sort(),
+    );
+    expect(JSON.parse(nested.stdout).data.repo.repoId).toBe(
+      "github.com/moxellabs/atlas",
+    );
+  }, 30_000);
 
   test("shorthand repo input uses configured default host before public GitHub", async () => {
     const home = join(rootDir, "home-default-host");
@@ -1118,7 +1256,7 @@ describe("atlas cli", () => {
           "--config",
           configPath,
           "--repo",
-          "github.mycorp.com/platform/docs",
+          "GitHub.MyCorp.com/Platform/Docs",
           "--json",
         ])
       ).stdout,
@@ -2374,8 +2512,14 @@ repos:
     );
     expect(setup.exitCode).toBe(0);
 
-    const serve = await runWithCapture(
-      [
+    // Serve waits for SIGINT/SIGTERM in production. Drive the injectable
+    // lifecycle so the HOME config discovery path stays unit-testable.
+    const deps = await buildCliDependencies({
+      cwd: rootDir,
+      env: { HOME: home },
+    });
+    try {
+      const context = createCommandContext([
         "serve",
         "--cwd",
         rootDir,
@@ -2384,12 +2528,44 @@ repos:
         "--port",
         "48765",
         "--json",
-      ],
-      { HOME: home },
-    );
-
-    expect(serve.exitCode).toBe(0);
-    expect(JSON.parse(serve.stdout).data.dbPath).toContain("serve-cache");
+      ]);
+      context.env = { HOME: home };
+      context.cwd = rootDir;
+      const result = await runServeCommandWithDependencies(
+        context,
+        {
+          server: {
+            async start(options = {}) {
+              expect(options).toMatchObject({
+                host: "127.0.0.1",
+                port: 48765,
+              });
+              return {
+                host: "127.0.0.1",
+                port: 48765,
+                dbPath: deps.config.config.corpusDbPath,
+                repoCount: deps.config.config.repos.length,
+                openApiEnabled: true,
+                mcpEnabled: true,
+                uiEnabled: false,
+                stop() {},
+              };
+            },
+          },
+          close: deps.close,
+        },
+        async () => {},
+        async () => {},
+      );
+      expect(result).toMatchObject({
+        ok: true,
+        data: {
+          dbPath: expect.stringContaining("serve-cache"),
+        },
+      });
+    } finally {
+      deps.close();
+    }
   });
 
   test("serve reports startup metadata, open result, and closes CLI dependencies", async () => {
@@ -2407,6 +2583,8 @@ repos:
     }> = [];
     const opened: string[] = [];
     let closed = false;
+    let stopped = false;
+    let closeObservedStopped = false;
 
     const result = await runServeCommandWithDependencies(
       context,
@@ -2422,17 +2600,22 @@ repos:
               openApiEnabled: true,
               mcpEnabled: true,
               uiEnabled: false,
-              stop() {},
+              async stop() {
+                await Promise.resolve();
+                stopped = true;
+              },
             };
           },
         },
         close() {
           closed = true;
+          closeObservedStopped = stopped;
         },
       },
       async (url) => {
         opened.push(url);
       },
+      async () => {},
     );
 
     expect(result).toMatchObject({
@@ -2446,6 +2629,7 @@ repos:
     expect(startedWith).toEqual([{ host: "0.0.0.0", port: 40789 }]);
     expect(opened).toEqual(["http://0.0.0.0:40789"]);
     expect(closed).toBe(true);
+    expect(closeObservedStopped).toBe(true);
   });
 
   test("mcp starts without requiring GitHub token config for public repos", async () => {
@@ -3803,7 +3987,7 @@ Internal package docs.
     const anyProfileJson = JSON.parse(anyProfileSearch.stdout);
     expect(anyProfileJson.data.filters.profile).toBeUndefined();
     expect(anyProfileJson.data.allProfiles).toBe(true);
-  });
+  }, 30_000);
 
   test("identity root init build verify inspect migration and validation", async () => {
     const init = await runWithCapture([

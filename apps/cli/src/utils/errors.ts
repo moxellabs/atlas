@@ -185,7 +185,7 @@ export function summarizeReport(
 		if (report.corpusAffected) {
 			return `${report.repoId}: corpus stale (${report.changedPathCount} source path(s), ${report.relevantDocPathCount} doc path(s)).`;
 		}
-		return `${report.repoId}: source updated, corpus current (${report.changedPathCount} source path(s), 0 corpus path(s)).`;
+		return `${report.repoId}: source revision advanced, corpus unchanged (${report.changedPathCount} non-corpus path(s)).`;
 	}
 	return `${report.repoId}: ${report.strategy} (${report.docsRebuilt} rebuilt, ${report.docsDeleted} deleted).`;
 }

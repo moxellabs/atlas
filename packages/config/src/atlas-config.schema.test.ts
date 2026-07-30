@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+	canonicalizeRepoId,
 	parseCanonicalRepoId,
 	repoIdSchema,
 	repoPathSegments,
@@ -23,16 +24,35 @@ describe("canonical repo IDs", () => {
 		).toBe(true);
 	});
 
+	test("canonicalizes mixed-case owner and name segments", () => {
+		expect(parseCanonicalRepoId("GitHub.com/MetaMask/metamask-mobile")).toEqual(
+			{
+				host: "github.com",
+				owner: "metamask",
+				name: "metamask-mobile",
+			},
+		);
+		expect(canonicalizeRepoId("github.com/MetaMask/MetaMask-mobile")).toBe(
+			"github.com/metamask/metamask-mobile",
+		);
+		expect(repoIdSchema.parse("github.com/MetaMask/metamask-mobile")).toBe(
+			"github.com/metamask/metamask-mobile",
+		);
+		expect(canonicalizeRepoId("github.com/platform/docs.git")).toBe(
+			"github.com/platform/docs",
+		);
+	});
+
 	test("rejects non-canonical repo IDs", () => {
 		for (const value of [
 			"platform/docs",
 			"github.com/a/b/c",
 			"github.com//docs",
-			"github.com/platform/Docs",
 			"github.com/platform/../docs",
 			"https://github.com/platform/docs",
 			"github.com/platform docs/repo",
 			"github.com\\platform\\docs",
+			"github.com/platform/docs!",
 		]) {
 			expect(repoIdSchema.safeParse(value).success).toBe(false);
 			expect(() => parseCanonicalRepoId(value)).toThrow(

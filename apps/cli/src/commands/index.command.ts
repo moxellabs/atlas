@@ -4,6 +4,7 @@ import {
 	AtlasConfigNotFoundError,
 	type AtlasRepoConfig,
 	buildDefaultConfig,
+	canonicalizeRepoId,
 	DEFAULT_MOXEL_ATLAS_CONFIG_RELATIVE_PATH,
 	loadConfig,
 	resolveIdentityProfile,
@@ -79,7 +80,21 @@ export async function runIndexCommand(
 		...(hostFlag === undefined ? {} : { host: hostFlag }),
 		nonInteractive: context.argv.includes("--non-interactive"),
 	});
-	const repoId = readArgvString(context.argv, "--repo-id") ?? resolved.repoId;
+	const rawRepoId = readArgvString(context.argv, "--repo-id") ?? resolved.repoId;
+	let repoId: string;
+	try {
+		repoId = canonicalizeRepoId(rawRepoId);
+	} catch (error) {
+		throw new CliError(
+			error instanceof Error
+				? error.message
+				: "Repository ID must be host/owner/name.",
+			{
+				code: "CLI_REPO_ID_REQUIRED",
+				exitCode: EXIT_INPUT_ERROR,
+			},
+		);
+	}
 	const ref = readArgvString(context.argv, "--ref") ?? "main";
 	const [host, owner, name] = repoId.split("/") as [string, string, string];
 	const checkoutPath = join(

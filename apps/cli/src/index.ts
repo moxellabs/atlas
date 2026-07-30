@@ -1,4 +1,5 @@
 import { Command, CommanderError } from "commander";
+import packageJson from "../../../package.json" with { type: "json" };
 import { runAddRepoCommand } from "./commands/add-repo.command";
 import { runAdoptionTemplateCommand } from "./commands/adoption-template.command";
 import { runArtifactCommand } from "./commands/artifact.command";
@@ -20,8 +21,11 @@ import { runSearchCommand } from "./commands/search.command";
 import { runServeCommand } from "./commands/serve.command";
 import { runSyncCommand } from "./commands/sync.command";
 import { CliConsole } from "./io/console";
+import { canPrompt } from "./io/prompts";
+import { resolveCliConfigTarget } from "./runtime/dependencies";
 import type { CliCommandContext, CliCommandResult } from "./runtime/types";
 import { CliError, EXIT_INPUT_ERROR, toFailureResult } from "./utils/errors";
+import { fileExists } from "./utils/node-runtime";
 
 export interface Runtime {
 	stdin: NodeJS.ReadStream;
@@ -85,11 +89,44 @@ async function parseAtlasProgram(
 	runtime: Runtime,
 	argv: readonly string[],
 ): Promise<void> {
+	if (await startFirstRunOnboarding(runtime, argv)) return;
 	const normalizedArgv =
 		argv.length === 0 || argv[0] === "help" ? ["--help"] : [...argv];
 	await createAtlasProgram(runtime).parseAsync(normalizedArgv, {
 		from: "user",
 	});
+}
+
+async function startFirstRunOnboarding(
+	runtime: Runtime,
+	argv: readonly string[],
+): Promise<boolean> {
+	if (argv.length !== 0) return false;
+	const context = buildContext(runtime, [], {});
+	if (!(await shouldStartFirstRunOnboarding(context))) return false;
+	const result = await runInitCommand(context, "setup");
+	runtime.exitCode = await emitResult(
+		new CliConsole(context.output, context.stdout, context.stderr),
+		false,
+		result,
+	);
+	return true;
+}
+
+/** Returns whether a bare interactive invocation should begin first-run setup. */
+export async function shouldStartFirstRunOnboarding(
+	context: CliCommandContext,
+): Promise<boolean> {
+	if (!canPrompt(context)) return false;
+	try {
+		const configPath = await resolveCliConfigTarget({
+			cwd: context.cwd,
+			env: context.env,
+		});
+		return !(await fileExists(configPath));
+	} catch {
+		return false;
+	}
 }
 
 async function handleCliError(input: {
@@ -121,7 +158,11 @@ async function handleCommanderError(input: {
 	output: { json: boolean; verbose: boolean; quiet: boolean };
 	error: CommanderError;
 }): Promise<number> {
-	if (input.error.code === "commander.helpDisplayed") return 0;
+	if (
+		input.error.code === "commander.helpDisplayed" ||
+		input.error.code === "commander.version"
+	)
+		return 0;
 	const failure = toFailureResult(
 		commandNameFromArgv(input.argv),
 		commanderCliError(input.argv, input.error),
@@ -524,6 +565,7 @@ export function createAtlasBaseCommand(
 	const command = new Command()
 		.name(options.name)
 		.description(options.description)
+		.version(packageJson.version, "-v, --version", "Display version")
 		.exitOverride()
 		.configureOutput({
 			writeOut: (str) => runtime.stdout.write(str),

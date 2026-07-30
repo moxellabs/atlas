@@ -13,6 +13,11 @@ export interface OpenStoreOptions {
 	path: string;
 	/** Run migrations during open. Defaults to false to keep bootstrap explicit. */
 	migrate?: boolean | undefined;
+	/**
+	 * Open an existing store without creating files, applying write pragmas, or
+	 * permitting mutations. Intended for diagnostic and recommendation probes.
+	 */
+	readOnly?: boolean | undefined;
 }
 
 type SqliteRuntime = "bun" | "node";
@@ -36,14 +41,14 @@ export class AtlasStoreClient implements StoreDatabase {
 	private readonly runtime: SqliteRuntime;
 	private transactionDepth = 0;
 
-	constructor(path: string) {
+	constructor(path: string, options: { readOnly?: boolean | undefined } = {}) {
 		this.path = path;
 		try {
-			ensureDatabaseParent(path);
-			const opened = openRuntimeDatabase(path);
+			if (options.readOnly !== true) ensureDatabaseParent(path);
+			const opened = openRuntimeDatabase(path, options.readOnly === true);
 			this.db = opened.db;
 			this.runtime = opened.runtime;
-			applyStorePragmas(this);
+			if (options.readOnly !== true) applyStorePragmas(this);
 		} catch (error) {
 			throw new StoreInitializationError("Failed to open SQLite store.", {
 				operation: "open",
@@ -124,7 +129,7 @@ export class AtlasStoreClient implements StoreDatabase {
 	}
 }
 
-function openRuntimeDatabase(path: string): {
+function openRuntimeDatabase(path: string, readOnly: boolean): {
 	runtime: SqliteRuntime;
 	db: SqliteDatabase;
 } {
@@ -133,21 +138,35 @@ function openRuntimeDatabase(path: string): {
 		const { Database } = require("bun:sqlite") as {
 			Database: new (
 				path: string,
-				options: { create: boolean; strict: boolean },
+				options: { create: boolean; readonly: boolean; strict: boolean },
 			) => SqliteDatabase;
 		};
 		return {
 			runtime: "bun",
-			db: new Database(path, { create: true, strict: true }),
+			db: new Database(path, {
+				create: !readOnly,
+				readonly: readOnly,
+				strict: true,
+			}),
 		};
 	}
 	const BetterSqlite = require("better-sqlite3") as {
-		default?: new (path: string) => SqliteDatabase;
+		default?: new (
+			path: string,
+			options?: { readonly?: boolean; fileMustExist?: boolean },
+		) => SqliteDatabase;
 	} & (new (
 		path: string,
+		options?: { readonly?: boolean; fileMustExist?: boolean },
 	) => SqliteDatabase);
 	const Database = BetterSqlite.default ?? BetterSqlite;
-	return { runtime: "node", db: new Database(path) };
+	return {
+		runtime: "node",
+		db: new Database(path, {
+			readonly: readOnly,
+			fileMustExist: readOnly,
+		}),
+	};
 }
 
 function ensureDatabaseParent(path: string): void {
@@ -166,7 +185,15 @@ function normalizeParams(params: SQLParams): Record<string, unknown> {
 
 /** Opens a SQLite store and optionally applies migrations. */
 export function openStore(options: OpenStoreOptions): AtlasStoreClient {
-	const client = new AtlasStoreClient(options.path);
+	if (options.readOnly === true && options.migrate === true) {
+		throw new StoreInitializationError(
+			"Read-only stores cannot run migrations.",
+			{ operation: "open", entity: "database" },
+		);
+	}
+	const client = new AtlasStoreClient(options.path, {
+		readOnly: options.readOnly,
+	});
 	if (options.migrate === true) {
 		migrateStore(client);
 	}

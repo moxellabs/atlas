@@ -77,7 +77,7 @@ The CLI should not implement source acquisition, topology classification, compil
 - Config and dependency construction errors should preserve structured details for `--verbose` and `--json`.
 - `CLI_BUILD_FAILED` wraps failed indexer build reports. JSON output includes `error.details.diagnostics[]`; `--verbose` preserves nested `cause` stack traces, stage, code, and failing path/entity diagnostics. Non-verbose human output stays concise and tells operators to rerun with `--verbose --json`.
 - Missing repo targets report checked sources (`flags`, positional input, repo metadata, cwd, Git origin, config). Ambiguous bare repo names report candidate canonical IDs and never hang in JSON/non-interactive mode.
-- For production build triage, run `bunx @moxellabs/atlas build --json --verbose --repo <repo-id> --config <config>` and compare with `inspect topology --live`; topology success means discovery worked, not that compile/persist stages succeeded.
+- For production build triage, run `bunx @mrmendez/atlas build --json --verbose --repo <repo-id> --config <config>` and compare with `inspect topology --live`; topology success means discovery worked, not that compile/persist stages succeeded.
 - Commands that mutate config or corpus state should report what changed and leave package-level rollback or recovery semantics to the owning package.
 
 ## Tests
