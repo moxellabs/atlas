@@ -219,6 +219,33 @@ describe("agent effect evaluation", () => {
     expect(prompt).not.toContain("AUTHORITATIVE_JUDGE_ONLY_EVIDENCE");
   });
 
+  test("exposes normal competing tools without weakening workspace isolation", () => {
+    const command = codexAgentCommand({
+      atlasCwd: "/atlas",
+      cwd: "/consumer",
+      workDir: "/tmp/eval",
+      configPath: "/tmp/eval/atlas.config.json",
+      useGlobal: false,
+      competitiveTools: true,
+      outputSchemaPath: "/tmp/eval/output.schema.json",
+      outputPath: "/tmp/eval/output.json",
+      runner: dataset.runner,
+      arm: "treatment",
+      task: dataset.tasks[0]!,
+      trial: 1,
+    });
+
+    expect(command).toContain("--enable");
+    expect(command).toContain("web_search");
+    expect(command).toContain('web_search="live"');
+    expect(command).toContain("tools.web_search=true");
+    expect(command).not.toContain("shell_tool");
+    expect(command).not.toContain("unified_exec");
+    expect(command).toContain("sandbox_workspace_write.network_access=false");
+    expect(command).toContain('shell_environment_policy.inherit="none"');
+    expect(command.at(-1)).toContain(dataset.tasks[0]!.prompt);
+  });
+
   test("selects checkout or global Atlas MCP arguments explicitly", () => {
     expect(
       atlasMcpServerArgs({

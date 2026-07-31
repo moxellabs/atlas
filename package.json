@@ -25,6 +25,7 @@
     "eval:baseline:update": "bun tooling/scripts/mcp-retrieval-eval.ts --dataset evals/mcp-retrieval.dataset.json --update-baseline --trend-log none",
     "eval:luna": "bun tooling/scripts/luna-agent-eval.ts",
     "eval:luna:smoke": "bun tooling/scripts/luna-agent-eval.ts --dataset evals/datasets/luna-agent-discovery-smoke.json --snapshot-global-corpus --require-atlas-adoption",
+    "eval:luna:competitive": "bun tooling/scripts/luna-agent-eval.ts --dataset evals/datasets/luna-agent-discovery-smoke.json --snapshot-global-corpus --competitive-tools",
     "eval:luna:release": "bun tooling/scripts/luna-agent-eval.ts",
     "eval:release:dashboard": "bun tooling/scripts/release-eval-dashboard.ts",
     "typecheck": "bunx tsc --noEmit",

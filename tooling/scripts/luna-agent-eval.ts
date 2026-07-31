@@ -31,6 +31,7 @@ const agentCwd =
   args.workspace === undefined ? undefined : resolve(cwd, args.workspace);
 const useGlobal = args.global === "true";
 const snapshotGlobalCorpus = args["snapshot-global-corpus"] === "true";
+const competitiveTools = args["competitive-tools"] === "true";
 
 if (useGlobal && snapshotGlobalCorpus) {
   throw new Error(
@@ -92,6 +93,7 @@ const handle = await createCodexExecutor({
   ...(agentCwd === undefined ? {} : { agentCwd }),
   ...(useGlobal ? { useGlobal: true } : {}),
   ...(snapshotGlobalCorpus ? { snapshotGlobalCorpus: true } : {}),
+  ...(competitiveTools ? { competitiveTools: true } : {}),
 });
 const corpusProvenance =
   handle.corpusProvenance ??
