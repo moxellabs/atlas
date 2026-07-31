@@ -15,6 +15,7 @@ import {
 	loadEvalDataset,
 	printTerminalSummary,
 	type ReportThresholdInput,
+	type Report,
 	renderHtml,
 } from "../retrieval-harness";
 import { inspectRuntime, omitConfigPath, resolveEvalConfig } from "./config";
@@ -44,9 +45,6 @@ export async function runMcpRetrievalEvalMain(input: {
 	const outPath = resolve(input.cwd, args.out ?? defaultOutPath);
 	const htmlPath = resolve(input.cwd, args.html ?? defaultHtmlPath);
 	const cli = args.cli ?? "bun run cli";
-	const modelProvider =
-		args.modelProvider ?? input.env.ATLAS_EVAL_MODEL_PROVIDER;
-	const model = args.model ?? input.env.ATLAS_EVAL_MODEL;
 	const minDocs = parseInteger(
 		args.minDocs ?? args["min-docs"] ?? "10",
 		"min-docs",
@@ -176,20 +174,18 @@ export async function runMcpRetrievalEvalMain(input: {
 		const baseline: BaselineSummary | undefined = baselineDisabled
 			? undefined
 			: await loadBaseline(baselinePath);
-		const report = buildReport(
-			dataset,
-			results,
-			{
-				...runtime,
-				datasetPath,
-			},
-			Object.fromEntries(
-				Object.entries({ provider: modelProvider, model }).filter(
-					([, value]) => value !== undefined,
-				),
-			) as { provider?: string; model?: string },
-			thresholds,
-			baseline,
+		const report = sanitizeReportForPublic(
+			buildReport(
+				dataset,
+				results,
+				{
+					...runtime,
+					datasetPath: relative(input.cwd, datasetPath),
+				},
+				{},
+				thresholds,
+				baseline,
+			),
 		);
 		await mkdir(dirname(outPath), { recursive: true });
 		await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`);
@@ -246,6 +242,24 @@ export async function runMcpRetrievalEvalMain(input: {
 			await rm(tempConfigDir, { recursive: true, force: true });
 		}
 	}
+}
+
+function sanitizeReportForPublic(report: Report): Report {
+	const corpusDbPath =
+		report.runtime.corpusDbPath === undefined
+			? undefined
+			: report.runtime.source === "repo-local-artifact"
+				? ".moxel/atlas/corpus.db"
+				: "configured local corpus";
+	return {
+		...report,
+		runtime: {
+			...Object.fromEntries(
+				Object.entries(report.runtime).filter(([key]) => key !== "configPath"),
+			),
+			...(corpusDbPath === undefined ? {} : { corpusDbPath }),
+		} as Report["runtime"],
+	};
 }
 
 async function runRetrievalCase(input: {

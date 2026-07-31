@@ -34,7 +34,8 @@ export function registerGetSkillTool(server: McpServer, dependencies: AtlasMcpDe
       title: "Get ATLAS skill",
       description: "Read a stored skill artifact by ID.",
       inputSchema: getSkillInputSchema,
-      outputSchema: jsonOutputSchema
+      outputSchema: jsonOutputSchema,
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
     (input) => toolResult(executeGetSkill(input, dependencies))
   );

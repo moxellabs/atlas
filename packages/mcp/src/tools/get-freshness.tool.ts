@@ -40,7 +40,8 @@ export function registerGetFreshnessTool(server: McpServer, dependencies: AtlasM
       title: "Get ATLAS freshness",
       description: "Return local freshness by comparing stored repo revisions with indexed manifest revisions.",
       inputSchema: getFreshnessInputSchema,
-      outputSchema: jsonOutputSchema
+      outputSchema: jsonOutputSchema,
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
     (input) => toolResult(executeGetFreshness(input, dependencies))
   );

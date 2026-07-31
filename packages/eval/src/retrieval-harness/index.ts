@@ -11,6 +11,7 @@ export { loadBaseline, baselineSummaryFromReport } from "./baseline";
 export { buildReport } from "./report";
 export { printTerminalSummary } from "./terminal";
 export { renderHtml } from "./render/html";
+export type { DashboardRenderOptions } from "./render/html";
 
 export type {
 	AttentionArea,

@@ -1,5 +1,5 @@
 export function renderExplorerScript(): string {
-  return `(function(){
+	return `(function(){
 const data=JSON.parse(document.getElementById('atlas-eval-report-data').textContent);
 const cards=[...document.querySelectorAll('[data-case-card]')];
 const search=document.getElementById('case-search');
@@ -87,7 +87,7 @@ function selectCase(id){
   setText('case-detail-ranked',String(item.rankedCount));
   setText('case-detail-diagnosis',item.passed?(item.retrieval.recallAt5<1?'Deterministic expectations passed, but known-good evidence has ranking headroom.':'The case passed deterministic retrieval expectations with strong evidence placement.'):'One or more deterministic expectations failed. Inspect missing fields and diagnostics in the machine-readable report.');
   const evidence=document.getElementById('case-detail-evidence');
-  if(evidence)evidence.innerHTML=item.topPaths.slice(0,6).map((path,index)=>{const relevance=Math.max(18,96-index*13);return '<tr><td>'+(index+1)+'</td><td><code>'+esc(path)+'</code></td><td><div class="relevance-meter"><i style="--relevance:'+relevance+'%"></i><span>'+relevance+'%</span></div></td></tr>'}).join('');
+  if(evidence)evidence.innerHTML=item.topPaths.slice(0,6).map((path,index)=>'<tr><td>'+(index+1)+'</td><td><code>'+esc(path)+'</code></td></tr>').join('');
   const pathCount=document.querySelector('.case-evidence-section .card-heading > span:last-child');
   if(pathCount)pathCount.textContent=item.topPaths.length+' paths';
 }

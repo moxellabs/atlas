@@ -87,6 +87,16 @@ export async function runMcpCommandWithDependencies(
         }).mcpIdentity;
   const server = runtime.createServer(deps, identity);
   const transport = runtime.createTransport(context);
+  const refreshTimer = setInterval(() => {
+    try {
+      server.refreshDiscovery();
+    } catch (error) {
+      void consoleIo.debug(
+        `Atlas MCP discovery refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }, 5_000);
+  refreshTimer.unref();
   const closeTransport = () => {
     void transport.close();
   };
@@ -115,6 +125,7 @@ export async function runMcpCommandWithDependencies(
       },
     };
   } finally {
+    clearInterval(refreshTimer);
     context.stdin.off("end", closeTransport);
     context.stdin.off("close", closeTransport);
     deps.close();

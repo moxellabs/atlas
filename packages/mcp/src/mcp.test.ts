@@ -155,9 +155,9 @@ describe("mcp package", () => {
 		);
 		expect(plannedContext).toMatchObject({
 			query: "how do I rotate session tokens?",
-			confidence: expect.any(String),
-			selected: expect.any(Array),
-			contextPacket: {
+			coverage: { status: expect.any(String) },
+			nextAction: expect.any(String),
+			context: {
 				evidence: expect.arrayContaining([
 					expect.objectContaining({
 						label: "session",
@@ -528,8 +528,9 @@ describe("mcp package", () => {
 				}),
 			],
 			agentGuidance: expect.stringContaining(
-				"For questions about an indexed repository, call plan_context before answering from memory.",
+				"Use local indexed evidence when it covers the question.",
 			),
+			sources: [expect.objectContaining({ repoId, toolSuffix: "atlas" })],
 		});
 		expect(JSON.stringify(manifestPayload)).not.toMatch(
 			/(token|password|secret|authorization|credential)/i,
@@ -659,7 +660,7 @@ describe("mcp package", () => {
 		expect(compareDocsPrompt.text).toContain("provenance");
 
 		const atlasServer = createAtlasMcpServer({ db: store });
-		expect(atlasServer.tools).toEqual([
+		expect(atlasServer.tools).toEqual(expect.arrayContaining([
 			"plan_context",
 			"find_scopes",
 			"find_docs",
@@ -672,10 +673,12 @@ describe("mcp package", () => {
 			"use_skill",
 			"get_freshness",
 			"what_changed",
-		]);
+		]));
+		expect(atlasServer.tools).toContain("plan_context__atlas");
 		expect(atlasServer.resources).toContain("atlas-document");
 		expect(atlasServer.resources).toContain("atlas-summary");
 		expect(atlasServer.resources).toContain("atlas-skill-artifact");
+		expect(atlasServer.resources).toContain("atlas-source-atlas");
 		expect(atlasServer.prompts).toEqual([
 			"answer_from_local_docs",
 			"onboard_to_module",
@@ -714,6 +717,61 @@ describe("mcp package", () => {
 		});
 
 		await Promise.all([client.close(), atlasServer.server.close()]);
+	});
+
+	test("advertises and executes a repo-bound local planning facade", async () => {
+		const atlasServer = createAtlasMcpServer({ db: store });
+		const client = new Client(
+			{ name: "atlas-discovery-test-client", version: "0.0.0" },
+			{ capabilities: {} },
+		);
+		const [clientTransport, serverTransport] =
+			InMemoryTransport.createLinkedPair();
+		await Promise.all([
+			atlasServer.server.connect(serverTransport),
+			client.connect(clientTransport),
+		]);
+
+		const tools = await client.listTools();
+		const facade = tools.tools.find((tool) => tool.name === "plan_context__atlas");
+		expect(facade).toMatchObject({
+			title: "Plan local atlas documentation",
+			description: expect.stringContaining("session"),
+			annotations: expect.objectContaining({ readOnlyHint: true }),
+		});
+		const result = await client.callTool({
+			name: "plan_context__atlas",
+			arguments: { query: "how do I rotate session tokens?" },
+		});
+		expect(result.structuredContent).toMatchObject({
+			coverage: expect.objectContaining({ status: expect.any(String) }),
+			citations: expect.arrayContaining([
+				expect.objectContaining({ repoId }),
+			]),
+		});
+		const manifest = await client.readResource({ uri: "atlas://manifest" });
+		expect(manifest.contents).toHaveLength(1);
+
+		await Promise.all([client.close(), atlasServer.server.close()]);
+	});
+
+	test("refreshes source-bound discovery after the indexed corpus changes", () => {
+		const atlasServer = createAtlasMcpServer({ db: store });
+		new RepoRepository(store).upsert({
+			repoId: "github.com/example/guide",
+			mode: "local-git",
+			revision: "rev_2",
+		});
+		new ManifestRepository(store).upsert({
+			repoId: "github.com/example/guide",
+			indexedRevision: "rev_2",
+			compilerVersion: "compiler-v1",
+		});
+
+		expect(atlasServer.refreshDiscovery()).toBeTrue();
+		expect(atlasServer.tools).toContain("plan_context__github_com_example_guide");
+		expect(atlasServer.resources).toContain("atlas-source-github_com_example_guide");
+		expect(atlasServer.refreshDiscovery()).toBeFalse();
 	});
 
 	test("creates isolated stdio and streamable HTTP transports", async () => {

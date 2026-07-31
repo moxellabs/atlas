@@ -3,6 +3,8 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import type { AgentEffectSnapshot } from "../../packages/eval/src/agent-effect";
+
 import {
   type BaselineSummary,
   buildReport,
@@ -354,7 +356,6 @@ describe("eval reporting", () => {
     expect(html).toContain("moxel-atlas-eval-report-theme");
     expect(html).toContain("MOXEL ATLAS EVALS");
     expect(html).toContain('id="banded-field"');
-    expect(html).toContain('data-eval-chart="recall-funnel"');
     expect(html).toContain('id="case-explorer"');
     expect(html).toContain('id="case-search"');
     expect(html).toContain(
@@ -363,13 +364,11 @@ describe("eval reporting", () => {
     expect(html).toContain("Methodology");
     expect(html).toContain("Reproducibility");
     expect(html).toContain('data-report-tab="overview"');
-    expect(html).toContain("multi-line-chart");
-    expect(html).toContain("scatter-chart");
-    expect(html).toContain("sparkline");
     expect(html).toContain("case-workspace");
     expect(html).toContain("pipeline-steps");
     expect(html).toContain("repro-meta-grid");
-    expect(html).toContain("Demo data");
+    expect(html).not.toContain("Demo data");
+    expect(html).toContain("Not collected");
     for (const section of [
       "overview",
       "quality-gates",
@@ -393,6 +392,71 @@ describe("eval reporting", () => {
     expect(html).toContain('data-health="bad"');
     expect(html).toContain("\\u003cscript");
     expect(html).not.toContain("<script>alert(1)</script>");
+  });
+
+  test("renders stale Luna evidence without fabricating a demo fallback", () => {
+    const report = buildReport(
+      { name: "dataset", cases: [] },
+      [result({ id: "one", category: "a" })],
+      { cli: "bun run cli", source: "cli-default" },
+      {},
+    );
+    const snapshot: AgentEffectSnapshot = {
+      schemaVersion: 1,
+      releaseId: "v0.3.0",
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      provenance: {
+        evaluatedRevision: "abc123def456",
+        datasetDigest: "digest",
+        codexVersion: "codex 1.0",
+        model: "gpt-5.6-luna",
+        reasoningEffort: "high",
+      },
+      dataset: {
+        name: "fixture",
+        repoId: "github.com/moxellabs/atlas",
+        runner: {
+          model: "gpt-5.6-luna",
+          reasoningEffort: "high",
+          trialsPerTask: 3,
+          agentTimeoutMs: 480000,
+          judgeTimeoutMs: 180000,
+        },
+      },
+      pairs: [],
+      metrics: {
+        pairs: 0,
+        baseline: {
+          runs: 0,
+          completionRate: 0,
+          groundedAnswerRate: 0,
+          citationCoverageRate: 0,
+          unsupportedClaimRate: 0,
+          abstentionCorrectRate: null,
+          averageDurationMs: 0,
+          p95DurationMs: 0,
+        },
+        treatment: {
+          runs: 0,
+          completionRate: 0,
+          groundedAnswerRate: 0,
+          citationCoverageRate: 0,
+          unsupportedClaimRate: 0,
+          abstentionCorrectRate: null,
+          averageDurationMs: 0,
+          p95DurationMs: 0,
+        },
+        paired: { wins: 0, ties: 0, losses: 0 },
+        mcp: { adoptionRate: 0, atlasFirstRate: 0, localOnlyRate: 0, fallbackRate: 0, averageCalls: 0, protocolErrorRate: 0 },
+      },
+      representativeTraces: [],
+    };
+    const html = renderHtml(report, {
+      agentEffect: { status: "stale", snapshot },
+    });
+    expect(html).toContain("Stale");
+    expect(html).toContain("Luna + Atlas MCP");
+    expect(html).not.toContain("Demo data");
   });
 
   test("includes optional threshold results without applying gates by default", () => {

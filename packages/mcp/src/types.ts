@@ -66,6 +66,8 @@ export interface AtlasMcpServer {
 	prompts: string[];
 	/** Registration diagnostics. */
 	diagnostics: AtlasMcpDiagnostic[];
+	/** Rebuilds source-specific discovery surfaces after the local corpus changes. */
+	refreshDiscovery: () => boolean;
 }
 
 /** Standard JSON object returned as MCP structured content. */

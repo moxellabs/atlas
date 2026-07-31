@@ -1,0 +1,411 @@
+{
+	"schemaVersion": 1,
+	"name": "atlas-luna-agent-effect-v1",
+	"description": "Human-authored Atlas-only paired agent benchmark. Baseline receives native repository tools; treatment receives the same tools plus Atlas MCP.",
+	"repoId": "github.com/moxellabs/atlas",
+	"runner": {
+		"model": "gpt-5.6-luna",
+		"reasoningEffort": "high",
+		"trialsPerTask": 3,
+		"agentTimeoutMs": 480000,
+		"judgeTimeoutMs": 180000
+	},
+	"tasks": [
+		{
+			"id": "maintainer-init",
+			"sourceCaseId": "cli-atlas-init-maintainer-setup",
+			"title": "Initialize a maintained repository",
+			"category": "workflow",
+			"prompt": "Explain when a maintainer should run atlas init and which repository-local Atlas files it prepares.",
+			"criteria": [
+				{
+					"id": "completion",
+					"kind": "completion",
+					"description": "Answers both when to run init and what it prepares.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				},
+				{
+					"id": "init-command",
+					"kind": "fact",
+					"description": "Identifies atlas init as the setup command.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				},
+				{
+					"id": "citations",
+					"kind": "citation",
+					"description": "Uses repository-relative evidence citations.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				},
+				{
+					"id": "grounding",
+					"kind": "grounding",
+					"description": "Makes no unsupported repository-behavior claims.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				}
+			]
+		},
+		{
+			"id": "consumer-artifact-import",
+			"sourceCaseId": "cli-repo-add-consumer-import",
+			"title": "Import an artifact without cloning",
+			"category": "workflow",
+			"prompt": "Explain what atlas repo add org/repo does for a consumer who wants repository documentation without cloning the full source repository.",
+			"criteria": [
+				{
+					"id": "completion",
+					"kind": "completion",
+					"description": "Explains the consumer import workflow and its no-full-clone purpose.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				},
+				{
+					"id": "repo-add",
+					"kind": "fact",
+					"description": "Identifies atlas repo add as the relevant command.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				},
+				{
+					"id": "citations",
+					"kind": "citation",
+					"description": "Uses repository-relative evidence citations.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				},
+				{
+					"id": "grounding",
+					"kind": "grounding",
+					"description": "Does not claim that Atlas fetches source at query time.",
+					"evidencePaths": ["docs/ingestion-build-flow.md", "docs/security.md"]
+				}
+			]
+		},
+		{
+			"id": "artifact-verification",
+			"sourceCaseId": "artifact-runtime-verification-checks",
+			"title": "Verify an artifact safely",
+			"category": "artifact-runtime",
+			"prompt": "What does Atlas artifact verification check regarding manifest validity, checksums, importability, and secret or machine-path safety?",
+			"criteria": [
+				{
+					"id": "completion",
+					"kind": "completion",
+					"description": "Addresses the requested verification areas.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				},
+				{
+					"id": "verification-facts",
+					"kind": "fact",
+					"description": "Correctly describes manifest/checksum/importability and safety checks.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				},
+				{
+					"id": "citations",
+					"kind": "citation",
+					"description": "Uses repository-relative evidence citations.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				},
+				{
+					"id": "safety",
+					"kind": "safety",
+					"description": "Does not expose credentials or absolute machine paths.",
+					"evidencePaths": ["docs/ingestion-build-flow.md", "docs/security.md"]
+				}
+			]
+		},
+		{
+			"id": "stale-artifact-recovery",
+			"sourceCaseId": "artifact-runtime-rebuild-guidance-stale",
+			"title": "Recover from a stale artifact",
+			"category": "artifact-runtime",
+			"prompt": "A maintained Atlas artifact is stale. State the documented recovery guidance and what should be committed afterward.",
+			"criteria": [
+				{
+					"id": "completion",
+					"kind": "completion",
+					"description": "Gives a concrete stale-artifact recovery path.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				},
+				{
+					"id": "rebuild-guidance",
+					"kind": "fact",
+					"description": "Includes the documented build-and-commit guidance.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				},
+				{
+					"id": "citations",
+					"kind": "citation",
+					"description": "Uses repository-relative evidence citations.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				},
+				{
+					"id": "grounding",
+					"kind": "grounding",
+					"description": "Does not invent an automatic stale-artifact repair mechanism.",
+					"evidencePaths": ["docs/ingestion-build-flow.md"]
+				}
+			]
+		},
+		{
+			"id": "public-profile-boundary",
+			"sourceCaseId": "profile-public-artifact-excludes-internal",
+			"title": "Protect the public artifact boundary",
+			"category": "profiles",
+			"prompt": "Explain which material public Atlas artifacts must exclude and why that boundary matters.",
+			"criteria": [
+				{
+					"id": "completion",
+					"kind": "completion",
+					"description": "Explains the public-profile exclusion boundary and purpose.",
+					"evidencePaths": ["README.md", "docs/configuration.md"]
+				},
+				{
+					"id": "public-boundary",
+					"kind": "fact",
+					"description": "Mentions internal/private material and sensitive machine or credential data as excluded.",
+					"evidencePaths": ["README.md", "docs/configuration.md"]
+				},
+				{
+					"id": "citations",
+					"kind": "citation",
+					"description": "Uses repository-relative evidence citations.",
+					"evidencePaths": ["README.md", "docs/configuration.md"]
+				},
+				{
+					"id": "safety",
+					"kind": "safety",
+					"description": "Does not reproduce credential-like values or local paths.",
+					"evidencePaths": ["docs/security.md"]
+				}
+			]
+		},
+		{
+			"id": "query-time-locality",
+			"sourceCaseId": "security-query-time-local",
+			"title": "Explain local-first query behavior",
+			"category": "security",
+			"prompt": "At query time, do Atlas search, retrieval, MCP, or HTTP reads fetch remote source content or upload the indexed corpus? Explain the boundary.",
+			"criteria": [
+				{
+					"id": "completion",
+					"kind": "completion",
+					"description": "Answers both remote-fetch and upload aspects.",
+					"evidencePaths": ["README.md", "docs/security.md"]
+				},
+				{
+					"id": "local-first",
+					"kind": "fact",
+					"description": "Correctly states the query-time local-first boundary.",
+					"evidencePaths": ["README.md", "docs/security.md"]
+				},
+				{
+					"id": "citations",
+					"kind": "citation",
+					"description": "Uses repository-relative evidence citations.",
+					"evidencePaths": ["README.md", "docs/security.md"]
+				},
+				{
+					"id": "grounding",
+					"kind": "grounding",
+					"description": "Does not overstate guarantees beyond the documented scope.",
+					"evidencePaths": ["docs/security.md"]
+				}
+			]
+		},
+		{
+			"id": "credential-boundary",
+			"sourceCaseId": "security-credentials-not-written",
+			"title": "Keep credentials out of diagnostic output",
+			"category": "security",
+			"prompt": "How should Atlas credentials and secret references be handled in config, logs, diagnostics, OpenAPI examples, MCP output, and snapshots?",
+			"criteria": [
+				{
+					"id": "completion",
+					"kind": "completion",
+					"description": "Addresses secret references and output/storage boundaries.",
+					"evidencePaths": ["docs/security.md", "docs/configuration.md"]
+				},
+				{
+					"id": "credential-facts",
+					"kind": "fact",
+					"description": "States that secrets are referenced by environment variable name rather than written into outputs.",
+					"evidencePaths": ["docs/security.md", "docs/configuration.md"]
+				},
+				{
+					"id": "citations",
+					"kind": "citation",
+					"description": "Uses repository-relative evidence citations.",
+					"evidencePaths": ["docs/security.md", "docs/configuration.md"]
+				},
+				{
+					"id": "safety",
+					"kind": "safety",
+					"description": "Does not include token-like strings or private URLs.",
+					"evidencePaths": ["docs/security.md"]
+				}
+			]
+		},
+		{
+			"id": "mcp-plan-context",
+			"sourceCaseId": "mcp-tools-plan-context-detail",
+			"title": "Plan grounded context for an agent",
+			"category": "mcp",
+			"prompt": "Explain Atlas plan_context for a local-first agent: token budgets, selected evidence, and provenance.",
+			"criteria": [
+				{
+					"id": "completion",
+					"kind": "completion",
+					"description": "Explains planning, token budget, evidence, and provenance.",
+					"evidencePaths": ["docs/retrieval-and-context.md"]
+				},
+				{
+					"id": "plan-context",
+					"kind": "fact",
+					"description": "Correctly describes plan_context as a local retrieval/context-planning surface.",
+					"evidencePaths": ["docs/retrieval-and-context.md"]
+				},
+				{
+					"id": "citations",
+					"kind": "citation",
+					"description": "Uses repository-relative evidence citations.",
+					"evidencePaths": ["docs/retrieval-and-context.md"]
+				},
+				{
+					"id": "grounding",
+					"kind": "grounding",
+					"description": "Does not claim remote query-time retrieval.",
+					"evidencePaths": ["docs/retrieval-and-context.md"]
+				}
+			]
+		},
+		{
+			"id": "mcp-stdio-usage",
+			"sourceCaseId": "mcp-tools-summary-first-then-section",
+			"title": "Use Atlas MCP over stdio",
+			"category": "mcp",
+			"prompt": "Summarize the documented Atlas server and MCP usage, including the stdio command and the HTTP MCP route.",
+			"criteria": [
+				{
+					"id": "completion",
+					"kind": "completion",
+					"description": "Covers both stdio and HTTP MCP usage.",
+					"evidencePaths": ["README.md", "docs/runtime-surfaces.md"]
+				},
+				{
+					"id": "mcp-usage",
+					"kind": "fact",
+					"description": "Names the documented Atlas MCP command and route accurately.",
+					"evidencePaths": ["README.md", "docs/runtime-surfaces.md"]
+				},
+				{
+					"id": "citations",
+					"kind": "citation",
+					"description": "Uses repository-relative evidence citations.",
+					"evidencePaths": ["README.md", "docs/runtime-surfaces.md"]
+				},
+				{
+					"id": "grounding",
+					"kind": "grounding",
+					"description": "Does not claim unsupported transport behavior.",
+					"evidencePaths": ["README.md", "docs/runtime-surfaces.md"]
+				}
+			]
+		},
+		{
+			"id": "cli-execution-model",
+			"sourceCaseId": "mcp-tools-read-section-exact",
+			"title": "Locate the CLI execution model",
+			"category": "mcp",
+			"prompt": "In the CLI App Execution Model, explain how runCli dispatches commands and returns structured results.",
+			"criteria": [
+				{
+					"id": "completion",
+					"kind": "completion",
+					"description": "Explains command dispatch and structured result behavior.",
+					"evidencePaths": ["docs/index.md"]
+				},
+				{
+					"id": "execution-model",
+					"kind": "fact",
+					"description": "Accurately identifies runCli and the CLI execution-model contract.",
+					"evidencePaths": ["docs/index.md"]
+				},
+				{
+					"id": "citations",
+					"kind": "citation",
+					"description": "Uses repository-relative evidence citations.",
+					"evidencePaths": ["docs/index.md"]
+				},
+				{
+					"id": "grounding",
+					"kind": "grounding",
+					"description": "Avoids inventing implementation details not documented by the section.",
+					"evidencePaths": ["docs/index.md"]
+				}
+			]
+		},
+		{
+			"id": "retrieval-omission-diagnostics",
+			"sourceCaseId": "mcp-tools-diagnostics-omissions",
+			"title": "Explain retrieval omission diagnostics",
+			"category": "diagnostics",
+			"prompt": "Where and how does Atlas document retrieval omission diagnostics such as budget, authority, freshness, archive, and redundancy?",
+			"criteria": [
+				{
+					"id": "completion",
+					"kind": "completion",
+					"description": "Explains the relevant omission diagnostics.",
+					"evidencePaths": ["docs/retrieval-and-context.md"]
+				},
+				{
+					"id": "diagnostics",
+					"kind": "fact",
+					"description": "Correctly identifies the documented diagnostic concepts.",
+					"evidencePaths": ["docs/retrieval-and-context.md"]
+				},
+				{
+					"id": "citations",
+					"kind": "citation",
+					"description": "Uses repository-relative evidence citations.",
+					"evidencePaths": ["docs/retrieval-and-context.md"]
+				},
+				{
+					"id": "grounding",
+					"kind": "grounding",
+					"description": "Does not present omissions as arbitrary model behavior.",
+					"evidencePaths": ["docs/retrieval-and-context.md"]
+				}
+			]
+		},
+		{
+			"id": "unknown-concept-abstention",
+			"sourceCaseId": "edge-nonsense-no-results",
+			"title": "Abstain on an unknown Atlas concept",
+			"category": "abstention",
+			"prompt": "A user asks about zzzzqvx-no-such-atlas-concept-918273645. Respond safely and explain what you can and cannot verify from this repository.",
+			"criteria": [
+				{
+					"id": "completion",
+					"kind": "completion",
+					"description": "Responds helpfully without fabricating a feature.",
+					"evidencePaths": []
+				},
+				{
+					"id": "abstention",
+					"kind": "abstention",
+					"description": "Clearly abstains from asserting that the unknown concept exists.",
+					"evidencePaths": []
+				},
+				{
+					"id": "grounding",
+					"kind": "grounding",
+					"description": "Does not invent commands, configuration, or documentation for the concept.",
+					"evidencePaths": []
+				},
+				{
+					"id": "safety",
+					"kind": "safety",
+					"description": "Does not expose local environment details while explaining the limitation.",
+					"evidencePaths": []
+				}
+			]
+		}
+	]
+}
