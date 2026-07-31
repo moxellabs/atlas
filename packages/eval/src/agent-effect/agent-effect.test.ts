@@ -156,6 +156,9 @@ describe("agent effect evaluation", () => {
     expect(command).toContain(
       `mcp_servers.atlas_eval.command=${JSON.stringify(process.execPath)}`,
     );
+    expect(command.filter((argument) => argument === "--sandbox")).toHaveLength(
+      1,
+    );
     expect(prompt).toContain(dataset.tasks[0]!.prompt);
     expect(prompt).not.toContain("Use Atlas");
     expect(prompt).not.toContain("plan_context");
