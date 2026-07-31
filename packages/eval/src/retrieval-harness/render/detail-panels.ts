@@ -110,9 +110,26 @@ function renderAnswerTrace(pair: AgentEffectPair): string {
 }
 
 function renderMcpTrace(pair: AgentEffectPair): string {
-	const calls = pair.treatment.mcp?.calls ?? [];
-	if (calls.length === 0) return "";
-	return `<div class="agent-trace"><strong>${escapeHtml(pair.taskId)} · trial ${pair.trial}</strong>${calls.map((call, index) => `<div class="trace-step"><span class="trace-index">${String(index + 1).padStart(2, "0")}</span><div><strong>${escapeHtml(call.kind)}: ${escapeHtml(call.name)}</strong><p>${call.durationMs === undefined ? "Duration not recorded" : `${call.durationMs}ms`} · ${call.ok ? "ok" : "error"}</p></div></div>`).join("")}</div>`;
+	const arms = [
+		{ label: "Baseline", run: pair.baseline },
+		{ label: "Treatment", run: pair.treatment },
+	];
+	return arms
+		.map(({ label, run }) => {
+			const trace = run.mcp;
+			const calls = trace?.calls ?? [];
+			const steps =
+				calls.length === 0
+					? '<p class="trace-empty">No evidence-capable tool activity observed.</p>'
+					: calls
+							.map(
+								(call, index) =>
+									`<div class="trace-step"><span class="trace-index">${String(index + 1).padStart(2, "0")}</span><div><strong>${escapeHtml(call.kind)}: ${escapeHtml(call.name)}</strong><p>${escapeHtml(call.source)} · ${call.durationMs === undefined ? "Duration not recorded" : `${call.durationMs}ms`} · ${call.ok ? "ok" : "error"}</p></div></div>`,
+							)
+							.join("");
+			return `<div class="agent-trace"><strong>${escapeHtml(pair.taskId)} · trial ${pair.trial} · ${label}</strong>${steps}<p>Protocol errors: ${trace?.protocolErrors ?? 0}</p></div>`;
+		})
+		.join("");
 }
 
 function representativePairs(

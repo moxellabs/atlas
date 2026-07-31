@@ -149,6 +149,8 @@ describe("agent effect evaluation", () => {
 		expect(command).toContain("--ignore-rules");
 		expect(command).toContain("web_search");
 		expect(command).toContain("standalone_web_search");
+		expect(command).toContain("shell_tool");
+		expect(command).toContain("unified_exec");
 		expect(command).toContain('shell_environment_policy.inherit="none"');
 		expect(command).toContain(
 			`mcp_servers.atlas_eval.command=${JSON.stringify(process.execPath)}`,
