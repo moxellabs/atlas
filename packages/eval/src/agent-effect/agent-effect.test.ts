@@ -333,6 +333,13 @@ describe("agent effect evaluation", () => {
         text: "Recovery repairs only the interrupted append.",
       },
     ]);
+    expect(() =>
+      readCorpusEvidence({
+        corpusPath: targetPath,
+        repoId: targetRepoId,
+        paths: ["docs/architecture/missing.md"],
+      }),
+    ).toThrow("is absent from the isolated");
     const unchangedSource = openStore({ path: sourcePath, readOnly: true });
     try {
       expect(
