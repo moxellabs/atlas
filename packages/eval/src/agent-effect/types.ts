@@ -58,10 +58,10 @@ export interface AgentAnswer {
 }
 
 export interface McpTraceEvent {
-	readonly kind: "tool" | "resource" | "web_search";
+	readonly kind: "tool" | "resource" | "web_search" | "command";
 	readonly name: string;
-	/** Atlas is local corpus evidence; web is an open-world fallback. */
-	readonly source: "atlas" | "web";
+	/** Origin of evidence-capable activity observed in the Codex JSONL stream. */
+	readonly source: "atlas" | "web" | "shell" | "filesystem" | "github";
 	readonly durationMs?: number;
 	readonly ok: boolean;
 }

@@ -1,6 +1,6 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
+import { basename, join } from "node:path";
 
 import { resolveEvalConfig } from "../retrieval-cli/config";
 import { sanitizeEvalText } from "./sanitize";
@@ -42,6 +42,7 @@ export async function createCodexExecutor(input: {
 	const workDir = await mkdtemp(join(tmpdir(), "atlas-luna-eval-"));
 	const generatedAgentCwd = input.agentCwd === undefined;
 	const agentCwd = input.agentCwd ?? await mkdtemp(join(tmpdir(), "atlas-consumer-eval-"));
+	await mkdir(join(workDir, "home"), { recursive: true });
 	if (agentCwd === input.cwd) {
 		throw new Error("Agent-effect evaluation requires a consumer workspace separate from the indexed source checkout.");
 	}
@@ -126,8 +127,10 @@ async function runAgent(input: {
 		command,
 		input.cwd,
 		input.runner.agentTimeoutMs,
+		hermeticCodexEnvironment(input.workDir),
 	);
 	const durationMs = Math.round(performance.now() - started);
+	const trace = traceMcpEvents(result.stdout);
 	if (result.timedOut) {
 		return failedRun(
 			input,
@@ -135,6 +138,7 @@ async function runAgent(input: {
 			durationMs,
 			"timeout",
 			"Codex exceeded the agent timeout.",
+			trace,
 		);
 	}
 	if (result.exitCode !== 0) {
@@ -144,6 +148,7 @@ async function runAgent(input: {
 			durationMs,
 			"error",
 			result.stderr || result.stdout,
+			trace,
 		);
 	}
 	try {
@@ -156,9 +161,7 @@ async function runAgent(input: {
 			durationMs,
 			status: "completed",
 			answer,
-			...(input.arm === "treatment"
-				? { mcp: traceMcpEvents(result.stdout) }
-				: {}),
+			mcp: trace,
 		};
 	} catch (error) {
 		return failedRun(
@@ -167,6 +170,7 @@ async function runAgent(input: {
 			durationMs,
 			"invalid-output",
 			String(error),
+			trace,
 		);
 	}
 }
@@ -194,6 +198,16 @@ async function judgePair(input: {
 			"codex",
 			"exec",
 			"--ephemeral",
+			"--ignore-user-config",
+			"--ignore-rules",
+			"--disable",
+			"web_search",
+			"--disable",
+			"standalone_web_search",
+			"--disable",
+			"apps",
+			"--disable",
+			"plugins",
 			"--sandbox",
 			"workspace-write",
 			"-C",
@@ -202,6 +216,8 @@ async function judgePair(input: {
 			input.runner.model,
 			"-c",
 			`model_reasoning_effort=${JSON.stringify(input.runner.reasoningEffort)}`,
+			"-c",
+			'shell_environment_policy.inherit="none"',
 			"--output-schema",
 			input.outputSchemaPath,
 			"-o",
@@ -210,6 +226,7 @@ async function judgePair(input: {
 		],
 		input.cwd,
 		input.runner.judgeTimeoutMs,
+		hermeticCodexEnvironment(input.workDir),
 	);
 	if (result.exitCode !== 0 || result.timedOut) {
 		return failedJudgeVerdict(
@@ -247,6 +264,16 @@ function codexAgentCommand(input: {
 		"codex",
 		"exec",
 		"--ephemeral",
+		"--ignore-user-config",
+		"--ignore-rules",
+		"--disable",
+		"web_search",
+		"--disable",
+		"standalone_web_search",
+		"--disable",
+		"apps",
+		"--disable",
+		"plugins",
 		"--json",
 		"--sandbox",
 		"workspace-write",
@@ -256,6 +283,8 @@ function codexAgentCommand(input: {
 		input.runner.model,
 		"-c",
 		`model_reasoning_effort=${JSON.stringify(input.runner.reasoningEffort)}`,
+		"-c",
+		'shell_environment_policy.inherit="none"',
 		"--output-schema",
 		input.outputSchemaPath,
 		"-o",
@@ -461,6 +490,7 @@ function failedRun(
 	durationMs: number,
 	status: AgentRunStatus,
 	error: string,
+	mcp: McpTraceSummary,
 ): AgentRun {
 	return {
 		arm: input.arm,
@@ -470,9 +500,7 @@ function failedRun(
 		durationMs,
 		status,
 		error: sanitizeEvalText(error, 1_000),
-		...(input.arm === "treatment"
-			? { mcp: { calls: [], protocolErrors: 1 } }
-			: {}),
+		mcp,
 	};
 }
 
@@ -482,21 +510,16 @@ export function traceMcpEvents(stdout: string): McpTraceSummary {
 	for (const line of stdout.split("\n")) {
 		if (line.trim().length === 0) continue;
 		try {
-			forEachRecord(JSON.parse(line) as unknown, (record) => {
-				if (record.type === "mcp_tool_call" && record.server === "atlas_eval") {
-					const name =
-						typeof record.tool === "string"
-							? record.tool
-							: typeof record.name === "string"
-								? record.name
-								: "unknown-tool";
-					calls.push({ kind: "tool", name, source: "atlas", ok: record.error == null });
-					return;
-				}
-				if (record.type === "web_search_call" || record.type === "web_search") {
-					calls.push({ kind: "web_search", name: "web_search", source: "web", ok: record.error == null });
-				}
-			});
+			const event = JSON.parse(line) as unknown;
+			const record = isRecord(event) ? event : undefined;
+			const item =
+				record?.type === "item.completed" && isRecord(record.item)
+					? record.item
+					: record;
+			if (item !== undefined) {
+				const call = traceEvent(item);
+				if (call !== undefined) calls.push(call);
+			}
 		} catch {
 			protocolErrors++;
 		}
@@ -504,17 +527,81 @@ export function traceMcpEvents(stdout: string): McpTraceSummary {
 	return { calls, protocolErrors };
 }
 
-function forEachRecord(
-	value: unknown,
-	visit: (record: Record<string, unknown>) => void,
-): void {
-	if (Array.isArray(value)) {
-		for (const item of value) forEachRecord(item, visit);
-		return;
+function traceEvent(record: Record<string, unknown>): McpTraceEvent | undefined {
+	if (record.type === "mcp_tool_call" && record.server === "atlas_eval") {
+		const name =
+			typeof record.tool === "string"
+				? record.tool
+				: typeof record.name === "string"
+					? record.name
+					: "unknown-tool";
+		return {
+			kind: "tool",
+			name,
+			source: "atlas",
+			ok: commandSucceeded(record),
+		};
 	}
-	if (!isRecord(value)) return;
-	visit(value);
-	for (const child of Object.values(value)) forEachRecord(child, visit);
+	if (record.type === "web_search_call" || record.type === "web_search") {
+		return {
+			kind: "web_search",
+			name: "web_search",
+			source: "web",
+			ok: commandSucceeded(record),
+		};
+	}
+	if (record.type !== "command_execution") return undefined;
+	const command = typeof record.command === "string" ? record.command : "";
+	return {
+		kind: "command",
+		name: commandExecutable(command),
+		source: commandSource(command),
+		ok: commandSucceeded(record),
+	};
+}
+
+function commandSucceeded(record: Record<string, unknown>): boolean {
+	return (
+		record.error == null &&
+		(record.exit_code === undefined || record.exit_code === 0) &&
+		record.status !== "failed"
+	);
+}
+
+function commandExecutable(command: string): string {
+	const first = command.trim().split(/\s+/, 1)[0];
+	return first === undefined || first.length === 0 ? "unknown-command" : basename(first);
+}
+
+function commandSource(
+	command: string,
+): "shell" | "filesystem" | "github" {
+	if (/(?:^|\s)gh(?:\s|$)/.test(command)) return "github";
+	if (
+		/(?:^|\s)(?:cat|find|grep|ls|pwd|readlink|rg|sed|stat)(?:\s|$)/.test(
+			command,
+		)
+	) {
+		return "filesystem";
+	}
+	return "shell";
+}
+
+function hermeticCodexEnvironment(workDir: string): Record<string, string> {
+	return {
+		CODEX_HOME: Bun.env.CODEX_HOME ?? join(homedir(), ".codex"),
+		GH_TOKEN: "",
+		GITHUB_TOKEN: "",
+		HOME: join(workDir, "home"),
+		LANG: "C.UTF-8",
+		LC_ALL: "C.UTF-8",
+		OPENAI_API_KEY: Bun.env.OPENAI_API_KEY ?? "",
+		PATH: Bun.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
+		TZ: "UTC",
+		XDG_CACHE_HOME: join(workDir, "home", ".cache"),
+		XDG_CONFIG_HOME: join(workDir, "home", ".config"),
+		XDG_DATA_HOME: join(workDir, "home", ".local", "share"),
+	};
 }
 
 async function runText(
@@ -532,13 +619,19 @@ async function runCommand(
 	command: string[],
 	cwd: string,
 	timeoutMs: number,
+	env: Record<string, string> = hermeticCodexEnvironment(cwd),
 ): Promise<{
 	stdout: string;
 	stderr: string;
 	exitCode: number;
 	timedOut: boolean;
 }> {
-	const process = Bun.spawn(command, { cwd, stdout: "pipe", stderr: "pipe" });
+	const process = Bun.spawn(command, {
+		cwd,
+		env: env,
+		stdout: "pipe",
+		stderr: "pipe",
+	});
 	let timedOut = false;
 	const timeout = setTimeout(() => {
 		timedOut = true;
