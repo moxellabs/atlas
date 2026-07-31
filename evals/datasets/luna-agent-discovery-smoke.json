@@ -22,25 +22,19 @@
           "id": "completion",
           "kind": "completion",
           "description": "Names the three published container files and the bounded recovery repairs.",
-          "evidencePaths": [
-            "docs/architecture/streaming-scene-session.md"
-          ]
+          "evidencePaths": ["docs/architecture/streaming-scene-session.md"]
         },
         {
           "id": "grounding",
           "kind": "grounding",
           "description": "Does not invent additional files, rewriting, or unbounded recovery behavior.",
-          "evidencePaths": [
-            "docs/architecture/streaming-scene-session.md"
-          ]
+          "evidencePaths": ["docs/architecture/streaming-scene-session.md"]
         },
         {
           "id": "citations",
           "kind": "citation",
           "description": "Cites the source-relative Diffract architecture document supporting the answer.",
-          "evidencePaths": [
-            "docs/architecture/streaming-scene-session.md"
-          ]
+          "evidencePaths": ["docs/architecture/streaming-scene-session.md"]
         }
       ]
     }
