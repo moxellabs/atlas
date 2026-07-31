@@ -28,6 +28,11 @@ const trialCount = positiveInteger(args.trials, "--trials");
 const requireAtlasAdoption = args["require-atlas-adoption"] === "true";
 const agentCwd = args.workspace === undefined ? undefined : resolve(cwd, args.workspace);
 const useGlobal = args.global === "true";
+const snapshotGlobalCorpus = args["snapshot-global-corpus"] === "true";
+
+if (useGlobal && snapshotGlobalCorpus) {
+	throw new Error("--global and --snapshot-global-corpus are mutually exclusive.");
+}
 
 if (Bun.env.CI !== undefined && Bun.env.CI !== "") {
 	throw new Error(
@@ -69,6 +74,7 @@ const handle = await createCodexExecutor({
 	dataset,
 	...(agentCwd === undefined ? {} : { agentCwd }),
 	...(useGlobal ? { useGlobal: true } : {}),
+	...(snapshotGlobalCorpus ? { snapshotGlobalCorpus: true } : {}),
 });
 try {
 	const snapshot = await runAgentEffectEvaluation({
