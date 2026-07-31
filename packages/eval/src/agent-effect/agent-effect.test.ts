@@ -1,10 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtemp } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import {
+  countRepoCorpusRows,
+  ManifestRepository,
+  openStore,
+  RepoRepository,
+} from "@atlas/store";
 import { agentEffectDatasetDigest } from "./dataset";
 import { resolveSnapshotFreshness, writeAgentEffectSnapshot } from "./history";
+import { isolateCorpusSnapshot } from "./corpus-snapshot";
 import { assertHermeticAtlasDiscovery, runAgentEffectEvaluation } from "./run";
 import { atlasMcpServerArgs, codexAgentCommand, traceMcpEvents } from "./codex";
 import type { AgentEffectDataset, AgentRun } from "./types";
@@ -183,6 +191,66 @@ describe("agent effect evaluation", () => {
     expect(() =>
       atlasMcpServerArgs({ atlasCwd: "/atlas", useGlobal: false }),
     ).toThrow("explicit local eval config or global runtime");
+  });
+
+  test("isolates one complete repository into a valid corpus snapshot", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "atlas-corpus-snapshot-"));
+    const sourcePath = join(directory, "source.db");
+    const targetPath = join(directory, "isolated", "corpus.db");
+    const targetRepoId = "github.com/justmrmendez/diffract";
+    const excludedRepoId = "github.com/example/other";
+    const source = openStore({ path: sourcePath, migrate: true });
+    for (const [repoId, revision] of [
+      [targetRepoId, "diffract-revision"],
+      [excludedRepoId, "other-revision"],
+    ] as const) {
+      new RepoRepository(source).upsert({
+        repoId,
+        mode: "local-git",
+        revision,
+      });
+      new ManifestRepository(source).upsert({
+        repoId,
+        indexedRevision: revision,
+        compilerVersion: "compiler-v1",
+      });
+    }
+    source.close();
+
+    const provenance = await isolateCorpusSnapshot({
+      sourcePath,
+      targetPath,
+      repoId: targetRepoId,
+    });
+    const snapshot = openStore({ path: targetPath, readOnly: true });
+    try {
+      expect(
+        new RepoRepository(snapshot).list().map((repo) => repo.repoId),
+      ).toEqual([targetRepoId]);
+      expect(countRepoCorpusRows(snapshot, excludedRepoId)).toEqual({
+        repos: 0,
+        packages: 0,
+        modules: 0,
+        documents: 0,
+        sections: 0,
+        chunks: 0,
+        summaries: 0,
+        skills: 0,
+        manifests: 0,
+        ftsRows: 0,
+      });
+      expect(
+        snapshot.get<{ integrity_check: string }>("PRAGMA integrity_check"),
+      ).toEqual({ integrity_check: "ok" });
+    } finally {
+      snapshot.close();
+    }
+    expect(provenance).toEqual({
+      indexedRevision: "diffract-revision",
+      corpusDigest: createHash("sha256")
+        .update(await readFile(targetPath))
+        .digest("hex"),
+    });
   });
 
   test("aggregates paired baseline and MCP treatment evidence deterministically", async () => {
