@@ -325,6 +325,12 @@ export function codexAgentCommand(input: {
       `mcp_servers.atlas_eval.command=${JSON.stringify(process.execPath)}`,
       "-c",
       `mcp_servers.atlas_eval.args=${JSON.stringify(serverArgs)}`,
+      "-c",
+      "features.deferred_tool_world_state=true",
+      "-c",
+      'features.non_prefixed_mcp_tool_names={enabled=true,server_names=["atlas_eval"]}',
+      "-c",
+      "mcp_servers.atlas_eval.required=true",
     );
   }
   command.push(agentPrompt(input.task));
