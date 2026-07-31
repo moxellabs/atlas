@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
@@ -38,19 +39,29 @@ export async function createCodexExecutor(input: {
 	readonly agentCwd?: string;
 	/** Use the caller's global Atlas runtime instead of the checkout artifact. */
 	readonly useGlobal?: boolean;
+	/** Snapshot the caller's indexed corpus into the isolated treatment runtime. */
+	readonly snapshotGlobalCorpus?: boolean;
 }): Promise<CodexExecutorHandle> {
 	const workDir = await mkdtemp(join(tmpdir(), "atlas-luna-eval-"));
 	const generatedAgentCwd = input.agentCwd === undefined;
 	const agentCwd = input.agentCwd ?? await mkdtemp(join(tmpdir(), "atlas-consumer-eval-"));
 	await mkdir(join(workDir, "home"), { recursive: true });
 	if (agentCwd === input.cwd) {
-		throw new Error("Agent-effect evaluation requires a consumer workspace separate from the indexed source checkout.");
+		throw new Error(
+			"Agent-effect evaluation requires a consumer workspace separate from the indexed source checkout.",
+		);
 	}
-	const config = await resolveEvalConfig({
-		cli: "bun run cli",
-		useGlobal: input.useGlobal === true,
-		cwd: input.cwd,
-	});
+	const config =
+		input.snapshotGlobalCorpus === true
+			? await snapshotGlobalCorpus({
+					workDir,
+					repoId: input.dataset.repoId,
+				})
+			: await resolveEvalConfig({
+					cli: "bun run cli",
+					useGlobal: input.useGlobal === true,
+					cwd: input.cwd,
+				});
 	const agentSchemaPath = join(workDir, "agent-output.schema.json");
 	const judgeSchemaPath = join(workDir, "judge-output.schema.json");
 	await Promise.all([
@@ -585,6 +596,64 @@ function commandSource(
 		return "filesystem";
 	}
 	return "shell";
+}
+
+async function snapshotGlobalCorpus(input: {
+	workDir: string;
+	repoId: string;
+}): Promise<{
+	configPath: string;
+	tempConfigDir?: undefined;
+	source: "explicit-config";
+}> {
+	const sourcePath = join(homedir(), ".moxel", "atlas", "corpus.db");
+	if (!(await Bun.file(sourcePath).exists())) {
+		throw new Error(
+			`Global Atlas corpus is unavailable at ${sourcePath}. Index ${input.repoId} before running the discovery smoke.`,
+		);
+	}
+	const source = new Database(sourcePath, { readonly: true });
+	let serialized: Uint8Array;
+	try {
+		const indexed = source
+			.query<{ found: number }, [string]>(
+				"SELECT 1 AS found FROM repos WHERE repo_id = ? LIMIT 1",
+			)
+			.get(input.repoId);
+		if (indexed?.found !== 1) {
+			throw new Error(
+				`Global Atlas corpus does not contain ${input.repoId}. Index it before running the discovery smoke.`,
+			);
+		}
+		serialized = source.serialize();
+	} finally {
+		source.close();
+	}
+	const snapshotDir = join(input.workDir, "corpus-snapshot");
+	const cacheDir = join(snapshotDir, "cache");
+	const corpusDbPath = join(snapshotDir, "corpus.db");
+	const configPath = join(snapshotDir, "atlas.config.json");
+	await mkdir(cacheDir, { recursive: true });
+	await Promise.all([
+		writeFile(corpusDbPath, serialized),
+		writeFile(
+			configPath,
+			`${JSON.stringify(
+				{
+					version: 1,
+					cacheDir,
+					corpusDbPath,
+					logLevel: "warn",
+					server: { transport: "stdio" },
+					hosts: [],
+					repos: [],
+				},
+				null,
+				2,
+			)}\n`,
+		),
+	]);
+	return { configPath, source: "explicit-config" };
 }
 
 function hermeticCodexEnvironment(workDir: string): Record<string, string> {
