@@ -1,10 +1,9 @@
-import { Database } from "bun:sqlite";
-import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
 
 import { resolveEvalConfig } from "../retrieval-cli/config";
+import { isolateCorpusSnapshot } from "./corpus-snapshot";
 import { sanitizeEvalText } from "./sanitize";
 import type {
   AgentAnswer,
@@ -597,54 +596,16 @@ async function snapshotGlobalCorpus(input: {
   };
 }> {
   const sourcePath = join(homedir(), ".moxel", "atlas", "corpus.db");
-  if (!(await Bun.file(sourcePath).exists())) {
-    throw new Error(
-      `Global Atlas corpus is unavailable at ${sourcePath}. Index ${input.repoId} before running the discovery smoke.`,
-    );
-  }
-  const source = new Database(sourcePath, { readonly: true });
-  let indexedRevision: string;
-  let serialized: Uint8Array;
-  try {
-    const indexed = source
-      .query<{ indexedRevision: string | null }, [string]>(
-        `SELECT manifests.indexed_revision AS indexedRevision
-				 FROM repos
-				 JOIN manifests ON manifests.repo_id = repos.repo_id
-				 WHERE repos.repo_id = ?
-				 LIMIT 1`,
-      )
-      .get(input.repoId);
-    if (indexed?.indexedRevision == null) {
-      throw new Error(
-        `Global Atlas corpus does not contain a complete index for ${input.repoId}. Index it before running the discovery smoke.`,
-      );
-    }
-    indexedRevision = indexed.indexedRevision;
-    serialized = source.serialize();
-  } finally {
-    source.close();
-  }
-
   const snapshotDir = join(input.workDir, "corpus-snapshot");
   const cacheDir = join(snapshotDir, "cache");
   const corpusDbPath = join(snapshotDir, "corpus.db");
   const configPath = join(snapshotDir, "atlas.config.json");
+  const corpusProvenance = await isolateCorpusSnapshot({
+    sourcePath,
+    targetPath: corpusDbPath,
+    repoId: input.repoId,
+  });
   await mkdir(cacheDir, { recursive: true });
-  await writeFile(corpusDbPath, serialized);
-
-  const snapshot = new Database(corpusDbPath);
-  try {
-    snapshot.exec("PRAGMA foreign_keys = ON");
-    snapshot.run("DELETE FROM fts_entries WHERE repo_id <> ?", [input.repoId]);
-    snapshot.run("DELETE FROM repos WHERE repo_id <> ?", [input.repoId]);
-    snapshot.exec("VACUUM");
-  } finally {
-    snapshot.close();
-  }
-  const corpusDigest = createHash("sha256")
-    .update(await readFile(corpusDbPath))
-    .digest("hex");
   await writeFile(
     configPath,
     `${JSON.stringify(
@@ -664,7 +625,7 @@ async function snapshotGlobalCorpus(input: {
   return {
     configPath,
     source: "explicit-config",
-    corpusProvenance: { indexedRevision, corpusDigest },
+    corpusProvenance,
   };
 }
 
