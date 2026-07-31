@@ -40,6 +40,8 @@ export function buildIndexedSourceCatalog(
 				listDocumentsByRepo(dependencies.db, coverage.repoId).map((document) => ({
 					title: document.title,
 					path: document.path,
+					description: document.description,
+					tags: document.tags,
 				})),
 			);
 			return {
@@ -132,10 +134,23 @@ function stableHash(value: string): string {
 	return (hash >>> 0).toString(36);
 }
 
-function sourceTopics(documents: readonly { title?: string | undefined; path: string }[]): string[] {
+function sourceTopics(
+	documents: readonly {
+		title?: string | undefined;
+		path: string;
+		description?: string | undefined;
+		tags: readonly string[];
+	}[],
+): string[] {
 	const counts = new Map<string, number>();
 	for (const document of documents) {
-		for (const token of `${document.title ?? ""} ${document.path}`.toLowerCase().split(/[^a-z0-9]+/)) {
+		const searchable = [
+			document.title ?? "",
+			document.path,
+			document.description ?? "",
+			...document.tags,
+		].join(" ");
+		for (const token of searchable.toLowerCase().split(/[^a-z0-9]+/)) {
 			if (token.length < 3 || STOP_WORDS.has(token)) continue;
 			counts.set(token, (counts.get(token) ?? 0) + 1);
 		}
