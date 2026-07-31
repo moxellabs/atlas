@@ -46,7 +46,8 @@ export function registerReadSectionTool(server: McpServer, dependencies: AtlasMc
       title: "Read ATLAS section",
       description: "Read exact text and provenance for one stored canonical section.",
       inputSchema: readSectionInputSchema,
-      outputSchema: jsonOutputSchema
+      outputSchema: jsonOutputSchema,
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
     (input) => toolResult(executeReadSection(input, dependencies))
   );

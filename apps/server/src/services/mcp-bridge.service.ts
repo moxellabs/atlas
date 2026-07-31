@@ -32,6 +32,7 @@ export class McpBridgeService {
 	private readonly db: AtlasStoreClient;
 	private readonly sourceDiffProvider?: AtlasSourceDiffProvider | undefined;
 	private readonly identity?: AtlasMcpIdentity | undefined;
+	private readonly discoveryRefreshTimer: ReturnType<typeof setInterval>;
 	private closed = false;
 
 	constructor(
@@ -42,6 +43,13 @@ export class McpBridgeService {
 		this.db = db;
 		this.sourceDiffProvider = sourceDiffProvider;
 		this.identity = identity;
+		this.discoveryRefreshTimer = setInterval(() => {
+			this.catalogServer?.refreshDiscovery();
+			for (const session of this.sessions.values()) {
+				session.server.refreshDiscovery();
+			}
+		}, 5_000);
+		this.discoveryRefreshTimer.unref();
 	}
 
 	/**
@@ -81,6 +89,7 @@ export class McpBridgeService {
 	/** Disposes every live session. Safe to call during config reload or shutdown. */
 	async close(): Promise<void> {
 		this.closed = true;
+		clearInterval(this.discoveryRefreshTimer);
 		const sessionIds = [...this.sessions.keys()];
 		await Promise.all(sessionIds.map((sessionId) => this.disposeSession(sessionId)));
 		this.sessions.clear();

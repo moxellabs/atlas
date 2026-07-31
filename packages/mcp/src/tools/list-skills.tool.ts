@@ -36,7 +36,8 @@ export function registerListSkillsTool(server: McpServer, dependencies: AtlasMcp
       title: `List ${dependencies.identity?.title ?? "ATLAS"} skills`,
       description: "List stored skills with optional scope constraints.",
       inputSchema: listSkillsInputSchema,
-      outputSchema: jsonOutputSchema
+      outputSchema: jsonOutputSchema,
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
     (input) => toolResult(executeListSkills(input, dependencies))
   );

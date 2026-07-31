@@ -42,7 +42,8 @@ export function registerReadOutlineTool(server: McpServer, dependencies: AtlasMc
       title: "Read ATLAS document outline",
       description: "Read a compact outline and summaries for a stored document.",
       inputSchema: readOutlineInputSchema,
-      outputSchema: jsonOutputSchema
+      outputSchema: jsonOutputSchema,
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
     (input) => toolResult(executeReadOutline(input, dependencies))
   );

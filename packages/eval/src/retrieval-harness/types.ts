@@ -248,13 +248,6 @@ export interface Report {
 	generatedAt: string;
 	repoId?: string;
 	runtime: RuntimeInfo;
-	modelJudge: {
-		enabled: boolean;
-		provider?: string;
-		model?: string;
-		note: string;
-	};
-	researchNotes: string[];
 	totalCases: number;
 	passedCases: number;
 	failedCases: number;

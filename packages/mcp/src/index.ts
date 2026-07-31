@@ -16,7 +16,17 @@ export type { AtlasPromptDefinition } from "./prompts/prompt-utils";
 export { registerAtlasPrompt } from "./prompts/prompt-utils";
 export { summarizeModulePrompt } from "./prompts/summarize-module.prompt";
 export { documentResource } from "./resources/document.resource";
+export {
+	buildIndexedSourceCatalog,
+	discoveryDescription,
+	discoveryInstructions,
+} from "./discovery/indexed-source-catalog";
+export type {
+	IndexedSourceCatalog,
+	IndexedSourceCatalogEntry,
+} from "./discovery/indexed-source-catalog";
 export { manifestResource } from "./resources/manifest.resource";
+export { registerIndexedSourceResource } from "./resources/indexed-source.resource";
 export { moduleResource } from "./resources/module.resource";
 export { packageResource } from "./resources/package.resource";
 export { repoResource } from "./resources/repo.resource";
@@ -113,6 +123,7 @@ export {
 	executePlanContext,
 	PLAN_CONTEXT_TOOL,
 	registerPlanContextTool,
+	registerSourcePlanContextTool,
 } from "./tools/plan-context.tool";
 export {
 	executeReadOutline,

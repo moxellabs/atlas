@@ -1,5 +1,7 @@
 import type { Authority, DiagnosticConfidence, Provenance } from "@atlas/core";
 
+export * from "./agent-effect";
+
 export interface AtlasEvalDataset {
 	name: string;
 	cases: AtlasEvalCase[];

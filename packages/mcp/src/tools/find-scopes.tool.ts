@@ -29,7 +29,8 @@ export function registerFindScopesTool(server: McpServer, dependencies: AtlasMcp
       title: "Find ATLAS scopes",
       description: "Infer likely repository, package, module, or skill scopes for a query.",
       inputSchema: findScopesInputSchema,
-      outputSchema: jsonOutputSchema
+      outputSchema: jsonOutputSchema,
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
     (input) => toolResult(executeFindScopes(input, dependencies))
   );
