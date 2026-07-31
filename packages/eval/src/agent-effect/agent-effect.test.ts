@@ -114,6 +114,22 @@ describe("agent effect evaluation", () => {
           exit_code: 1,
         },
       },
+      {
+        type: "item.completed",
+        item: {
+          type: "command_execution",
+          command: "/usr/bin/cat docs/private.md",
+          exit_code: 0,
+        },
+      },
+      {
+        type: "item.completed",
+        item: {
+          type: "command_execution",
+          command: "/usr/bin/git fetch origin",
+          exit_code: 0,
+        },
+      },
     ]
       .map((event) => JSON.stringify(event))
       .join("\n");
@@ -131,6 +147,8 @@ describe("agent effect evaluation", () => {
       { kind: "command", name: "printf", source: "shell", ok: true },
       { kind: "command", name: "cat", source: "filesystem", ok: true },
       { kind: "command", name: "gh", source: "github", ok: false },
+      { kind: "command", name: "cat", source: "filesystem", ok: true },
+      { kind: "command", name: "git", source: "github", ok: true },
     ]);
     expect(trace.protocolErrors).toBe(0);
   });
