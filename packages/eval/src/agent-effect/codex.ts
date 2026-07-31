@@ -49,6 +49,8 @@ export async function createCodexExecutor(input: {
   readonly useGlobal?: boolean;
   /** Snapshot the caller's indexed corpus into the isolated treatment runtime. */
   readonly snapshotGlobalCorpus?: boolean;
+  /** Expose normal web, shell, and filesystem tools alongside Atlas to both answer arms. */
+  readonly competitiveTools?: boolean;
 }): Promise<CodexExecutorHandle> {
   const workDir = await mkdtemp(join(tmpdir(), "atlas-luna-eval-"));
   const generatedAgentCwd = input.agentCwd === undefined;
@@ -115,6 +117,7 @@ export async function createCodexExecutor(input: {
             ? {}
             : { configPath: config.configPath }),
           useGlobal: input.useGlobal === true,
+          competitiveTools: input.competitiveTools === true,
           outputSchemaPath: agentSchemaPath,
           runner: input.dataset.runner,
           arm,
@@ -152,6 +155,7 @@ async function runAgent(input: {
   readonly workDir: string;
   readonly configPath?: string;
   readonly useGlobal: boolean;
+  readonly competitiveTools: boolean;
   readonly outputSchemaPath: string;
   readonly runner: AgentEffectDataset["runner"];
   readonly arm: AgentArm;
@@ -281,6 +285,7 @@ export function codexAgentCommand(input: {
   readonly workDir: string;
   readonly configPath?: string;
   readonly useGlobal: boolean;
+  readonly competitiveTools?: boolean;
   readonly outputSchemaPath: string;
   readonly outputPath: string;
   readonly runner: AgentEffectDataset["runner"];
@@ -292,7 +297,9 @@ export function codexAgentCommand(input: {
     "codex",
     "exec",
     "--ephemeral",
-    ...hermeticCodexOptions(input.workDir),
+    ...(input.competitiveTools === true
+      ? competitiveCodexOptions(input.workDir)
+      : hermeticCodexOptions(input.workDir)),
     "--json",
     "-C",
     input.cwd,
@@ -685,6 +692,27 @@ function hermeticCodexEnvironment(): Record<string, string> {
     PATH: Bun.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
     TZ: "UTC",
   };
+}
+
+function competitiveCodexOptions(workDir: string): string[] {
+  return [
+    "--ignore-user-config",
+    "--ignore-rules",
+    "--enable",
+    "web_search",
+    "-c",
+    'web_search="live"',
+    "-c",
+    "tools.web_search=true",
+    "-c",
+    "sandbox_workspace_write.network_access=false",
+    "-c",
+    'shell_environment_policy.inherit="none"',
+    "-c",
+    shellEnvironmentSet(workDir),
+    "--sandbox",
+    "workspace-write",
+  ];
 }
 
 function hermeticCodexOptions(workDir: string): string[] {
