@@ -148,7 +148,7 @@ async function runAgent(input: {
     command,
     input.cwd,
     input.runner.agentTimeoutMs,
-    hermeticCodexEnvironment(input.workDir),
+    hermeticCodexEnvironment(),
   );
   const durationMs = Math.round(performance.now() - started);
   const trace = traceMcpEvents(result.stdout);
@@ -267,7 +267,7 @@ async function judgePair(input: {
     ],
     input.cwd,
     input.runner.judgeTimeoutMs,
-    hermeticCodexEnvironment(input.workDir),
+    hermeticCodexEnvironment(),
   );
   if (result.exitCode !== 0 || result.timedOut) {
     return failedJudgeVerdict(
@@ -734,7 +734,7 @@ async function snapshotGlobalCorpus(input: {
   };
 }
 
-function hermeticCodexEnvironment(_workDir: string): Record<string, string> {
+function hermeticCodexEnvironment(): Record<string, string> {
   return {
     CODEX_HOME: Bun.env.CODEX_HOME ?? join(homedir(), ".codex"),
     GH_TOKEN: "",
@@ -768,7 +768,7 @@ async function runCommand(
   command: string[],
   cwd: string,
   timeoutMs: number,
-  env: Record<string, string> = hermeticCodexEnvironment(cwd),
+  env: Record<string, string> = hermeticCodexEnvironment(),
 ): Promise<{
   stdout: string;
   stderr: string;
