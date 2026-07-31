@@ -4,7 +4,9 @@ import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { createDocId, createSectionId } from "@atlas/core";
 import {
+  DocRepository,
   countRepoCorpusRows,
   ManifestRepository,
   openStore,
@@ -12,9 +14,14 @@ import {
 } from "@atlas/store";
 import { agentEffectDatasetDigest } from "./dataset";
 import { resolveSnapshotFreshness, writeAgentEffectSnapshot } from "./history";
-import { isolateCorpusSnapshot } from "./corpus-snapshot";
+import { isolateCorpusSnapshot, readCorpusEvidence } from "./corpus-snapshot";
 import { assertHermeticAtlasDiscovery, runAgentEffectEvaluation } from "./run";
-import { atlasMcpServerArgs, codexAgentCommand, traceMcpEvents } from "./codex";
+import {
+  atlasMcpServerArgs,
+  codexAgentCommand,
+  judgePrompt,
+  traceMcpEvents,
+} from "./codex";
 import type { AgentEffectDataset, AgentRun } from "./types";
 
 const dataset: AgentEffectDataset = {
@@ -195,6 +202,21 @@ describe("agent effect evaluation", () => {
       ),
     ).toBe(false);
     expect(baselineCommand.at(-1)).toBe(prompt);
+    const evidence = [
+      {
+        path: "docs/a.md",
+        text: "AUTHORITATIVE_JUDGE_ONLY_EVIDENCE",
+      },
+    ];
+    expect(
+      judgePrompt(
+        dataset.tasks[0]!,
+        { answer: "left", citations: [] },
+        { answer: "right", citations: [] },
+        evidence,
+      ),
+    ).toContain("AUTHORITATIVE_JUDGE_ONLY_EVIDENCE");
+    expect(prompt).not.toContain("AUTHORITATIVE_JUDGE_ONLY_EVIDENCE");
   });
 
   test("selects checkout or global Atlas MCP arguments explicitly", () => {
@@ -240,6 +262,29 @@ describe("agent effect evaluation", () => {
         compilerVersion: "compiler-v1",
       });
     }
+    const evidencePath = "docs/architecture/recovery.md";
+    const docId = createDocId({ repoId: targetRepoId, path: evidencePath });
+    const headingPath = ["Recovery"];
+    new DocRepository(source).replaceCanonicalDocument({
+      docId,
+      repoId: targetRepoId,
+      path: evidencePath,
+      sourceVersion: "diffract-revision",
+      title: "Recovery",
+      kind: "repo-doc",
+      authority: "canonical",
+      scopes: [{ level: "repo", repoId: targetRepoId }],
+      sections: [
+        {
+          sectionId: createSectionId({ docId, headingPath, ordinal: 0 }),
+          headingPath,
+          ordinal: 0,
+          text: "Recovery repairs only the interrupted append.",
+          codeBlocks: [],
+        },
+      ],
+      metadata: { tags: ["recovery", "append"] },
+    });
     source.close();
 
     const provenance = await isolateCorpusSnapshot({
@@ -276,6 +321,18 @@ describe("agent effect evaluation", () => {
         .update(await readFile(targetPath))
         .digest("hex"),
     });
+    expect(
+      readCorpusEvidence({
+        corpusPath: targetPath,
+        repoId: targetRepoId,
+        paths: [evidencePath, evidencePath],
+      }),
+    ).toEqual([
+      {
+        path: evidencePath,
+        text: "Recovery repairs only the interrupted append.",
+      },
+    ]);
     const unchangedSource = openStore({ path: sourcePath, readOnly: true });
     try {
       expect(

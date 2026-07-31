@@ -3,7 +3,13 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import { deleteRepoCorpus, openStore, RepoRepository } from "@atlas/store";
+import {
+  deleteRepoCorpus,
+  DocRepository,
+  openStore,
+  RepoRepository,
+  SectionRepository,
+} from "@atlas/store";
 
 export interface IsolatedCorpusProvenance {
   readonly indexedRevision: string;
@@ -61,4 +67,42 @@ export async function isolateCorpusSnapshot(input: {
     .update(await readFile(input.targetPath))
     .digest("hex");
   return { indexedRevision, corpusDigest };
+}
+
+export interface CorpusEvidence {
+  readonly path: string;
+  readonly text: string;
+}
+
+/** Reads exact source-relative documents for the judge without exposing them to answer arms. */
+export function readCorpusEvidence(input: {
+  readonly corpusPath: string;
+  readonly repoId: string;
+  readonly paths: readonly string[];
+}): CorpusEvidence[] {
+  const store = openStore({ path: input.corpusPath, readOnly: true });
+  try {
+    const documents = new DocRepository(store).listByRepo(input.repoId);
+    const byPath = new Map(
+      documents.map((document) => [document.path, document]),
+    );
+    const sections = new SectionRepository(store);
+    return [...new Set(input.paths)].map((path) => {
+      const document = byPath.get(path);
+      if (document === undefined) {
+        throw new Error(
+          `Judge evidence path ${path} is absent from the isolated ${input.repoId} corpus.`,
+        );
+      }
+      return {
+        path,
+        text: sections
+          .listByDocument(document.docId)
+          .map((section) => section.text)
+          .join("\n\n"),
+      };
+    });
+  } finally {
+    store.close();
+  }
 }
