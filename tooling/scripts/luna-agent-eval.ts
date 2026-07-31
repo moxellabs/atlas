@@ -37,6 +37,14 @@ if (useGlobal && snapshotGlobalCorpus) {
     "--global and --snapshot-global-corpus are mutually exclusive.",
   );
 }
+if (requireAtlasAdoption && (!snapshotGlobalCorpus || agentCwd !== undefined)) {
+  throw new Error(
+    "Atlas adoption gates require --snapshot-global-corpus and an evaluator-generated empty workspace.",
+  );
+}
+if (requireAtlasAdoption && trialCount !== undefined && trialCount < 3) {
+  throw new Error("Atlas adoption gates require at least three trials.");
+}
 
 if (Bun.env.CI !== undefined && Bun.env.CI !== "") {
   throw new Error(
