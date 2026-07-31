@@ -26,16 +26,16 @@ bun run eval
 
 What to run locally:
 
-| Command                                            | When                                                                                                                  |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `bun run eval` or `bun run eval:full`              | Default: full MCP/retrieval manifest; writes `evals/reports/*.json` and `*.html` (same underlying script).            |
-| `bun run eval:quick`                               | Fast smoke subset; reports under `/tmp`.                                                                              |
-| `bun run eval:ci`                                  | Same dataset as full, plus CI thresholds; writes under `/tmp` (GitHub Actions uses this).                             |
-| `bun run eval:baseline:update`                     | After reviewing a full run: promote metrics into `evals/baseline/`.                                                   |
-| `bun run eval:luna`                                | Run the local Luna paired benchmark and write ignored output under `/tmp`. Requires an authenticated local Codex CLI. |
-| `bun run eval:luna:smoke`                          | One paired `plan_context` trial. Requires a successful Atlas MCP tool call and fails closed if none is observed.       |
-| `bun run eval:luna:release -- --release-id vX.Y.Z` | Run the full local benchmark and write a sanitized, versioned release snapshot under `evals/history/luna/`.           |
-| `bun run eval:release:dashboard`                   | Compose a release dashboard from the current deterministic report and the newest compatible Luna snapshot.            |
+| Command                                            | When                                                                                                                    |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `bun run eval` or `bun run eval:full`              | Default: full MCP/retrieval manifest; writes `evals/reports/*.json` and `*.html` (same underlying script).              |
+| `bun run eval:quick`                               | Fast smoke subset; reports under `/tmp`.                                                                                |
+| `bun run eval:ci`                                  | Same dataset as full, plus CI thresholds; writes under `/tmp` (GitHub Actions uses this).                               |
+| `bun run eval:baseline:update`                     | After reviewing a full run: promote metrics into `evals/baseline/`.                                                     |
+| `bun run eval:luna`                                | Run the local Luna paired benchmark and write ignored output under `/tmp`. Requires an authenticated local Codex CLI.   |
+| `bun run eval:luna:smoke`                          | One paired, answerable Atlas documentation trial. Requires a successful Atlas MCP tool call and fails closed otherwise. |
+| `bun run eval:luna:release -- --release-id vX.Y.Z` | Run the full local benchmark and write a sanitized, versioned release snapshot under `evals/history/luna/`.             |
+| `bun run eval:release:dashboard`                   | Compose a release dashboard from the current deterministic report and the newest compatible Luna snapshot.              |
 
 Default full-suite outputs:
 
