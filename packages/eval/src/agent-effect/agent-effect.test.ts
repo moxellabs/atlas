@@ -6,7 +6,11 @@ import { join } from "node:path";
 import { agentEffectDatasetDigest } from "./dataset";
 import { resolveSnapshotFreshness, writeAgentEffectSnapshot } from "./history";
 import { runAgentEffectEvaluation } from "./run";
-import { atlasMcpServerArgs, traceMcpEvents } from "./codex";
+import {
+	atlasMcpServerArgs,
+	codexAgentCommand,
+	traceMcpEvents,
+} from "./codex";
 import type { AgentEffectDataset, AgentRun } from "./types";
 
 const dataset: AgentEffectDataset = {
@@ -63,6 +67,95 @@ describe("agent effect evaluation", () => {
 			calls: [{ kind: "tool", name: "plan_context", source: "atlas", ok: true }],
 			protocolErrors: 0,
 		});
+	});
+
+	test("captures evidence-capable activity from both agent arms", () => {
+		const stdout = [
+			{
+				type: "item.completed",
+				item: {
+					type: "mcp_tool_call",
+					server: "atlas_eval",
+					tool: "plan_context__diffract",
+					error: null,
+				},
+			},
+			{
+				type: "item.completed",
+				item: { type: "web_search_call", error: null },
+			},
+			{
+				type: "item.completed",
+				item: {
+					type: "command_execution",
+					command: "printf ok",
+					exit_code: 0,
+				},
+			},
+			{
+				type: "item.completed",
+				item: {
+					type: "command_execution",
+					command: "cat docs/architecture.md",
+					exit_code: 0,
+				},
+			},
+			{
+				type: "item.completed",
+				item: {
+					type: "command_execution",
+					command: "gh api repos/owner/private",
+					exit_code: 1,
+				},
+			},
+		]
+			.map((event) => JSON.stringify(event))
+			.join("\n");
+
+		const trace = traceMcpEvents(`${stdout}\n`);
+
+		expect(trace.calls).toEqual([
+			{
+				kind: "tool",
+				name: "plan_context__diffract",
+				source: "atlas",
+				ok: true,
+			},
+			{ kind: "web_search", name: "web_search", source: "web", ok: true },
+			{ kind: "command", name: "printf", source: "shell", ok: true },
+			{ kind: "command", name: "cat", source: "filesystem", ok: true },
+			{ kind: "command", name: "gh", source: "github", ok: false },
+		]);
+		expect(trace.protocolErrors).toBe(0);
+	});
+
+	test("builds an isolated treatment command without hiding Atlas in the prompt", () => {
+		const command = codexAgentCommand({
+			atlasCwd: "/atlas",
+			cwd: "/consumer",
+			workDir: "/tmp/eval",
+			configPath: "/tmp/eval/atlas.config.json",
+			useGlobal: false,
+			outputSchemaPath: "/tmp/eval/output.schema.json",
+			outputPath: "/tmp/eval/output.json",
+			runner: dataset.runner,
+			arm: "treatment",
+			task: dataset.tasks[0]!,
+			trial: 1,
+		});
+		const prompt = command.at(-1);
+
+		expect(command).toContain("--ignore-user-config");
+		expect(command).toContain("--ignore-rules");
+		expect(command).toContain("web_search");
+		expect(command).toContain("standalone_web_search");
+		expect(command).toContain('shell_environment_policy.inherit="none"');
+		expect(command).toContain(
+			`mcp_servers.atlas_eval.command=${JSON.stringify(process.execPath)}`,
+		);
+		expect(prompt).toContain(dataset.tasks[0]!.prompt);
+		expect(prompt).not.toContain("Use Atlas");
+		expect(prompt).not.toContain("plan_context");
 	});
 
 	test("selects checkout or global Atlas MCP arguments explicitly", () => {

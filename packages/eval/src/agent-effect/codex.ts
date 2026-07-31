@@ -219,6 +219,8 @@ async function judgePair(input: {
 			"apps",
 			"--disable",
 			"plugins",
+			"-c",
+			shellEnvironmentSet(input.workDir),
 			"--sandbox",
 			"workspace-write",
 			"-C",
@@ -258,7 +260,7 @@ async function judgePair(input: {
 	}
 }
 
-function codexAgentCommand(input: {
+export function codexAgentCommand(input: {
 	readonly atlasCwd: string;
 	readonly cwd: string;
 	readonly workDir: string;
@@ -296,6 +298,8 @@ function codexAgentCommand(input: {
 		`model_reasoning_effort=${JSON.stringify(input.runner.reasoningEffort)}`,
 		"-c",
 		'shell_environment_policy.inherit="none"',
+		"-c",
+		shellEnvironmentSet(input.workDir),
 		"--output-schema",
 		input.outputSchemaPath,
 		"-o",
@@ -311,7 +315,7 @@ function codexAgentCommand(input: {
 		});
 		command.push(
 			"-c",
-			'mcp_servers.atlas_eval.command="bun"',
+			`mcp_servers.atlas_eval.command=${JSON.stringify(process.execPath)}`,
 			"-c",
 			`mcp_servers.atlas_eval.args=${JSON.stringify(serverArgs)}`,
 		);
@@ -656,21 +660,23 @@ async function snapshotGlobalCorpus(input: {
 	return { configPath, source: "explicit-config" };
 }
 
-function hermeticCodexEnvironment(workDir: string): Record<string, string> {
+function hermeticCodexEnvironment(_workDir: string): Record<string, string> {
 	return {
 		CODEX_HOME: Bun.env.CODEX_HOME ?? join(homedir(), ".codex"),
 		GH_TOKEN: "",
 		GITHUB_TOKEN: "",
-		HOME: join(workDir, "home"),
+		HOME: homedir(),
 		LANG: "C.UTF-8",
 		LC_ALL: "C.UTF-8",
 		OPENAI_API_KEY: Bun.env.OPENAI_API_KEY ?? "",
 		PATH: Bun.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
 		TZ: "UTC",
-		XDG_CACHE_HOME: join(workDir, "home", ".cache"),
-		XDG_CONFIG_HOME: join(workDir, "home", ".config"),
-		XDG_DATA_HOME: join(workDir, "home", ".local", "share"),
 	};
+}
+
+function shellEnvironmentSet(workDir: string): string {
+	const home = join(workDir, "home");
+	return `shell_environment_policy.set={ HOME = ${JSON.stringify(home)}, GH_TOKEN = "", GITHUB_TOKEN = "", XDG_CACHE_HOME = ${JSON.stringify(join(home, ".cache"))}, XDG_CONFIG_HOME = ${JSON.stringify(join(home, ".config"))}, XDG_DATA_HOME = ${JSON.stringify(join(home, ".local", "share"))} }`;
 }
 
 async function runText(

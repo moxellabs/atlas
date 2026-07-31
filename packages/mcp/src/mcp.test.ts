@@ -736,7 +736,7 @@ describe("mcp package", () => {
 		const facade = tools.tools.find((tool) => tool.name === "plan_context__atlas");
 		expect(facade).toMatchObject({
 			title: "Plan local atlas documentation",
-			description: expect.stringContaining("session"),
+			description: expect.stringMatching(/session.*append/),
 			annotations: expect.objectContaining({ readOnlyHint: true }),
 		});
 		const result = await client.callTool({
@@ -1284,7 +1284,7 @@ function createDocument(): CanonicalDocument {
 		metadata: {
 			packageId,
 			moduleId,
-			tags: ["session"],
+			tags: ["session", "append"],
 		},
 	};
 }
