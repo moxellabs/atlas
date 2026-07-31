@@ -251,6 +251,44 @@ describe("agent effect evaluation", () => {
         .update(await readFile(targetPath))
         .digest("hex"),
     });
+    const unchangedSource = openStore({ path: sourcePath, readOnly: true });
+    try {
+      expect(
+        new RepoRepository(unchangedSource)
+          .list()
+          .map((repo) => repo.repoId)
+          .sort(),
+      ).toEqual([excludedRepoId, targetRepoId].sort());
+    } finally {
+      unchangedSource.close();
+    }
+  });
+
+  test("rejects unavailable and incomplete source corpora", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "atlas-corpus-errors-"));
+    await expect(
+      isolateCorpusSnapshot({
+        sourcePath: join(directory, "missing.db"),
+        targetPath: join(directory, "target.db"),
+        repoId: "github.com/example/missing",
+      }),
+    ).rejects.toThrow("corpus is unavailable");
+
+    const sourcePath = join(directory, "incomplete.db");
+    const source = openStore({ path: sourcePath, migrate: true });
+    new RepoRepository(source).upsert({
+      repoId: "github.com/example/incomplete",
+      mode: "local-git",
+      revision: "revision",
+    });
+    source.close();
+    await expect(
+      isolateCorpusSnapshot({
+        sourcePath,
+        targetPath: join(directory, "isolated.db"),
+        repoId: "github.com/example/incomplete",
+      }),
+    ).rejects.toThrow("does not contain a complete index");
   });
 
   test("aggregates paired baseline and MCP treatment evidence deterministically", async () => {
