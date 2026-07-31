@@ -154,7 +154,7 @@ describe("agent effect evaluation", () => {
   });
 
   test("builds an isolated treatment command without hiding Atlas in the prompt", () => {
-    const command = codexAgentCommand({
+    const common = {
       atlasCwd: "/atlas",
       cwd: "/consumer",
       workDir: "/tmp/eval",
@@ -163,10 +163,10 @@ describe("agent effect evaluation", () => {
       outputSchemaPath: "/tmp/eval/output.schema.json",
       outputPath: "/tmp/eval/output.json",
       runner: dataset.runner,
-      arm: "treatment",
       task: dataset.tasks[0]!,
       trial: 1,
-    });
+    };
+    const command = codexAgentCommand({ ...common, arm: "treatment" });
     const prompt = command.at(-1);
 
     expect(command).toContain("--ignore-user-config");
@@ -188,6 +188,13 @@ describe("agent effect evaluation", () => {
     expect(prompt).toContain(dataset.tasks[0]!.prompt);
     expect(prompt).not.toContain("Use Atlas");
     expect(prompt).not.toContain("plan_context");
+    const baselineCommand = codexAgentCommand({ ...common, arm: "baseline" });
+    expect(
+      baselineCommand.some((argument) =>
+        argument.startsWith("mcp_servers.atlas_eval."),
+      ),
+    ).toBe(false);
+    expect(baselineCommand.at(-1)).toBe(prompt);
   });
 
   test("selects checkout or global Atlas MCP arguments explicitly", () => {
