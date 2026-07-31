@@ -572,8 +572,16 @@ function commandExecutable(command: string): string {
 }
 
 function commandSource(command: string): "shell" | "filesystem" | "github" {
-  if (/(?:^|\s)gh(?:\s|$)/.test(command)) return "github";
+  const executable = commandExecutable(command);
   if (
+    executable === "gh" ||
+    executable === "git" ||
+    /(?:^|\s)(?:gh|git)(?:\s|$)/.test(command)
+  ) {
+    return "github";
+  }
+  if (
+    FILESYSTEM_COMMANDS.has(executable) ||
     /(?:^|\s)(?:cat|find|grep|ls|pwd|readlink|rg|sed|stat)(?:\s|$)/.test(
       command,
     )
@@ -582,6 +590,18 @@ function commandSource(command: string): "shell" | "filesystem" | "github" {
   }
   return "shell";
 }
+
+const FILESYSTEM_COMMANDS = new Set([
+  "cat",
+  "find",
+  "grep",
+  "ls",
+  "pwd",
+  "readlink",
+  "rg",
+  "sed",
+  "stat",
+]);
 
 async function snapshotGlobalCorpus(input: {
   workDir: string;
