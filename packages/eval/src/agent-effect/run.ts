@@ -133,7 +133,7 @@ export function aggregateAgentEffect(
 				return atlasCalls(run).length > 0 && calls.every((call) => call.source === "atlas");
 			}),
 			fallbackRate: rate(treatment, ({ run }) =>
-				(run.mcp?.calls ?? []).some((call) => call.source === "web"),
+				(run.mcp?.calls ?? []).some((call) => call.source !== "atlas"),
 			),
 			averageCalls:
 				treatment.length === 0 ? 0 : treatmentCalls.length / treatment.length,

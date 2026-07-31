@@ -6,6 +6,7 @@ import { dirname, resolve } from "node:path";
 
 import {
 	agentEffectDatasetDigest,
+	type AgentEffectSnapshot,
 	createCodexExecutor,
 	loadAgentEffectDataset,
 	runAgentEffectEvaluation,
@@ -195,18 +196,42 @@ function positiveInteger(
 	return parsed;
 }
 
-function assertAtlasAdoption(snapshot: Awaited<
-	ReturnType<typeof runAgentEffectEvaluation>
->): void {
+function assertAtlasAdoption(snapshot: AgentEffectSnapshot): void {
+	const targetMetrics = snapshot.metrics.mcp;
+	const metricFailure =
+		targetMetrics.adoptionRate !== 1 ||
+		targetMetrics.atlasFirstRate !== 1 ||
+		targetMetrics.localOnlyRate !== 1 ||
+		targetMetrics.fallbackRate !== 0 ||
+		targetMetrics.protocolErrorRate !== 0;
+	const trials = snapshot.pairs.map((pair) => pair.trial).sort((a, b) => a - b);
+	const consecutiveTrials =
+		trials.length >= 3 &&
+		trials.every((trial, index) => trial === index + 1);
 	const failed = snapshot.pairs.filter((pair) => {
-		const trace = pair.treatment.mcp;
-		return !trace?.calls.some(
-			(call) => call.source === "atlas" && call.kind === "tool" && call.ok,
+		const baselineTrace = pair.baseline.mcp;
+		const treatmentTrace = pair.treatment.mcp;
+		const atlasCalls =
+			treatmentTrace?.calls.filter(
+				(call) => call.source === "atlas" && call.kind === "tool" && call.ok,
+			) ?? [];
+		return (
+			pair.treatment.status !== "completed" ||
+			baselineTrace === undefined ||
+			baselineTrace.calls.length !== 0 ||
+			baselineTrace.protocolErrors !== 0 ||
+			treatmentTrace === undefined ||
+			treatmentTrace.protocolErrors !== 0 ||
+			atlasCalls.length === 0 ||
+			treatmentTrace.calls[0]?.source !== "atlas" ||
+			treatmentTrace.calls.some((call) => call.source !== "atlas") ||
+			pair.judge.treatment.unsupportedClaimCount !== 0 ||
+			pair.judge.treatment.criteria.some((criterion) => !criterion.passed)
 		);
 	});
-	if (failed.length > 0) {
+	if (metricFailure || !consecutiveTrials || failed.length > 0) {
 		throw new Error(
-			`Atlas local-evidence adoption check failed for ${failed.map((pair) => `${pair.taskId}:${pair.trial}`).join(", ")}.`,
+			`Atlas discovery gate failed. metrics=${JSON.stringify(targetMetrics)} trials=${JSON.stringify(trials)} failed=${failed.map((pair) => `${pair.taskId}:${pair.trial}`).join(",") || "none"}.`,
 		);
 	}
 }
