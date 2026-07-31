@@ -33,7 +33,7 @@ What to run locally:
 | `bun run eval:ci`                                  | Same dataset as full, plus CI thresholds; writes under `/tmp` (GitHub Actions uses this).                               |
 | `bun run eval:baseline:update`                     | After reviewing a full run: promote metrics into `evals/baseline/`.                                                     |
 | `bun run eval:luna`                                | Run the local Luna paired benchmark and write ignored output under `/tmp`. Requires an authenticated local Codex CLI.   |
-| `bun run eval:luna:smoke`                          | One paired, answerable Atlas documentation trial. Requires a successful Atlas MCP tool call and fails closed otherwise. |
+| `bun run eval:luna:smoke`                          | One paired Diffract documentation trial over the global corpus. Requires a successful Atlas MCP tool call.             |
 | `bun run eval:luna:release -- --release-id vX.Y.Z` | Run the full local benchmark and write a sanitized, versioned release snapshot under `evals/history/luna/`.             |
 | `bun run eval:release:dashboard`                   | Compose a release dashboard from the current deterministic report and the newest compatible Luna snapshot.              |
 
@@ -87,7 +87,7 @@ Path-substring expectations are used instead of generated document IDs so the su
 
 Both arms use `gpt-5.6-luna` with high effort. The task prompt never names Atlas, MCP, or a tool. MCP startup failures are tracked separately from a completed treatment run with no Atlas use; lack of adoption is an outcome, not an infrastructure success. Adoption, Atlas-first ordering, local-only completion, web fallback, protocol errors, answer completion, grounding, citations, unsupported claims, and abstention are measured from actual runs. A separate anonymous Luna judge grades both answers against the human-authored criteria.
 
-The runner uses ephemeral Codex configuration and never calls `codex mcp add`, modifies user configuration, reads API tokens into the report, or runs in CI. Use `--workspace <consumer-workspace>` to evaluate from a real consumer project; without it, the runner creates an empty isolated consumer workspace. Raw Codex JSONL remains local; the committed release snapshot is sanitized and contains bounded final answers, citations, judge outcomes, and MCP trace summaries only.
+The runner uses ephemeral Codex configuration and never calls `codex mcp add`, modifies user configuration, reads API tokens into the report, or runs in CI. Use `--workspace <consumer-workspace>` to evaluate from a real consumer project; without it, the runner creates an empty isolated consumer workspace. The Diffract discovery smoke passes `--global` so its treatment reads the user's explicitly indexed global corpus; standard and release runs continue to use the repo-local artifact. Raw Codex JSONL remains local; the committed release snapshot is sanitized and contains bounded final answers, citations, judge outcomes, and MCP trace summaries only.
 
 ## Adding or changing cases
 

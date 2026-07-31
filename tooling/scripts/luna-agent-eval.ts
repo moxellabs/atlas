@@ -27,6 +27,7 @@ const taskId = args.task;
 const trialCount = positiveInteger(args.trials, "--trials");
 const requireAtlasAdoption = args["require-atlas-adoption"] === "true";
 const agentCwd = args.workspace === undefined ? undefined : resolve(cwd, args.workspace);
+const useGlobal = args.global === "true";
 
 if (Bun.env.CI !== undefined && Bun.env.CI !== "") {
 	throw new Error(
@@ -63,7 +64,12 @@ const dataset = {
 	tasks,
 };
 const datasetDigest = agentEffectDatasetDigest(dataset);
-const handle = await createCodexExecutor({ cwd, dataset, ...(agentCwd === undefined ? {} : { agentCwd }) });
+const handle = await createCodexExecutor({
+	cwd,
+	dataset,
+	...(agentCwd === undefined ? {} : { agentCwd }),
+	...(useGlobal ? { useGlobal: true } : {}),
+});
 try {
 	const snapshot = await runAgentEffectEvaluation({
 		dataset,
@@ -71,8 +77,8 @@ try {
 		datasetDigest,
 		provenance: {
 			evaluatedRevision: await git(cwd, ["rev-parse", "HEAD"]),
-			...(await readIndexedRevision(cwd)),
-			...(await readCorpusDigest(cwd)),
+			...(useGlobal ? {} : await readIndexedRevision(cwd)),
+			...(useGlobal ? {} : await readCorpusDigest(cwd)),
 			codexVersion: handle.codexVersion,
 		},
 		executor: handle.executor,

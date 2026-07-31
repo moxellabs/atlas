@@ -24,7 +24,7 @@
 		"eval:ci": "rm -rf /tmp/atlas-eval-report && mkdir -p /tmp/atlas-eval-report && bun tooling/scripts/mcp-retrieval-eval.ts --dataset evals/mcp-retrieval.dataset.json --out /tmp/atlas-eval-report/mcp-retrieval-report.json --html /tmp/atlas-eval-report/mcp-retrieval-report.html --trend-log none --min-pass-rate 0.98 --min-path-recall 0.9 --min-term-recall 0.9 --min-non-empty-context-rate 0.9 --min-recall-at-5 0.5 --min-mrr 0.25 --min-no-result-accuracy 0.95 --min-forbidden-path-accuracy 1.0 --max-p95-latency-ms 1500",
 		"eval:baseline:update": "bun tooling/scripts/mcp-retrieval-eval.ts --dataset evals/mcp-retrieval.dataset.json --update-baseline --trend-log none",
 		"eval:luna": "bun tooling/scripts/luna-agent-eval.ts",
-		"eval:luna:smoke": "bun tooling/scripts/luna-agent-eval.ts --dataset evals/datasets/luna-agent-discovery-smoke.json --require-atlas-adoption",
+		"eval:luna:smoke": "bun tooling/scripts/luna-agent-eval.ts --dataset evals/datasets/luna-agent-discovery-smoke.json --global --require-atlas-adoption",
 		"eval:luna:release": "bun tooling/scripts/luna-agent-eval.ts",
 		"eval:release:dashboard": "bun tooling/scripts/release-eval-dashboard.ts",
 		"typecheck": "bunx tsc --noEmit",
