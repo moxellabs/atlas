@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { agentEffectDatasetDigest } from "./dataset";
 import { resolveSnapshotFreshness, writeAgentEffectSnapshot } from "./history";
 import { runAgentEffectEvaluation } from "./run";
-import { traceMcpEvents } from "./codex";
+import { atlasMcpServerArgs, traceMcpEvents } from "./codex";
 import type { AgentEffectDataset, AgentRun } from "./types";
 
 const dataset: AgentEffectDataset = {
@@ -63,6 +63,27 @@ describe("agent effect evaluation", () => {
 			calls: [{ kind: "tool", name: "plan_context", source: "atlas", ok: true }],
 			protocolErrors: 0,
 		});
+	});
+
+	test("selects checkout or global Atlas MCP arguments explicitly", () => {
+		expect(
+			atlasMcpServerArgs({
+				atlasCwd: "/atlas",
+				configPath: "/tmp/eval.json",
+				useGlobal: false,
+			}),
+		).toEqual([
+			"/atlas/apps/cli/src/index.ts",
+			"--config",
+			"/tmp/eval.json",
+			"mcp",
+		]);
+		expect(
+			atlasMcpServerArgs({ atlasCwd: "/atlas", useGlobal: true }),
+		).toEqual(["/atlas/apps/cli/src/index.ts", "mcp"]);
+		expect(() =>
+			atlasMcpServerArgs({ atlasCwd: "/atlas", useGlobal: false }),
+		).toThrow("explicit local eval config or global runtime");
 	});
 
 	test("aggregates paired baseline and MCP treatment evidence deterministically", async () => {

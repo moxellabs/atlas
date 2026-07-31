@@ -36,6 +36,8 @@ export async function createCodexExecutor(input: {
 	readonly dataset: AgentEffectDataset;
 	/** Optional consumer workspace. When omitted, an empty isolated workspace is created. */
 	readonly agentCwd?: string;
+	/** Use the caller's global Atlas runtime instead of the checkout artifact. */
+	readonly useGlobal?: boolean;
 }): Promise<CodexExecutorHandle> {
 	const workDir = await mkdtemp(join(tmpdir(), "atlas-luna-eval-"));
 	const generatedAgentCwd = input.agentCwd === undefined;
@@ -45,7 +47,7 @@ export async function createCodexExecutor(input: {
 	}
 	const config = await resolveEvalConfig({
 		cli: "bun run cli",
-		useGlobal: false,
+		useGlobal: input.useGlobal === true,
 		cwd: input.cwd,
 	});
 	const agentSchemaPath = join(workDir, "agent-output.schema.json");
@@ -57,8 +59,8 @@ export async function createCodexExecutor(input: {
 	const codexVersion = (
 		await runText(["codex", "--version"], input.cwd, 15_000)
 	).trim();
-	if (config.configPath === undefined) {
-		throw new Error("Agent-effect treatment requires a local indexed Atlas artifact; no eval MCP config could be created.");
+	if (config.configPath === undefined && input.useGlobal !== true) {
+		throw new Error("Agent-effect treatment requires a local indexed Atlas artifact or explicit global runtime.");
 	}
 	return {
 		codexVersion,
@@ -71,6 +73,7 @@ export async function createCodexExecutor(input: {
 					...(config.configPath === undefined
 						? {}
 						: { configPath: config.configPath }),
+					useGlobal: input.useGlobal === true,
 					outputSchemaPath: agentSchemaPath,
 					runner: input.dataset.runner,
 					arm,
@@ -107,6 +110,7 @@ async function runAgent(input: {
 	readonly cwd: string;
 	readonly workDir: string;
 	readonly configPath?: string;
+	readonly useGlobal: boolean;
 	readonly outputSchemaPath: string;
 	readonly runner: AgentEffectDataset["runner"];
 	readonly arm: AgentArm;
@@ -231,6 +235,7 @@ function codexAgentCommand(input: {
 	readonly cwd: string;
 	readonly workDir: string;
 	readonly configPath?: string;
+	readonly useGlobal: boolean;
 	readonly outputSchemaPath: string;
 	readonly outputPath: string;
 	readonly runner: AgentEffectDataset["runner"];
@@ -257,12 +262,13 @@ function codexAgentCommand(input: {
 		input.outputPath,
 	];
 	if (input.arm === "treatment") {
-		if (input.configPath === undefined) {
-			throw new Error(
-				"Atlas MCP treatment requires an explicit local eval config.",
-			);
-		}
-		const serverArgs = [join(input.atlasCwd, "apps/cli/src/index.ts"), "--config", input.configPath, "mcp"];
+		const serverArgs = atlasMcpServerArgs({
+			atlasCwd: input.atlasCwd,
+			...(input.configPath === undefined
+				? {}
+				: { configPath: input.configPath }),
+			useGlobal: input.useGlobal,
+		});
 		command.push(
 			"-c",
 			'mcp_servers.atlas_eval.command="bun"',
@@ -272,6 +278,21 @@ function codexAgentCommand(input: {
 	}
 	command.push(agentPrompt(input.task));
 	return command;
+}
+
+export function atlasMcpServerArgs(input: {
+	readonly atlasCwd: string;
+	readonly configPath?: string;
+	readonly useGlobal: boolean;
+}): string[] {
+	const cliPath = join(input.atlasCwd, "apps/cli/src/index.ts");
+	if (input.configPath !== undefined) {
+		return [cliPath, "--config", input.configPath, "mcp"];
+	}
+	if (input.useGlobal) return [cliPath, "mcp"];
+	throw new Error(
+		"Atlas MCP treatment requires an explicit local eval config or global runtime.",
+	);
 }
 
 function agentPrompt(task: AgentEffectTask): string {

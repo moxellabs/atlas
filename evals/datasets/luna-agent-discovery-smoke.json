@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "name": "local-documentation-discovery-smoke",
-  "description": "A concrete Atlas documentation question whose answer is present in the indexed corpus; the prompt does not name MCP or a retrieval tool.",
-  "repoId": "github.com/moxellabs/atlas",
+  "description": "A concrete Diffract/WaveBridge question whose answer is present in the globally indexed corpus; the prompt does not name Atlas, MCP, or a retrieval tool.",
+  "repoId": "github.com/justmrmendez/diffract",
   "runner": {
     "model": "gpt-5.6-luna",
     "reasoningEffort": "high",
@@ -12,40 +12,34 @@
   },
   "tasks": [
     {
-      "id": "atlas-local-index-fallback",
-      "sourceCaseId": "atlas-local-index-fallback-documentation",
-      "title": "Use Atlas local indexing",
+      "id": "diffract-scene-session-recovery",
+      "sourceCaseId": "diffract-streaming-scene-session-documentation",
+      "title": "Explain scene-session recovery",
       "category": "local-documentation-discovery",
-      "prompt": "We need to use Atlas with a repository that does not publish a maintained artifact. How do we create a local-only index, and where does Atlas store the managed checkout and runtime corpus?",
+      "prompt": "In Diffract/WaveBridge, which files make up a .wb.scene-session container, and exactly what repairs may recovery perform after an interrupted append?",
       "criteria": [
         {
           "id": "completion",
           "kind": "completion",
-          "description": "Explains the documented local-only indexing command and storage locations.",
+          "description": "Names the three published container files and the bounded recovery repairs.",
           "evidencePaths": [
-            "README.md",
-            "docs/ingestion-build-flow.md",
-            "docs/runtime-surfaces.md"
+            "docs/architecture/streaming-scene-session.md"
           ]
         },
         {
           "id": "grounding",
           "kind": "grounding",
-          "description": "Does not invent undocumented indexing commands, paths, or artifact behavior.",
+          "description": "Does not invent additional files, rewriting, or unbounded recovery behavior.",
           "evidencePaths": [
-            "README.md",
-            "docs/ingestion-build-flow.md",
-            "docs/runtime-surfaces.md"
+            "docs/architecture/streaming-scene-session.md"
           ]
         },
         {
           "id": "citations",
           "kind": "citation",
-          "description": "Cites source-relative Atlas documentation supporting the answer.",
+          "description": "Cites the source-relative Diffract architecture document supporting the answer.",
           "evidencePaths": [
-            "README.md",
-            "docs/ingestion-build-flow.md",
-            "docs/runtime-surfaces.md"
+            "docs/architecture/streaming-scene-session.md"
           ]
         }
       ]
