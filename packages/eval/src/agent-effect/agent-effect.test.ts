@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { agentEffectDatasetDigest } from "./dataset";
 import { resolveSnapshotFreshness, writeAgentEffectSnapshot } from "./history";
-import { runAgentEffectEvaluation } from "./run";
+import { assertHermeticAtlasDiscovery, runAgentEffectEvaluation } from "./run";
 import { atlasMcpServerArgs, codexAgentCommand, traceMcpEvents } from "./codex";
 import type { AgentEffectDataset, AgentRun } from "./types";
 
@@ -245,6 +245,114 @@ describe("agent effect evaluation", () => {
     expect(snapshot.metrics.treatment.groundedAnswerRate).toBe(1);
     expect(snapshot.metrics.mcp.adoptionRate).toBe(1);
     expect(snapshot.representativeTraces.length).toBeGreaterThan(0);
+  });
+
+  test("requires repeated grounded Atlas-only discovery for every task", async () => {
+    const discoveryDataset: AgentEffectDataset = {
+      ...dataset,
+      runner: { ...dataset.runner, trialsPerTask: 3 },
+    };
+    const snapshot = await runAgentEffectEvaluation({
+      dataset: discoveryDataset,
+      releaseId: "local",
+      datasetDigest: agentEffectDatasetDigest(discoveryDataset),
+      provenance: {
+        evaluatedRevision: "abc123",
+        codexVersion: "codex 1.0",
+      },
+      executor: {
+        runAgent: async ({ arm, task, trial }): Promise<AgentRun> => ({
+          arm,
+          taskId: task.id,
+          trial,
+          startedAt: "2026-01-01T00:00:00.000Z",
+          durationMs: 1,
+          status: "completed",
+          answer: {
+            answer: arm === "baseline" ? "No evidence." : "Grounded answer.",
+            citations:
+              arm === "baseline"
+                ? []
+                : [{ path: "docs/a.md", claim: "fixture" }],
+          },
+          mcp: {
+            calls:
+              arm === "baseline"
+                ? []
+                : [
+                    {
+                      kind: "tool",
+                      name: "plan_context__fixture",
+                      source: "atlas",
+                      ok: true,
+                    },
+                  ],
+            protocolErrors: 0,
+          },
+        }),
+        judgePair: async () => ({
+          baseline: {
+            criteria: [
+              { id: "completion", passed: false, reason: "abstained" },
+              { id: "grounding", passed: true, reason: "grounded" },
+            ],
+            unsupportedClaimCount: 0,
+          },
+          treatment: {
+            criteria: [
+              { id: "completion", passed: true, reason: "complete" },
+              { id: "grounding", passed: true, reason: "grounded" },
+            ],
+            unsupportedClaimCount: 0,
+          },
+        }),
+      },
+    });
+
+    expect(() => assertHermeticAtlasDiscovery(snapshot)).not.toThrow();
+    expect(() => assertHermeticAtlasDiscovery(snapshot, 4)).toThrow("trials=");
+
+    const secondTaskPairs = snapshot.pairs.map((pair) => ({
+      ...pair,
+      taskId: "second-task",
+      baseline: { ...pair.baseline, taskId: "second-task" },
+      treatment: { ...pair.treatment, taskId: "second-task" },
+    }));
+    expect(() =>
+      assertHermeticAtlasDiscovery({
+        ...snapshot,
+        pairs: [...snapshot.pairs, ...secondTaskPairs],
+      }),
+    ).not.toThrow();
+
+    const first = snapshot.pairs[0]!;
+    const withFallback = {
+      ...snapshot,
+      pairs: [
+        {
+          ...first,
+          treatment: {
+            ...first.treatment,
+            mcp: {
+              calls: [
+                ...(first.treatment.mcp?.calls ?? []),
+                {
+                  kind: "web_search" as const,
+                  name: "web_search",
+                  source: "web" as const,
+                  ok: true,
+                },
+              ],
+              protocolErrors: 0,
+            },
+          },
+        },
+        ...snapshot.pairs.slice(1),
+      ],
+    };
+    expect(() => assertHermeticAtlasDiscovery(withFallback)).toThrow(
+      "failed=task:1",
+    );
   });
 
   test("keeps history-only commits fresh and marks source changes stale", async () => {

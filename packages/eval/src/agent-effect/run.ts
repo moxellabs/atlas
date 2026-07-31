@@ -148,6 +148,64 @@ export function aggregateAgentEffect(
   };
 }
 
+/** Enforces a repeated, hermetic, grounded Atlas-discovery result. */
+export function assertHermeticAtlasDiscovery(
+  snapshot: AgentEffectSnapshot,
+  minimumTrialsPerTask = 3,
+): void {
+  const targetMetrics = snapshot.metrics.mcp;
+  const metricFailure =
+    targetMetrics.adoptionRate !== 1 ||
+    targetMetrics.atlasFirstRate !== 1 ||
+    targetMetrics.localOnlyRate !== 1 ||
+    targetMetrics.fallbackRate !== 0 ||
+    targetMetrics.protocolErrorRate !== 0;
+  const trialsByTask = new Map<string, number[]>();
+  for (const pair of snapshot.pairs) {
+    const trials = trialsByTask.get(pair.taskId) ?? [];
+    trials.push(pair.trial);
+    trialsByTask.set(pair.taskId, trials);
+  }
+  const nonConsecutiveTasks = [...trialsByTask].flatMap(([taskId, trials]) => {
+    const sorted = [...trials].sort((left, right) => left - right);
+    return sorted.length >= minimumTrialsPerTask &&
+      sorted.every((trial, index) => trial === index + 1)
+      ? []
+      : [`${taskId}:${sorted.join(",")}`];
+  });
+  const failedPairs = snapshot.pairs.filter((pair) => {
+    const baselineTrace = pair.baseline.mcp;
+    const treatmentTrace = pair.treatment.mcp;
+    const atlasCalls =
+      treatmentTrace?.calls.filter(
+        (call) => call.source === "atlas" && call.kind === "tool" && call.ok,
+      ) ?? [];
+    return (
+      pair.treatment.status !== "completed" ||
+      baselineTrace === undefined ||
+      baselineTrace.calls.length !== 0 ||
+      baselineTrace.protocolErrors !== 0 ||
+      treatmentTrace === undefined ||
+      treatmentTrace.protocolErrors !== 0 ||
+      atlasCalls.length === 0 ||
+      treatmentTrace.calls[0]?.source !== "atlas" ||
+      treatmentTrace.calls.some((call) => call.source !== "atlas") ||
+      pair.judge.treatment.unsupportedClaimCount !== 0 ||
+      pair.judge.treatment.criteria.some((criterion) => !criterion.passed)
+    );
+  });
+  if (
+    metricFailure ||
+    trialsByTask.size === 0 ||
+    nonConsecutiveTasks.length > 0 ||
+    failedPairs.length > 0
+  ) {
+    throw new Error(
+      `Atlas discovery gate failed. metrics=${JSON.stringify(targetMetrics)} trials=${nonConsecutiveTasks.join(";") || "ok"} failed=${failedPairs.map((pair) => `${pair.taskId}:${pair.trial}`).join(",") || "none"}.`,
+    );
+  }
+}
+
 function atlasCalls(run: AgentRun) {
   return (run.mcp?.calls ?? []).filter((call) => call.source === "atlas");
 }

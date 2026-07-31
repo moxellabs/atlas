@@ -6,7 +6,7 @@ import { dirname, resolve } from "node:path";
 
 import {
   agentEffectDatasetDigest,
-  type AgentEffectSnapshot,
+  assertHermeticAtlasDiscovery,
   createCodexExecutor,
   loadAgentEffectDataset,
   runAgentEffectEvaluation,
@@ -113,7 +113,7 @@ try {
     await writeFile(outputPath, `${JSON.stringify(snapshot, null, 2)}\n`);
     console.log(`Wrote local Luna result ${outputPath}`);
   }
-  if (requireAtlasAdoption) assertAtlasAdoption(snapshot);
+  if (requireAtlasAdoption) assertHermeticAtlasDiscovery(snapshot);
   console.log(
     `Luna paired results: ${snapshot.metrics.paired.wins} treatment wins, ${snapshot.metrics.paired.ties} ties, ${snapshot.metrics.paired.losses} treatment losses across ${snapshot.metrics.pairs} pairs.`,
   );
@@ -209,45 +209,6 @@ function positiveInteger(
     throw new Error(`${option} must be a positive integer.`);
   }
   return parsed;
-}
-
-function assertAtlasAdoption(snapshot: AgentEffectSnapshot): void {
-  const targetMetrics = snapshot.metrics.mcp;
-  const metricFailure =
-    targetMetrics.adoptionRate !== 1 ||
-    targetMetrics.atlasFirstRate !== 1 ||
-    targetMetrics.localOnlyRate !== 1 ||
-    targetMetrics.fallbackRate !== 0 ||
-    targetMetrics.protocolErrorRate !== 0;
-  const trials = snapshot.pairs.map((pair) => pair.trial).sort((a, b) => a - b);
-  const consecutiveTrials =
-    trials.length >= 3 && trials.every((trial, index) => trial === index + 1);
-  const failed = snapshot.pairs.filter((pair) => {
-    const baselineTrace = pair.baseline.mcp;
-    const treatmentTrace = pair.treatment.mcp;
-    const atlasCalls =
-      treatmentTrace?.calls.filter(
-        (call) => call.source === "atlas" && call.kind === "tool" && call.ok,
-      ) ?? [];
-    return (
-      pair.treatment.status !== "completed" ||
-      baselineTrace === undefined ||
-      baselineTrace.calls.length !== 0 ||
-      baselineTrace.protocolErrors !== 0 ||
-      treatmentTrace === undefined ||
-      treatmentTrace.protocolErrors !== 0 ||
-      atlasCalls.length === 0 ||
-      treatmentTrace.calls[0]?.source !== "atlas" ||
-      treatmentTrace.calls.some((call) => call.source !== "atlas") ||
-      pair.judge.treatment.unsupportedClaimCount !== 0 ||
-      pair.judge.treatment.criteria.some((criterion) => !criterion.passed)
-    );
-  });
-  if (metricFailure || !consecutiveTrials || failed.length > 0) {
-    throw new Error(
-      `Atlas discovery gate failed. metrics=${JSON.stringify(targetMetrics)} trials=${JSON.stringify(trials)} failed=${failed.map((pair) => `${pair.taskId}:${pair.trial}`).join(",") || "none"}.`,
-    );
-  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
