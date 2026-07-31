@@ -56,6 +56,11 @@ if (releaseId !== undefined && !(await hasCleanTrackedWorktree(cwd))) {
     "Release Luna snapshots require committed source changes. Commit or stash tracked changes, then run the benchmark before adding its history-only snapshot commit.",
   );
 }
+if (requireAtlasAdoption && !(await hasCleanTrackedWorktree(cwd))) {
+  throw new Error(
+    "Atlas adoption gates require committed source changes so evaluatedRevision identifies the exact implementation under test.",
+  );
+}
 
 const loadedDataset = await loadAgentEffectDataset(datasetPath);
 const tasks =
