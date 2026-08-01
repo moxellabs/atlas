@@ -846,6 +846,45 @@ describe("agent integration manager", () => {
         allowedKeys: ["type", "command", "args", "env"],
       }),
     ).resolves.toBe(true);
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        mcpServers: { atlas: { command: "atlas-mcp", tools: ["custom"] } },
+      }),
+    );
+    const copilotVerification = {
+      kind: "native-config" as const,
+      path: configPath,
+      keyPath: ["mcpServers", "atlas"],
+      server: { command: "atlas-mcp", args: [] },
+      allowedKeys: ["type", "command", "args", "env", "tools"],
+      expectedValues: { tools: ["*"] },
+    };
+    await expect(fileOperationMatches(copilotVerification)).resolves.toBe(
+      false,
+    );
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        mcpServers: { atlas: { command: "atlas-mcp", tools: ["*"] } },
+      }),
+    );
+    await expect(fileOperationMatches(copilotVerification)).resolves.toBe(true);
+    const copilotPlan = planAgentInstall(
+      {
+        clientId: "copilot",
+        scope: "user",
+        mode: "standard",
+        server: { command: "atlas-mcp", args: [] },
+      },
+      fixture.environment,
+    );
+    expect(copilotPlan.operations[0]).toMatchObject({
+      verification: {
+        allowedKeys: ["type", "command", "args", "env", "tools"],
+        expectedValues: { tools: ["*"] },
+      },
+    });
 
     const plan = planAgentInstall(
       {
@@ -894,7 +933,6 @@ async function writeClaudeConfig(path: string): Promise<void> {
           atlas: {
             command: "npx",
             args: ["--yes", "@mrmendez/atlas@0.2.3", "mcp"],
-            tools: ["*"],
           },
         },
       },
