@@ -98,7 +98,13 @@ export function readCorpusEvidence(input: {
         path,
         text: sections
           .listByDocument(document.docId)
-          .map((section) => section.text)
+          .flatMap((section) => [
+            section.text,
+            ...section.codeBlocks.map(
+              (block) => `\`\`\`${block.lang ?? ""}\n${block.code}\n\`\`\``,
+            ),
+          ])
+          .filter((part) => part.length > 0)
           .join("\n\n"),
       };
     });

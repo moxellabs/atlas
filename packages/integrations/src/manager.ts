@@ -547,6 +547,10 @@ function installOperations(
           ),
           keyPath: [...adapter.verification.rootPath, "atlas"],
           server,
+          allowedKeys: adapter.verification.allowedKeys,
+          ...(adapter.verification.expectedValues === undefined
+            ? {}
+            : { expectedValues: adapter.verification.expectedValues }),
         },
       },
     ];
@@ -1111,7 +1115,10 @@ function isNativeConfigVerification(
     value.kind === "native-config" &&
     typeof value.path === "string" &&
     stringArray(value.keyPath) &&
-    isServerLaunchSpec(value.server)
+    isServerLaunchSpec(value.server) &&
+    stringArray(value.allowedKeys) &&
+    (value.expectedValues === undefined ||
+      isUnknownRecord(value.expectedValues))
   );
 }
 

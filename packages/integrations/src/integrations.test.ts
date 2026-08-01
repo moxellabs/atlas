@@ -168,6 +168,32 @@ describe("agent integration manager", () => {
     );
   });
 
+  test("replaces an owned managed-file recipe when its mode changes", async () => {
+    const fixture = await createFixture();
+    const configPath = join(
+      fixture.workspace,
+      ".continue",
+      "mcpServers",
+      "atlas.yaml",
+    );
+    await installAgentIntegration(
+      { clientId: "continue", scope: "workspace", mode: "standard" },
+      fixture.environment,
+    );
+    const initial = await readFile(configPath, "utf8");
+
+    const updated = await installAgentIntegration(
+      { clientId: "continue", scope: "workspace", mode: "prefer-local" },
+      fixture.environment,
+    );
+
+    expect(updated.changed).toBe(true);
+    expect(updated.receipt?.mode).toBe("prefer-local");
+    const configured = await readFile(configPath, "utf8");
+    expect(configured).not.toBe(initial);
+    expect(configured).toContain("prefer-local");
+  });
+
   test("serializes concurrent installs for one client and scope", async () => {
     const fixture = await createFixture();
     const results = await Promise.all([
@@ -269,6 +295,14 @@ describe("agent integration manager", () => {
       ),
     ).rejects.toThrow("Refusing to overwrite unmanaged");
     expect(await readFile(configPath, "utf8")).toBe("user-owned: true\n");
+    await writeFile(configPath, "");
+    await expect(
+      installAgentIntegration(
+        { clientId: "continue", scope: "workspace", mode: "standard" },
+        fixture.environment,
+      ),
+    ).rejects.toThrow("Refusing to overwrite unmanaged");
+    expect(await readFile(configPath, "utf8")).toBe("");
   });
 
   test("atomically configures Codex MCP with supported reliability settings", async () => {
@@ -538,7 +572,7 @@ describe("agent integration manager", () => {
     expect(report.healthy).toBe(true);
     expect(commands).toContainEqual(["claude", "mcp", "get", "atlas"]);
     const configured = JSON.parse(await readFile(configPath, "utf8"));
-    configured.mcpServers.atlas.env = { USER_OVERRIDE: "1" };
+    configured.mcpServers.atlas.timeout = 30_000;
     await writeFile(configPath, `${JSON.stringify(configured, null, 2)}\n`);
     await expect(
       removeAgentIntegration("claude", "user", fixture.environment),
@@ -809,6 +843,7 @@ describe("agent integration manager", () => {
         path: configPath,
         keyPath: ["mcpServers", "atlas"],
         server: { command: "atlas-mcp", args: [] },
+        allowedKeys: ["type", "command", "args", "env"],
       }),
     ).resolves.toBe(true);
 
