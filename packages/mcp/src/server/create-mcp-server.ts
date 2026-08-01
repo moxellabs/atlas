@@ -90,6 +90,11 @@ const TOOL_NAMES = [
   GET_FRESHNESS_TOOL,
   WHAT_CHANGED_TOOL,
 ] as const;
+const BOUNDED_REMOTE_TOOL_NAMES = [
+  PLAN_CONTEXT_TOOL,
+  FIND_SCOPES_TOOL,
+  FIND_DOCS_TOOL,
+] as const;
 
 const DEFAULT_RESOURCE_NAMES = [
   "atlas-manifest",
@@ -121,11 +126,14 @@ export function createAtlasMcpServer(
     description: discoveryDescription(catalog),
   };
   const effectiveDependencies = { ...dependencies, identity: metadata };
-  const resourceNames = DEFAULT_RESOURCE_NAMES.map((name) =>
-    name.startsWith("atlas-")
-      ? `${metadata.resourcePrefix}-${name.slice("atlas-".length)}`
-      : name,
-  );
+  const exposeAggregates = dependencies.exposurePolicy !== "bounded-remote";
+  const resourceNames = exposeAggregates
+    ? DEFAULT_RESOURCE_NAMES.map((name) =>
+        name.startsWith("atlas-")
+          ? `${metadata.resourcePrefix}-${name.slice("atlas-".length)}`
+          : name,
+      )
+    : [];
   const server = new McpServer(
     {
       name: metadata.name,
@@ -150,8 +158,12 @@ export function createAtlasMcpServer(
     string,
     ReturnType<typeof registerIndexedSourceResource>
   >();
-  const toolNames: string[] = [...TOOL_NAMES];
+  const toolNames: string[] = [
+    ...(exposeAggregates ? TOOL_NAMES : BOUNDED_REMOTE_TOOL_NAMES),
+  ];
   const allResourceNames: string[] = [...resourceNames];
+  const staticToolCount = toolNames.length;
+  const staticResourceCount = allResourceNames.length;
   const registerSourceSurfaces = (nextCatalog: IndexedSourceCatalog) => {
     for (const source of nextCatalog.sources) {
       const tool = registerSourcePlanContextTool(
@@ -159,15 +171,17 @@ export function createAtlasMcpServer(
         effectiveDependencies,
         source,
       );
-      const resource = registerIndexedSourceResource(
-        server,
-        metadata.resourcePrefix,
-        source,
-      );
       dynamicTools.set(source.repoId, tool);
-      dynamicResources.set(source.repoId, resource);
+      if (exposeAggregates) {
+        const resource = registerIndexedSourceResource(
+          server,
+          metadata.resourcePrefix,
+          source,
+        );
+        dynamicResources.set(source.repoId, resource);
+        allResourceNames.push(resource.name);
+      }
       toolNames.push(tool.name);
-      allResourceNames.push(resource.name);
     }
   };
   registerSourceSurfaces(catalog);
@@ -177,7 +191,8 @@ export function createAtlasMcpServer(
     metadata: { tools: [...toolNames] },
   });
 
-  registerResources(server, effectiveDependencies, metadata);
+  if (exposeAggregates)
+    registerResources(server, effectiveDependencies, metadata);
   diagnostics.push({
     stage: "resource",
     message: `Registered ${allResourceNames.length} MCP resources.`,
@@ -211,8 +226,8 @@ export function createAtlasMcpServer(
         registered.handle.remove();
       dynamicTools.clear();
       dynamicResources.clear();
-      toolNames.splice(TOOL_NAMES.length);
-      allResourceNames.splice(resourceNames.length);
+      toolNames.splice(staticToolCount);
+      allResourceNames.splice(staticResourceCount);
       catalog = nextCatalog;
       genericPlanTool.update({
         description: genericPlanDescription(catalog),
@@ -241,15 +256,17 @@ function registerTools(
   });
   registerFindScopesTool(server, dependencies);
   registerFindDocsTool(server, dependencies);
-  registerReadOutlineTool(server, dependencies);
-  registerReadSectionTool(server, dependencies);
-  registerExpandRelatedTool(server, dependencies);
-  registerExplainModuleTool(server, dependencies);
-  registerListSkillsTool(server, dependencies);
-  registerGetSkillTool(server, dependencies);
-  registerUseSkillTool(server, dependencies);
-  registerGetFreshnessTool(server, dependencies);
-  registerWhatChangedTool(server, dependencies);
+  if (dependencies.exposurePolicy !== "bounded-remote") {
+    registerReadOutlineTool(server, dependencies);
+    registerReadSectionTool(server, dependencies);
+    registerExpandRelatedTool(server, dependencies);
+    registerExplainModuleTool(server, dependencies);
+    registerListSkillsTool(server, dependencies);
+    registerGetSkillTool(server, dependencies);
+    registerUseSkillTool(server, dependencies);
+    registerGetFreshnessTool(server, dependencies);
+    registerWhatChangedTool(server, dependencies);
+  }
   return planTool;
 }
 

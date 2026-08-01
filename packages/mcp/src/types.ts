@@ -16,6 +16,8 @@ export const ATLAS_MCP_DISCOVERY_POLICIES = [
 export type AtlasMcpDiscoveryPolicy =
   (typeof ATLAS_MCP_DISCOVERY_POLICIES)[number];
 
+export type AtlasMcpExposurePolicy = "full" | "bounded-remote";
+
 export interface AtlasMcpDependencies {
   /** Initialized ATLAS store database. */
   db: StoreDatabase;
@@ -23,6 +25,8 @@ export interface AtlasMcpDependencies {
   identity?: AtlasMcpIdentity | undefined;
   /** Client-visible discovery guidance; neutral never directs tool selection. */
   discoveryPolicy?: AtlasMcpDiscoveryPolicy | undefined;
+  /** Controls whether aggregate resources and tools are exposed. */
+  exposurePolicy?: AtlasMcpExposurePolicy | undefined;
   /** Optional source-backed diff provider used by what_changed in full runtimes. */
   sourceDiffProvider?: AtlasSourceDiffProvider | undefined;
 }

@@ -108,9 +108,7 @@ function assertRemoteCorpusPayloadBounds(
   maxResponseBytes: number,
 ): void {
   // JSON escaping can expand one input byte to six output bytes. Reserve
-  // additional envelope space so no single persisted value can allocate an
-  // oversized remote response before middleware serialization.
-  const maxStoredBytes = Math.max(1_024, Math.floor(maxResponseBytes / 8));
+  // envelope and aggregate-row space before any remote response is built.
   const checks = [
     {
       source: "section",
@@ -118,22 +116,91 @@ function assertRemoteCorpusPayloadBounds(
         length(CAST(text AS BLOB)) +
         length(CAST(code_blocks_json AS BLOB))
       ) AS bytes FROM sections`,
+      divisor: 8,
     },
     {
       source: "chunk",
       sql: "SELECT MAX(length(CAST(text AS BLOB))) AS bytes FROM chunks",
+      divisor: 8,
     },
     {
       source: "summary",
       sql: "SELECT MAX(length(CAST(text AS BLOB))) AS bytes FROM summaries",
+      divisor: 8,
     },
     {
       source: "skill artifact",
-      sql: "SELECT MAX(size_bytes) AS bytes FROM skill_artifacts",
+      sql: `SELECT MAX(
+        MAX(size_bytes, COALESCE(length(CAST(content AS BLOB)), 0))
+      ) AS bytes FROM skill_artifacts`,
+      divisor: 8,
+    },
+    {
+      source: "document metadata",
+      sql: `SELECT MAX(
+        length(CAST(path AS BLOB)) +
+        COALESCE(length(CAST(title AS BLOB)), 0) +
+        COALESCE(length(CAST(description AS BLOB)), 0) +
+        length(CAST(tags_json AS BLOB)) +
+        length(CAST(audience_json AS BLOB)) +
+        length(CAST(purpose_json AS BLOB))
+      ) AS bytes FROM documents`,
+      divisor: 256,
+    },
+    {
+      source: "repository metadata",
+      sql: `SELECT MAX(
+        length(CAST(repo_id AS BLOB)) +
+        length(CAST(revision AS BLOB))
+      ) AS bytes FROM repos`,
+      divisor: 256,
+    },
+    {
+      source: "package metadata",
+      sql: `SELECT MAX(
+        length(CAST(name AS BLOB)) +
+        length(CAST(path AS BLOB)) +
+        length(CAST(manifest_path AS BLOB))
+      ) AS bytes FROM packages`,
+      divisor: 256,
+    },
+    {
+      source: "module metadata",
+      sql: `SELECT MAX(
+        length(CAST(name AS BLOB)) +
+        length(CAST(path AS BLOB))
+      ) AS bytes FROM modules`,
+      divisor: 256,
+    },
+    {
+      source: "skill metadata",
+      sql: `SELECT MAX(
+        length(CAST(source_doc_path AS BLOB)) +
+        COALESCE(length(CAST(title AS BLOB)), 0) +
+        COALESCE(length(CAST(description AS BLOB)), 0) +
+        length(CAST(headings_json AS BLOB)) +
+        length(CAST(key_sections_json AS BLOB)) +
+        length(CAST(topics_json AS BLOB)) +
+        length(CAST(aliases_json AS BLOB))
+      ) AS bytes FROM skills`,
+      divisor: 256,
+    },
+    {
+      source: "manifest metadata",
+      sql: `SELECT MAX(
+        COALESCE(length(CAST(indexed_revision AS BLOB)), 0) +
+        COALESCE(length(CAST(partial_selector_json AS BLOB)), 0) +
+        COALESCE(length(CAST(compiler_version AS BLOB)), 0)
+      ) AS bytes FROM manifests`,
+      divisor: 256,
     },
   ] as const;
   for (const check of checks) {
     const bytes = db.get<{ bytes: number | null }>(check.sql)?.bytes ?? 0;
+    const maxStoredBytes = Math.max(
+      1_024,
+      Math.floor(maxResponseBytes / check.divisor),
+    );
     if (bytes > maxStoredBytes)
       throw new Error(
         `Remote corpus ${check.source} payload is ${bytes} bytes; the safe per-value limit for ATLAS_REMOTE_MAX_RESPONSE_BYTES=${maxResponseBytes} is ${maxStoredBytes}. Split the source content or raise the response limit before hosting it.`,
@@ -167,6 +234,7 @@ function createConfigBoundServices(
           : createSourceDiffProvider(indexerDeps),
         mcpIdentity,
         env.discoveryPolicy,
+        env.remote?.enabled === true ? "bounded-remote" : "full",
       )
     : undefined;
   return {

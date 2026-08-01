@@ -229,13 +229,28 @@ describe("server app", () => {
           ),
         )
       ).status,
-    ).toBe(403);
+    ).toBe(405);
     expect(() =>
       assertRemoteExposureSafe(
         { ...publicDependencies.env, remote: { ...remote, repoAllowlist: [] } },
         publicDependencies.config,
       ),
     ).toThrow("ATLAS_REMOTE_REPO_ALLOWLIST");
+    expect(() =>
+      assertRemoteExposureSafe(
+        {
+          ...publicDependencies.env,
+          remote: {
+            ...remote,
+            repoAllowlist: Array.from(
+              { length: 101 },
+              (_, index) => `github.com/private/repo-${index}`,
+            ),
+          },
+        },
+        publicDependencies.config,
+      ),
+    ).toThrow("at most 100 repositories");
     const bounded = new RemoteSecurityService(
       {
         ...publicDependencies.env,
@@ -371,6 +386,31 @@ describe("server app", () => {
     await expect(
       buildServerDependencies(remoteEnv, createResolvedConfig(dbPath)),
     ).rejects.toThrow("safe per-value limit");
+  });
+
+  test("checks stored skill artifact bytes instead of declared size", async () => {
+    new SkillRepository(store).replaceArtifacts(skillId, [
+      {
+        skillId,
+        path: "references/oversized.md",
+        kind: "reference",
+        contentHash: "mismatched-declared-size",
+        sizeBytes: 1,
+        mimeType: "text/markdown",
+        content: "x".repeat(2_000),
+      },
+    ]);
+    const remoteEnv = loadServerEnv({
+      ATLAS_ENABLE_MCP: "false",
+      ATLAS_ENABLE_TELEMETRY: "false",
+      ATLAS_REMOTE_AUTH_TOKEN: "x".repeat(32),
+      ATLAS_REMOTE_TLS_TERMINATED: "true",
+      ATLAS_REMOTE_REPO_ALLOWLIST: repoId,
+      ATLAS_REMOTE_MAX_RESPONSE_BYTES: "8192",
+    });
+    await expect(
+      buildServerDependencies(remoteEnv, createResolvedConfig(dbPath)),
+    ).rejects.toThrow("skill artifact payload");
   });
 
   test("serves health, version, repo, manifest, freshness, and topology inspection", async () => {

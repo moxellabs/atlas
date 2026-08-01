@@ -336,14 +336,10 @@ export const AGENT_INTEGRATIONS: readonly AgentIntegrationDescriptor[] = [
     kind: "ide",
     executable: "zed",
     user: json(
-      (platform) => {
-        if (platform === "linux") return ".config/zed/settings.json";
-        if (platform === "darwin")
-          return "Library/Application Support/Zed/settings.json";
-        throw new Error(
-          `Automatic Zed user configuration is not supported on ${platform}; use atlas agent print-config zed --scope user and configure Zed manually.`,
-        );
-      },
+      (platform) =>
+        platform === "linux" || platform === "darwin"
+          ? ".config/zed/settings.json"
+          : undefined,
       ["context_servers"],
     ),
     workspace: json(".zed/settings.json", ["context_servers"]),

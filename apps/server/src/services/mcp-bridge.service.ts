@@ -4,6 +4,7 @@ import {
 } from "@atlas/mcp";
 import type {
   AtlasMcpIdentity,
+  AtlasMcpExposurePolicy,
   AtlasMcpServer,
   AtlasSourceDiffProvider,
   AtlasMcpDiscoveryPolicy,
@@ -33,9 +34,9 @@ export class McpBridgeService {
   private readonly db: AtlasStoreClient;
   private readonly sourceDiffProvider?: AtlasSourceDiffProvider | undefined;
   private readonly identity?: AtlasMcpIdentity | undefined;
-  private readonly discoveryRefreshTimer: ReturnType<typeof setInterval>;
   private initializationTail: Promise<void> = Promise.resolve();
   private readonly discoveryPolicy: AtlasMcpDiscoveryPolicy;
+  private readonly exposurePolicy: AtlasMcpExposurePolicy;
   private closed = false;
 
   constructor(
@@ -43,18 +44,13 @@ export class McpBridgeService {
     sourceDiffProvider?: AtlasSourceDiffProvider | undefined,
     identity?: AtlasMcpIdentity | undefined,
     discoveryPolicy: AtlasMcpDiscoveryPolicy = "neutral",
+    exposurePolicy: AtlasMcpExposurePolicy = "full",
   ) {
     this.db = db;
     this.sourceDiffProvider = sourceDiffProvider;
     this.identity = identity;
     this.discoveryPolicy = discoveryPolicy;
-    this.discoveryRefreshTimer = setInterval(() => {
-      this.catalogServer?.refreshDiscovery();
-      for (const session of this.sessions.values()) {
-        session.server.refreshDiscovery();
-      }
-    }, 5_000);
-    this.discoveryRefreshTimer.unref();
+    this.exposurePolicy = exposurePolicy;
   }
 
   /**
@@ -74,6 +70,7 @@ export class McpBridgeService {
       return jsonRpcErrorResponse(503, -32000, "MCP bridge is closed");
     }
     try {
+      this.refreshDiscoverySurfaces();
       await this.sweepIdleSessions(Date.now());
 
       const sessionId = request.headers.get("mcp-session-id");
@@ -94,7 +91,6 @@ export class McpBridgeService {
   /** Disposes every live session. Safe to call during config reload or shutdown. */
   async close(): Promise<void> {
     this.closed = true;
-    clearInterval(this.discoveryRefreshTimer);
     await this.initializationTail;
     const sessionIds = [...this.sessions.keys()];
     await Promise.all(
@@ -185,10 +181,18 @@ export class McpBridgeService {
       db: this.db,
       ...(this.identity === undefined ? {} : { identity: this.identity }),
       discoveryPolicy: this.discoveryPolicy,
+      exposurePolicy: this.exposurePolicy,
       ...(this.sourceDiffProvider === undefined
         ? {}
         : { sourceDiffProvider: this.sourceDiffProvider }),
     });
+  }
+
+  private refreshDiscoverySurfaces(): void {
+    this.catalogServer?.refreshDiscovery();
+    for (const session of this.sessions.values()) {
+      session.server.refreshDiscovery();
+    }
   }
 
   private async sweepIdleSessions(now: number): Promise<void> {

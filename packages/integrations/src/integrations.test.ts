@@ -337,6 +337,34 @@ describe("agent integration manager", () => {
     ).rejects.toThrow("Refusing to overwrite unmanaged Codex MCP server");
     expect(await readFile(configPath, "utf8")).toBe(original);
   });
+  test("rejects inline and dotted pre-existing Codex Atlas ownership", async () => {
+    const fixture = await createFixture(
+      async () => ({
+        exitCode: 0,
+        stdout: "codex-cli 0.146.0\n",
+        stderr: "",
+      }),
+      ["codex"],
+    );
+    const configPath = join(fixture.home, ".codex", "config.toml");
+    await mkdir(join(fixture.home, ".codex"), { recursive: true });
+    const variants = [
+      'mcp_servers = { atlas = { command = "user-owned", args = [] } }\n',
+      'mcp_servers.atlas.command = "user-owned"\n',
+      '[ "mcp_servers" . "atlas" ]\ncommand = "user-owned"\n',
+    ];
+
+    for (const original of variants) {
+      await writeFile(configPath, original);
+      await expect(
+        installAgentIntegration(
+          { clientId: "codex", scope: "user", mode: "standard" },
+          fixture.environment,
+        ),
+      ).rejects.toThrow("Refusing to overwrite unmanaged Codex MCP server");
+      expect(await readFile(configPath, "utf8")).toBe(original);
+    }
+  });
 
   test("rejects an unmanaged native Atlas entry before invoking the client", async () => {
     const commands: string[][] = [];
@@ -671,20 +699,40 @@ describe("agent integration manager", () => {
       { ...fixture.environment, platform: "darwin" },
     );
     expect(macPlan.operations[0]).toMatchObject({
-      path: join(
-        fixture.home,
-        "Library",
-        "Application Support",
-        "Zed",
-        "settings.json",
-      ),
+      path: join(fixture.home, ".config", "zed", "settings.json"),
     });
-    expect(() =>
-      planAgentInstall(
-        { clientId: "zed", scope: "user", mode: "standard" },
-        { ...fixture.environment, platform: "win32" },
-      ),
-    ).toThrow("not supported on win32");
+    const windowsEnvironment = {
+      ...fixture.environment,
+      platform: "win32" as const,
+    };
+    const windowsUserPlan = planAgentInstall(
+      { clientId: "zed", scope: "user", mode: "standard" },
+      windowsEnvironment,
+    );
+    expect(windowsUserPlan.requiresManualAction).toBe(true);
+    expect(windowsUserPlan.operations[0]).toMatchObject({
+      kind: "manual",
+      config: {
+        context_servers: {
+          atlas: expect.objectContaining({ command: "npx" }),
+        },
+      },
+    });
+    const windowsWorkspacePlan = planAgentInstall(
+      { clientId: "zed", scope: "workspace", mode: "standard" },
+      windowsEnvironment,
+    );
+    expect(windowsWorkspacePlan.operations[0]).toMatchObject({
+      path: join(fixture.workspace, ".zed", "settings.json"),
+    });
+    expect(
+      (
+        await installAgentIntegration(
+          { clientId: "zed", scope: "workspace", mode: "standard" },
+          windowsEnvironment,
+        )
+      ).changed,
+    ).toBe(true);
   });
 
   test("resolves Windows PATHEXT executables and preserves literal arguments", async () => {
