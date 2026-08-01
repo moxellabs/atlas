@@ -29,7 +29,7 @@ Dependency construction belongs in the runtime layer. Command modules should req
 
 ## Commands
 
-The CLI currently supports `setup`, `next`, `init`, `repo add`, `adoption-template`, `sync`, `build`, `index`, `hosts`, `search`, `artifact`, `serve`, `mcp`, `inspect`, `install-skill`, `list`, `clean`, `prune`, `doctor`, and `eval`.
+The CLI currently supports `setup`, `next`, `init`, `repo add`, `adoption-template`, `sync`, `build`, `index`, `hosts`, `search`, `artifact`, `serve`, `mcp`, `agent`, `inspect`, `install-skill`, `list`, `clean`, `prune`, `doctor`, and `eval`.
 
 `setup` creates user-home `~/.moxel/atlas` config and runtime directories. `next` inspects current setup/repo/corpus state and recommends one command. `repo add` imports an existing repo artifact for consumers; legacy `add-repo` remains the compatibility alias. `init` initializes repo-local `.moxel/atlas` artifact files for maintainers. `build` publishes/updates the artifact. `index` is the local-only fallback for repos that do not publish artifacts. `init`, `build`, `repo doctor`, `repo show`, and store-backed inspect commands share repo target inference: explicit flags win, then repo metadata/cwd/config/Git origin/bare-name sources can avoid repeated full IDs.
 
@@ -40,8 +40,10 @@ Command groups:
 - Build artifacts: `init`, `build`, `artifact verify`, `artifact inspect`.
 - Search/query: `search`, `list`, `serve`, `mcp`.
 - Diagnose: `doctor`, `repo doctor`, `inspect`, `clean`, `prune`.
-- Agent/editor workflow: `install-skill`.
+- Agent/editor workflow: `agent list`, `agent detect`, `agent install`, `agent remove`, `agent doctor`, `agent print-config`, and `install-skill`.
 - Evaluation: `eval`.
+
+`agent install` delegates durable configuration work to `@atlas/integrations`. It accepts one explicit client or `--detected`, a supported `user` or `workspace` scope, and `standard`, `discoverable`, or `prefer-local` mode. `agent remove` and `agent doctor` accept one explicit client or `--all`. Conflicting selectors fail instead of expanding the operation. `--dry-run` and `--json` make mutations inspectable in automation.
 
 ## Adoption templates
 

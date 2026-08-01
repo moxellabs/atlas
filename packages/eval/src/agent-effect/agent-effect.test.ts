@@ -189,12 +189,10 @@ describe("agent effect evaluation", () => {
     expect(command).toContain(
       `mcp_servers.atlas_eval.command=${JSON.stringify(process.execPath)}`,
     );
-    expect(command).toContain("features.deferred_tool_world_state=true");
-    expect(
-      command.some((argument) =>
-        argument.startsWith("features.non_prefixed_mcp_tool_names="),
-      ),
-    ).toBe(true);
+    expect(command).toContain(
+      'mcp_servers.atlas_eval.default_tools_approval_mode="writes"',
+    );
+    expect(command.join(" ")).toContain('"--discovery-policy","prefer-local"');
     expect(command).toContain("mcp_servers.atlas_eval.required=true");
     expect(command.filter((argument) => argument === "--sandbox")).toHaveLength(
       1,
@@ -265,9 +263,16 @@ describe("agent effect evaluation", () => {
       "--config",
       "/tmp/eval.json",
       "mcp",
+      "--discovery-policy",
+      "prefer-local",
     ]);
     expect(atlasMcpServerArgs({ atlasCwd: "/atlas", useGlobal: true })).toEqual(
-      ["/atlas/apps/cli/src/index.ts", "mcp"],
+      [
+        "/atlas/apps/cli/src/index.ts",
+        "mcp",
+        "--discovery-policy",
+        "prefer-local",
+      ],
     );
     expect(() =>
       atlasMcpServerArgs({ atlasCwd: "/atlas", useGlobal: false }),

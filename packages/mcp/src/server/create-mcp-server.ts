@@ -8,30 +8,73 @@ import { onboardToRepoPrompt } from "../prompts/onboard-to-repo.prompt";
 import { registerAtlasPrompt } from "../prompts/prompt-utils";
 import { summarizeModulePrompt } from "../prompts/summarize-module.prompt";
 import { documentResource } from "../resources/document.resource";
-import { buildIndexedSourceCatalog, discoveryDescription, discoveryInstructions, type IndexedSourceCatalog } from "../discovery/indexed-source-catalog";
+import {
+  buildIndexedSourceCatalog,
+  discoveryDescription,
+  discoveryInstructions,
+  type IndexedSourceCatalog,
+} from "../discovery/indexed-source-catalog";
 import { registerIndexedSourceResource } from "../resources/indexed-source.resource";
 import { manifestResource } from "../resources/manifest.resource";
 import { moduleResource } from "../resources/module.resource";
 import { packageResource } from "../resources/package.resource";
 import { repoResource } from "../resources/repo.resource";
-import { registerAtlasResource, withResourceIdentity } from "../resources/resource-utils";
+import {
+  registerAtlasResource,
+  withResourceIdentity,
+} from "../resources/resource-utils";
 import { skillArtifactResource } from "../resources/skill-artifact.resource";
 import { skillResource } from "../resources/skill.resource";
 import { summaryResource } from "../resources/summary.resource";
-import { EXPAND_RELATED_TOOL, registerExpandRelatedTool } from "../tools/expand-related.tool";
-import { EXPLAIN_MODULE_TOOL, registerExplainModuleTool } from "../tools/explain-module.tool";
+import {
+  EXPAND_RELATED_TOOL,
+  registerExpandRelatedTool,
+} from "../tools/expand-related.tool";
+import {
+  EXPLAIN_MODULE_TOOL,
+  registerExplainModuleTool,
+} from "../tools/explain-module.tool";
 import { FIND_DOCS_TOOL, registerFindDocsTool } from "../tools/find-docs.tool";
-import { FIND_SCOPES_TOOL, registerFindScopesTool } from "../tools/find-scopes.tool";
-import { GET_FRESHNESS_TOOL, registerGetFreshnessTool } from "../tools/get-freshness.tool";
+import {
+  FIND_SCOPES_TOOL,
+  registerFindScopesTool,
+} from "../tools/find-scopes.tool";
+import {
+  GET_FRESHNESS_TOOL,
+  registerGetFreshnessTool,
+} from "../tools/get-freshness.tool";
 import { GET_SKILL_TOOL, registerGetSkillTool } from "../tools/get-skill.tool";
-import { LIST_SKILLS_TOOL, registerListSkillsTool } from "../tools/list-skills.tool";
-import { PLAN_CONTEXT_TOOL, registerPlanContextTool, registerSourcePlanContextTool } from "../tools/plan-context.tool";
-import { READ_OUTLINE_TOOL, registerReadOutlineTool } from "../tools/read-outline.tool";
-import { READ_SECTION_TOOL, registerReadSectionTool } from "../tools/read-section.tool";
+import {
+  LIST_SKILLS_TOOL,
+  registerListSkillsTool,
+} from "../tools/list-skills.tool";
+import {
+  PLAN_CONTEXT_TOOL,
+  registerPlanContextTool,
+  registerSourcePlanContextTool,
+} from "../tools/plan-context.tool";
+import {
+  READ_OUTLINE_TOOL,
+  registerReadOutlineTool,
+} from "../tools/read-outline.tool";
+import {
+  READ_SECTION_TOOL,
+  registerReadSectionTool,
+} from "../tools/read-section.tool";
 import { USE_SKILL_TOOL, registerUseSkillTool } from "../tools/use-skill.tool";
-import { WHAT_CHANGED_TOOL, registerWhatChangedTool } from "../tools/what-changed.tool";
-import type { AtlasMcpDependencies, AtlasMcpDiagnostic, AtlasMcpServer } from "../types";
-import { ATLAS_MCP_CAPABILITIES, createAtlasMcpServerMetadata } from "./metadata";
+import {
+  WHAT_CHANGED_TOOL,
+  registerWhatChangedTool,
+} from "../tools/what-changed.tool";
+import type {
+  AtlasMcpDependencies,
+  AtlasMcpDiagnostic,
+  AtlasMcpServer,
+} from "../types";
+import {
+  ATLAS_MCP_CAPABILITIES,
+  createAtlasMcpServerMetadata,
+} from "./metadata";
 
 const TOOL_NAMES = [
   PLAN_CONTEXT_TOOL,
@@ -45,7 +88,7 @@ const TOOL_NAMES = [
   GET_SKILL_TOOL,
   USE_SKILL_TOOL,
   GET_FRESHNESS_TOOL,
-  WHAT_CHANGED_TOOL
+  WHAT_CHANGED_TOOL,
 ] as const;
 
 const DEFAULT_RESOURCE_NAMES = [
@@ -56,7 +99,7 @@ const DEFAULT_RESOURCE_NAMES = [
   "atlas-document",
   "atlas-skill",
   "atlas-skill-artifact",
-  "atlas-summary"
+  "atlas-summary",
 ] as const;
 const PROMPT_NAMES = [
   "answer_from_local_docs",
@@ -64,35 +107,63 @@ const PROMPT_NAMES = [
   "onboard_to_repo",
   "summarize_module",
   "compare_docs",
-  "explain_skill_usage"
+  "explain_skill_usage",
 ] as const;
 
 /** Creates and registers the complete ATLAS MCP server surface. */
-export function createAtlasMcpServer(dependencies: AtlasMcpDependencies): AtlasMcpServer {
+export function createAtlasMcpServer(
+  dependencies: AtlasMcpDependencies,
+): AtlasMcpServer {
   const diagnostics: AtlasMcpDiagnostic[] = [];
   let catalog = buildIndexedSourceCatalog(dependencies);
   const metadata = {
     ...createAtlasMcpServerMetadata(dependencies.identity),
-    description: discoveryDescription(catalog)
+    description: discoveryDescription(catalog),
   };
   const effectiveDependencies = { ...dependencies, identity: metadata };
-  const resourceNames = DEFAULT_RESOURCE_NAMES.map((name) => name.startsWith("atlas-") ? `${metadata.resourcePrefix}-${name.slice("atlas-".length)}` : name);
-  const server = new McpServer({
-    name: metadata.name,
-    version: metadata.version,
-    title: metadata.title,
-    description: metadata.description
-  }, { instructions: discoveryInstructions(catalog) });
+  const resourceNames = DEFAULT_RESOURCE_NAMES.map((name) =>
+    name.startsWith("atlas-")
+      ? `${metadata.resourcePrefix}-${name.slice("atlas-".length)}`
+      : name,
+  );
+  const server = new McpServer(
+    {
+      name: metadata.name,
+      version: metadata.version,
+      title: metadata.title,
+      description: metadata.description,
+    },
+    {
+      instructions: discoveryInstructions(
+        catalog,
+        dependencies.discoveryPolicy,
+      ),
+    },
+  );
 
   const genericPlanTool = registerTools(server, effectiveDependencies, catalog);
-  const dynamicTools = new Map<string, ReturnType<typeof registerSourcePlanContextTool>>();
-  const dynamicResources = new Map<string, ReturnType<typeof registerIndexedSourceResource>>();
+  const dynamicTools = new Map<
+    string,
+    ReturnType<typeof registerSourcePlanContextTool>
+  >();
+  const dynamicResources = new Map<
+    string,
+    ReturnType<typeof registerIndexedSourceResource>
+  >();
   const toolNames: string[] = [...TOOL_NAMES];
   const allResourceNames: string[] = [...resourceNames];
   const registerSourceSurfaces = (nextCatalog: IndexedSourceCatalog) => {
     for (const source of nextCatalog.sources) {
-      const tool = registerSourcePlanContextTool(server, effectiveDependencies, source);
-      const resource = registerIndexedSourceResource(server, metadata.resourcePrefix, source);
+      const tool = registerSourcePlanContextTool(
+        server,
+        effectiveDependencies,
+        source,
+      );
+      const resource = registerIndexedSourceResource(
+        server,
+        metadata.resourcePrefix,
+        source,
+      );
       dynamicTools.set(source.repoId, tool);
       dynamicResources.set(source.repoId, resource);
       toolNames.push(tool.name);
@@ -100,21 +171,29 @@ export function createAtlasMcpServer(dependencies: AtlasMcpDependencies): AtlasM
     }
   };
   registerSourceSurfaces(catalog);
-  diagnostics.push({ stage: "tool", message: `Registered ${toolNames.length} MCP tools.`, metadata: { tools: [...toolNames] } });
+  diagnostics.push({
+    stage: "tool",
+    message: `Registered ${toolNames.length} MCP tools.`,
+    metadata: { tools: [...toolNames] },
+  });
 
   registerResources(server, effectiveDependencies, metadata);
   diagnostics.push({
     stage: "resource",
     message: `Registered ${allResourceNames.length} MCP resources.`,
-    metadata: { resources: [...allResourceNames] }
+    metadata: { resources: [...allResourceNames] },
   });
 
   registerPrompts(server);
-  diagnostics.push({ stage: "prompt", message: `Registered ${PROMPT_NAMES.length} MCP prompts.`, metadata: { prompts: [...PROMPT_NAMES] } });
+  diagnostics.push({
+    stage: "prompt",
+    message: `Registered ${PROMPT_NAMES.length} MCP prompts.`,
+    metadata: { prompts: [...PROMPT_NAMES] },
+  });
   diagnostics.push({
     stage: "server",
     message: "Created ATLAS MCP server.",
-    metadata: { metadata, capabilities: ATLAS_MCP_CAPABILITIES }
+    metadata: { metadata, capabilities: ATLAS_MCP_CAPABILITIES },
   });
 
   const result: AtlasMcpServer = {
@@ -126,15 +205,17 @@ export function createAtlasMcpServer(dependencies: AtlasMcpDependencies): AtlasM
     refreshDiscovery: () => {
       const nextCatalog = buildIndexedSourceCatalog(dependencies);
       if (nextCatalog.fingerprint === catalog.fingerprint) return false;
-      for (const registered of dynamicTools.values()) registered.handle.remove();
-      for (const registered of dynamicResources.values()) registered.handle.remove();
+      for (const registered of dynamicTools.values())
+        registered.handle.remove();
+      for (const registered of dynamicResources.values())
+        registered.handle.remove();
       dynamicTools.clear();
       dynamicResources.clear();
       toolNames.splice(TOOL_NAMES.length);
       allResourceNames.splice(resourceNames.length);
       catalog = nextCatalog;
       genericPlanTool.update({
-        description: genericPlanDescription(catalog)
+        description: genericPlanDescription(catalog),
       });
       registerSourceSurfaces(catalog);
       server.sendToolListChanged();
@@ -142,16 +223,22 @@ export function createAtlasMcpServer(dependencies: AtlasMcpDependencies): AtlasM
       diagnostics.push({
         stage: "server",
         message: "Refreshed indexed-source MCP discovery surface.",
-        metadata: { sources: catalog.sources.map((source) => source.repoId) }
+        metadata: { sources: catalog.sources.map((source) => source.repoId) },
       });
       return true;
-    }
+    },
   };
   return result;
 }
 
-function registerTools(server: McpServer, dependencies: AtlasMcpDependencies, catalog: IndexedSourceCatalog) {
-  const planTool = registerPlanContextTool(server, dependencies, { description: genericPlanDescription(catalog) });
+function registerTools(
+  server: McpServer,
+  dependencies: AtlasMcpDependencies,
+  catalog: IndexedSourceCatalog,
+) {
+  const planTool = registerPlanContextTool(server, dependencies, {
+    description: genericPlanDescription(catalog),
+  });
   registerFindScopesTool(server, dependencies);
   registerFindDocsTool(server, dependencies);
   registerReadOutlineTool(server, dependencies);
@@ -166,15 +253,37 @@ function registerTools(server: McpServer, dependencies: AtlasMcpDependencies, ca
   return planTool;
 }
 
-function registerResources(server: McpServer, dependencies: AtlasMcpDependencies, identity: { resourcePrefix: string; title: string }): void {
-  for (const resource of [manifestResource, repoResource, packageResource, moduleResource, documentResource, skillResource, skillArtifactResource, summaryResource]) {
-    registerAtlasResource(server, withResourceIdentity(resource, identity), dependencies);
+function registerResources(
+  server: McpServer,
+  dependencies: AtlasMcpDependencies,
+  identity: { resourcePrefix: string; title: string },
+): void {
+  for (const resource of [
+    manifestResource,
+    repoResource,
+    packageResource,
+    moduleResource,
+    documentResource,
+    skillResource,
+    skillArtifactResource,
+    summaryResource,
+  ]) {
+    registerAtlasResource(
+      server,
+      withResourceIdentity(resource, identity),
+      dependencies,
+    );
   }
 }
 
 function genericPlanDescription(catalog: IndexedSourceCatalog): string {
-	const sourceNames = catalog.sources.slice(0, 6).map((source) => `${source.title} (${source.topics.slice(0, 8).join(", ")})`).join("; ");
-	return `Find and package local evidence for a library, framework, API, or repository question. Returns coverage (sufficient, partial, absent, or stale), citations, and the next safe action. Indexed sources and topics: ${sourceNames || "none"}. Use repoId when the source is known.`;
+  const sourceNames = catalog.sources
+    .slice(0, 6)
+    .map(
+      (source) => `${source.title} (${source.topics.slice(0, 8).join(", ")})`,
+    )
+    .join("; ");
+  return `Find and package local evidence for a library, framework, API, or repository question. Returns coverage (sufficient, partial, absent, or stale), citations, and the next safe action. Indexed sources and topics: ${sourceNames || "none"}. Use repoId when the source is known.`;
 }
 
 function registerPrompts(server: McpServer): void {
@@ -184,7 +293,7 @@ function registerPrompts(server: McpServer): void {
     onboardToRepoPrompt,
     summarizeModulePrompt,
     compareDocsPrompt,
-    explainSkillUsagePrompt
+    explainSkillUsagePrompt,
   ]) {
     registerAtlasPrompt(server, prompt);
   }

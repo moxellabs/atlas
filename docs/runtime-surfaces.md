@@ -21,6 +21,7 @@ Atlas exposes the same local corpus through a CLI, an embeddable Commander comma
 - `sync` and `build` delegate to `@atlas/indexer`.
 - `list` and `inspect` read stored corpus state.
 - `install-skill` exports stored skill artifacts into supported agent/editor formats.
+- `agent` lists, detects, configures, verifies, and removes Atlas MCP integrations for supported headless agents and IDEs.
 - `clean` removes local corpus database artifacts; `prune` removes unconfigured repo caches.
 - `doctor` validates local prerequisites, source reachability, credentials, and store readiness.
 - `serve` starts the HTTP runtime.
@@ -71,6 +72,49 @@ Local browser CORS allows `http://localhost`, `http://127.0.0.1`, and `http://[:
 ## MCP
 
 `packages/mcp` exposes tools, resources, and prompts over stdio or Streamable HTTP transports. The server mounts Streamable HTTP at `/mcp` when enabled. MCP operations read from local store and retrieval services. MCP context planning reads from the compiled local corpus; source diffs are available only when a runtime explicitly provides a source diff provider. MCP does not perform sync/build or remote source acquisition on normal retrieval tool calls.
+
+MCP initialization advertises a bounded catalog of indexed repositories and a deterministic `plan_context__<source>` tool for each advertised source. Source aliases, topics, coverage, freshness, and source-relative provenance let capable clients choose Atlas without prompt injection or hidden instructions. `neutral` is the default advertising policy. `prefer-local` adds explicit covered-query-first guidance while preserving fallback for evidence Atlas does not have.
+
+### Agent and IDE integration
+
+`atlas agent list` reports the support matrix. `atlas agent detect` checks installed client executables, minimum versions, and Atlas-managed receipts. Install one target explicitly or every detected, version-compatible target:
+
+```bash
+atlas agent install codex --mode discoverable
+atlas agent install cursor --scope workspace --mode prefer-local
+atlas agent install --detected --mode discoverable
+atlas agent doctor --all
+```
+
+Supported targets are Codex CLI, Claude Code, Gemini CLI, Google Antigravity, GitHub Copilot CLI, OpenCode, Aider, Visual Studio Code, Cursor, Windsurf, Cline, Roo Code, Continue, Zed, JetBrains AI Assistant, Junie, Kiro, and Amazon Q Developer. Atlas uses a client's native MCP command when that command is documented and stable; otherwise it performs a narrow JSON/TOML/managed-file merge or returns a copyable manual configuration. Aider currently has no documented MCP surface, so its entry reports the limitation and recommends read-only Atlas artifacts instead of inventing a configuration. User and workspace support is reported per target, and unsupported scopes fail before mutation.
+
+Modes are explicit. `standard` registers Atlas without discovery-specific client changes. `discoverable` adds only supported reliability settings; for Codex, Atlas marks the server required and automatically approves read-only tools while retaining prompts for future write-capable tools. `prefer-local` also requests Atlas's covered-query-first MCP initialization guidance while retaining fallback for absent, partial, or stale local evidence. It does not force irrelevant Atlas calls.
+
+Every automatic mutation has a per-client, per-scope receipt under `~/.moxel/atlas/integrations`. Writes are atomic and serialized. Re-running `atlas agent install` with a different mode or server command reconciles the Atlas-owned entry in place after verifying it has not drifted. `atlas agent doctor <client>` compares live state with the receipt. `atlas agent remove <client>` removes only the Atlas-owned entry and managed discovery settings; it does not rewrite unrelated client configuration.
+
+### Authenticated remote hosting
+
+Run a dedicated Atlas process behind an HTTPS reverse proxy. Keep the Atlas listener on its default loopback host; public listener binds are rejected:
+
+```bash
+ATLAS_REMOTE_AUTH_TOKEN_FILE=/run/secrets/atlas-token \
+ATLAS_REMOTE_TLS_TERMINATED=true \
+ATLAS_REMOTE_REPO_ALLOWLIST=github.com/acme/platform-docs \
+ATLAS_MCP_DISCOVERY_POLICY=prefer-local \
+atlas serve
+```
+
+The token file must be a regular owner-only file and contain at least 32 characters. The server fails startup unless the allowlist is non-empty and every configured or indexed repository belongs to it. Remote middleware requires HTTPS proxy metadata and bearer authentication, limits requests and responses, applies a per-token rate limit, and exposes only read-only HTTP and MCP routes. See [Security](https://github.com/moxellabs/atlas/blob/main/docs/security.md#hosted-read-only-boundary).
+
+For centrally hosted Atlas, clients can still launch the local stdio bridge while all MCP calls are proxied to authenticated Streamable HTTP:
+
+```bash
+atlas agent install cursor --scope workspace \
+  --remote-url https://atlas.example.com/mcp \
+  --auth-token-env ATLAS_REMOTE_TOKEN
+```
+
+Use exactly one of `--auth-token-env` or `--auth-token-file`. The generated client configuration stores only the environment-variable name or token-file path, never the bearer value. Remote URLs must use HTTPS. The bridge mirrors the remote server's tools, resources, prompts, capabilities, and change notifications; it fails closed if `prefer-local` was requested but the remote server does not advertise that policy.
 
 First-party skills imported from public artifacts are available through `list_skills` and `use_skill`. After importing Atlas itself, first-party skills such as `document-codebase` and `skill-creator` appear with Atlas-prefixed invocation aliases. `use_skill` serves their instructions, references, scripts, templates, checklists, and agent profiles as read-only artifacts.
 

@@ -171,7 +171,7 @@ async function runAgent(input: {
     command,
     input.cwd,
     input.runner.agentTimeoutMs,
-    hermeticCodexEnvironment(),
+    hermeticCodexEnvironment(input.workDir),
   );
   const durationMs = Math.round(performance.now() - started);
   const trace = traceMcpEvents(result.stdout);
@@ -258,7 +258,7 @@ async function judgePair(input: {
     ],
     input.cwd,
     input.runner.judgeTimeoutMs,
-    hermeticCodexEnvironment(),
+    hermeticCodexEnvironment(input.workDir),
   );
   if (result.exitCode !== 0 || result.timedOut) {
     return failedJudgeVerdict(
@@ -326,11 +326,9 @@ export function codexAgentCommand(input: {
       "-c",
       `mcp_servers.atlas_eval.args=${JSON.stringify(serverArgs)}`,
       "-c",
-      "features.deferred_tool_world_state=true",
-      "-c",
-      'features.non_prefixed_mcp_tool_names={enabled=true,server_names=["atlas_eval"]}',
-      "-c",
       "mcp_servers.atlas_eval.required=true",
+      "-c",
+      'mcp_servers.atlas_eval.default_tools_approval_mode="writes"',
     );
   }
   command.push(agentPrompt(input.task));
@@ -344,9 +342,17 @@ export function atlasMcpServerArgs(input: {
 }): string[] {
   const cliPath = join(input.atlasCwd, "apps/cli/src/index.ts");
   if (input.configPath !== undefined) {
-    return [cliPath, "--config", input.configPath, "mcp"];
+    return [
+      cliPath,
+      "--config",
+      input.configPath,
+      "mcp",
+      "--discovery-policy",
+      "prefer-local",
+    ];
   }
-  if (input.useGlobal) return [cliPath, "mcp"];
+  if (input.useGlobal)
+    return [cliPath, "mcp", "--discovery-policy", "prefer-local"];
   throw new Error(
     "Atlas MCP treatment requires an explicit local eval config or global runtime.",
   );
@@ -686,17 +692,22 @@ async function snapshotGlobalCorpus(input: {
   };
 }
 
-function hermeticCodexEnvironment(): Record<string, string> {
+function hermeticCodexEnvironment(workDir?: string): Record<string, string> {
+  const home = workDir === undefined ? homedir() : join(workDir, "home");
   return {
     CODEX_HOME: Bun.env.CODEX_HOME ?? join(homedir(), ".codex"),
+    GH_CONFIG_DIR: join(home, ".config", "gh"),
     GH_TOKEN: "",
     GITHUB_TOKEN: "",
-    HOME: homedir(),
+    HOME: home,
     LANG: "C.UTF-8",
     LC_ALL: "C.UTF-8",
     OPENAI_API_KEY: Bun.env.OPENAI_API_KEY ?? "",
     PATH: Bun.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
     TZ: "UTC",
+    XDG_CACHE_HOME: join(home, ".cache"),
+    XDG_CONFIG_HOME: join(home, ".config"),
+    XDG_DATA_HOME: join(home, ".local", "share"),
   };
 }
 

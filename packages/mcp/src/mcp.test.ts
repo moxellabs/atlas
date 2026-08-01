@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  ATLAS_VERSION,
   type CanonicalDocument,
   type CorpusChunk,
   createChunkId,
@@ -26,9 +27,17 @@ import {
   SummaryRepository,
 } from "@atlas/store";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import {
+  ResourceListChangedNotificationSchema,
+  ToolListChangedNotificationSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 
 import * as publicMcp from "./index";
+import {
+  buildIndexedSourceCatalog,
+  discoveryInstructions,
+} from "./discovery/indexed-source-catalog";
 import { answerFromLocalDocsPrompt } from "./prompts/answer-from-local-docs.prompt";
 import { compareDocsPrompt } from "./prompts/compare-docs.prompt";
 import { onboardToRepoPrompt } from "./prompts/onboard-to-repo.prompt";
@@ -694,6 +703,52 @@ describe("mcp package", () => {
     ).toEqual(["tool", "resource", "prompt", "server"]);
   });
 
+  test("keeps autonomous discovery neutral unless prefer-local is explicit", () => {
+    const catalog = buildIndexedSourceCatalog({ db: store });
+    const neutral = discoveryInstructions(catalog);
+    const preferLocal = discoveryInstructions(catalog, "prefer-local");
+
+    expect(neutral).toContain("Atlas provides indexed documentation");
+    expect(neutral).not.toContain("before external search");
+    expect(preferLocal).toContain("before external search");
+  });
+
+  test("advertises the generic router for additive client preload", async () => {
+    const atlasServer = createAtlasMcpServer({ db: store });
+    const client = new Client(
+      { name: "atlas-metadata-test-client", version: "0.0.0" },
+      { capabilities: {} },
+    );
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    await Promise.all([
+      atlasServer.server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+
+    expect(client.getServerVersion()).toMatchObject({
+      name: "atlas-mcp",
+      version: ATLAS_VERSION,
+    });
+    expect(client.getInstructions()).not.toContain("before external search");
+
+    const tools = await client.listTools();
+    expect(
+      tools.tools.find((tool) => tool.name === "plan_context"),
+    ).toMatchObject({
+      title: "Answer from indexed documentation",
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+      _meta: { "anthropic/alwaysLoad": true },
+    });
+
+    await Promise.all([client.close(), atlasServer.server.close()]);
+  });
+
   test("serves successful MCP tool calls through the SDK server", async () => {
     const atlasServer = createAtlasMcpServer({ db: store });
     const client = new Client(
@@ -739,7 +794,7 @@ describe("mcp package", () => {
       (tool) => tool.name === "plan_context__atlas",
     );
     expect(facade).toMatchObject({
-      title: "Plan local atlas documentation",
+      title: "Answer from indexed atlas documentation",
       description: expect.stringMatching(/session.*append/),
       annotations: expect.objectContaining({ readOnlyHint: true }),
     });
@@ -757,8 +812,33 @@ describe("mcp package", () => {
     await Promise.all([client.close(), atlasServer.server.close()]);
   });
 
-  test("refreshes source-bound discovery after the indexed corpus changes", () => {
+  test("refreshes source-bound discovery and notifies connected clients", async () => {
     const atlasServer = createAtlasMcpServer({ db: store });
+    const client = new Client(
+      { name: "atlas-refresh-test-client", version: "0.0.0" },
+      { capabilities: {} },
+    );
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const toolListChanged = Promise.withResolvers<void>();
+    const resourceListChanged = Promise.withResolvers<void>();
+    client.setNotificationHandler(
+      ToolListChangedNotificationSchema,
+      async () => {
+        toolListChanged.resolve();
+      },
+    );
+    client.setNotificationHandler(
+      ResourceListChangedNotificationSchema,
+      async () => {
+        resourceListChanged.resolve();
+      },
+    );
+    await Promise.all([
+      atlasServer.server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+
     new RepoRepository(store).upsert({
       repoId: "github.com/example/guide",
       mode: "local-git",
@@ -771,13 +851,16 @@ describe("mcp package", () => {
     });
 
     expect(atlasServer.refreshDiscovery()).toBeTrue();
-    expect(atlasServer.tools).toContain(
+    await Promise.all([toolListChanged.promise, resourceListChanged.promise]);
+    expect((await client.listTools()).tools.map((tool) => tool.name)).toContain(
       "plan_context__github_com_example_guide",
     );
-    expect(atlasServer.resources).toContain(
-      "atlas-source-github_com_example_guide",
-    );
+    expect(
+      (await client.listResources()).resources.map((resource) => resource.name),
+    ).toContain("atlas-source-github_com_example_guide");
     expect(atlasServer.refreshDiscovery()).toBeFalse();
+
+    await Promise.all([client.close(), atlasServer.server.close()]);
   });
 
   test("creates isolated stdio and streamable HTTP transports", async () => {
@@ -1105,6 +1188,78 @@ describe("mcp package", () => {
         { db: store, identity: { resourcePrefix: "acme" } },
       ),
     ).toMatchObject({ status: "ok" });
+  });
+  test("proxies authenticated remote MCP without putting the bearer token in config", async () => {
+    const token = "remote-proxy-test-token-with-more-than-32-characters";
+    const observedAuthorization: string[] = [];
+    const proxy = await publicMcp.createRemoteMcpProxy({
+      url: "https://atlas.example/mcp",
+      token,
+      expectedDiscoveryPolicy: "prefer-local",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        observedAuthorization.push(request.headers.get("authorization") ?? "");
+        const message = (await request.clone().json()) as {
+          id?: string | number;
+          method: string;
+          params?: { protocolVersion?: string; name?: string };
+        };
+        if (message.id === undefined)
+          return new Response(null, { status: 202 });
+        const result =
+          message.method === "initialize"
+            ? {
+                protocolVersion:
+                  message.params?.protocolVersion ?? "2025-11-25",
+                capabilities: { tools: {} },
+                serverInfo: { name: "atlas-remote-test", version: "1.0.0" },
+                instructions:
+                  "Consult matching indexed sources before external search.",
+              }
+            : message.method === "tools/list"
+              ? {
+                  tools: [
+                    {
+                      name: "plan_context",
+                      description: "Plan indexed context",
+                      inputSchema: { type: "object" },
+                    },
+                  ],
+                }
+              : {
+                  content: [{ type: "text", text: "remote result" }],
+                  isError: false,
+                };
+        return Response.json(
+          { jsonrpc: "2.0", id: message.id, result },
+          { headers: { "content-type": "application/json" } },
+        );
+      },
+    });
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client(
+      { name: "atlas-proxy-test", version: "1.0.0" },
+      { capabilities: {} },
+    );
+    await Promise.all([
+      client.connect(clientTransport),
+      proxy.server.connect(serverTransport),
+    ]);
+    expect((await client.listTools()).tools.map((tool) => tool.name)).toContain(
+      "plan_context",
+    );
+    expect(
+      await client.callTool({ name: "plan_context", arguments: {} }),
+    ).toMatchObject({
+      content: [{ type: "text", text: "remote result" }],
+      isError: false,
+    });
+    expect(observedAuthorization).not.toContain(token);
+    expect(observedAuthorization).toEqual(
+      expect.arrayContaining([`Bearer ${token}`]),
+    );
+    await Promise.all([client.close(), proxy.close()]);
   });
 });
 

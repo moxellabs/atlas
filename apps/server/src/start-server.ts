@@ -1,7 +1,15 @@
 import { createApp } from "./app";
 import type { ServerEnv } from "./env";
 import { loadServerEnv } from "./env";
-import { buildServerDependencies, closeServerDependencies, type ResolvedAtlasConfig } from "./services/dependencies";
+import {
+  buildServerDependencies,
+  closeServerDependencies,
+  type ResolvedAtlasConfig,
+} from "./services/dependencies";
+import {
+  assertRemoteExposureSafe,
+  MAX_HTTP_REQUEST_BODY_BYTES,
+} from "./services/remote-security.service";
 
 /** Running ATLAS server handle returned to the CLI and the standalone entrypoint. */
 export interface AtlasRunningServer {
@@ -24,15 +32,28 @@ export interface AtlasRunningServer {
 }
 
 /** Starts the ATLAS HTTP server from reusable boot primitives. */
-export async function startAtlasServer(options: {
-  env?: ServerEnv | undefined;
-  config?: ResolvedAtlasConfig | undefined;
-} = {}): Promise<AtlasRunningServer> {
+export async function startAtlasServer(
+  options: {
+    env?: ServerEnv | undefined;
+    config?: ResolvedAtlasConfig | undefined;
+  } = {},
+): Promise<AtlasRunningServer> {
   const env = options.env ?? loadServerEnv();
   const dependencies = await buildServerDependencies(env, options.config);
+  try {
+    assertRemoteExposureSafe(
+      dependencies.env,
+      dependencies.config,
+      dependencies.store.listRepos().map(({ repo }) => repo.repoId),
+    );
+  } catch (error) {
+    await closeServerDependencies(dependencies);
+    throw error;
+  }
   const app = createApp(dependencies).listen({
     hostname: dependencies.env.host,
-    port: dependencies.env.port
+    port: dependencies.env.port,
+    maxRequestBodySize: MAX_HTTP_REQUEST_BODY_BYTES,
   });
 
   return {
@@ -46,6 +67,6 @@ export async function startAtlasServer(options: {
     stop() {
       app.stop();
       return closeServerDependencies(dependencies);
-    }
+    },
   };
 }
