@@ -43,7 +43,6 @@ import type { CliCommandContext } from "./runtime/types";
 import { CliError, toFailureResult } from "./utils/errors";
 
 describe("atlas cli", () => {
-
   test("starts onboarding only for an interactive bare first run", async () => {
     const home = join(rootDir, "home-first-run");
     const context = createCommandContext([]);
@@ -55,10 +54,9 @@ describe("atlas cli", () => {
 
     expect(await shouldStartFirstRunOnboarding(context)).toBe(true);
 
-    await runWithCapture(
-      ["setup", "--cwd", rootDir, "--non-interactive"],
-      { HOME: home },
-    );
+    await runWithCapture(["setup", "--cwd", rootDir, "--non-interactive"], {
+      HOME: home,
+    });
     expect(await shouldStartFirstRunOnboarding(context)).toBe(false);
 
     context.output = { json: true, verbose: false, quiet: false };
@@ -313,7 +311,14 @@ describe("atlas cli", () => {
     const secondCache = join(rootDir, "second-cache");
     const config = join(home, ".moxel", "atlas", "config.yaml");
     const first = await runWithCapture(
-      ["setup", "--cwd", rootDir, "--cache-dir", firstCache, "--non-interactive"],
+      [
+        "setup",
+        "--cwd",
+        rootDir,
+        "--cache-dir",
+        firstCache,
+        "--non-interactive",
+      ],
       { HOME: home },
     );
     expect(first.exitCode).toBe(0);
@@ -341,7 +346,11 @@ describe("atlas cli", () => {
       existingConfig: true,
       overwritten: false,
     });
-    let loaded = await loadConfig({ cwd: rootDir, configPath: config, env: { HOME: home } });
+    let loaded = await loadConfig({
+      cwd: rootDir,
+      configPath: config,
+      env: { HOME: home },
+    });
     expect(loaded.config.cacheDir).toBe(firstCache);
     expect(loaded.config.hosts[0]?.name).toBe("github.com");
 
@@ -369,7 +378,11 @@ describe("atlas cli", () => {
       existingConfig: true,
       overwritten: true,
     });
-    loaded = await loadConfig({ cwd: rootDir, configPath: config, env: { HOME: home } });
+    loaded = await loadConfig({
+      cwd: rootDir,
+      configPath: config,
+      env: { HOME: home },
+    });
     expect(loaded.config.cacheDir).toBe(secondCache);
     expect(loaded.config.hosts).toEqual([
       expect.objectContaining({
@@ -397,32 +410,34 @@ describe("atlas cli", () => {
     );
     expect(setup.exitCode).toBe(0);
     const nextConfig = join(home, ".moxel", "atlas", "config.yaml");
-		const emptyCorpusPath = (await loadConfig({
-			cwd: rootDir,
-			configPath: nextConfig,
-			env: { HOME: home },
-		})).config.corpusDbPath;
-		expect(await exists(emptyCorpusPath)).toBe(false);
+    const emptyCorpusPath = (
+      await loadConfig({
+        cwd: rootDir,
+        configPath: nextConfig,
+        env: { HOME: home },
+      })
+    ).config.corpusDbPath;
+    expect(await exists(emptyCorpusPath)).toBe(false);
     const emptySetup = await runWithCapture(
       ["next", "--cwd", rootDir, "--config", nextConfig, "--json"],
       { HOME: home },
     );
-		const emptySetupData = JSON.parse(emptySetup.stdout).data;
-		expect(emptySetupData).toMatchObject({
+    const emptySetupData = JSON.parse(emptySetup.stdout).data;
+    expect(emptySetupData).toMatchObject({
       recommendedCommand: "atlas repo add <repo>",
       state: { configFound: true, repoCount: 0 },
     });
-		expect(emptySetupData.candidates).toContainEqual(
-			expect.objectContaining({ command: "atlas repo add <repo>" }),
-		);
-		expect(await exists(emptyCorpusPath)).toBe(false);
-		const humanNext = await runWithCapture(
-			["next", "--cwd", rootDir, "--config", nextConfig],
-			{ HOME: home },
-		);
-		expect(humanNext.stdout).toContain("Next: atlas repo add <repo>");
-		expect(humanNext.stdout).toContain("Why:");
-		expect(humanNext.stdout).not.toContain("Alternatives:");
+    expect(emptySetupData.candidates).toContainEqual(
+      expect.objectContaining({ command: "atlas repo add <repo>" }),
+    );
+    expect(await exists(emptyCorpusPath)).toBe(false);
+    const humanNext = await runWithCapture(
+      ["next", "--cwd", rootDir, "--config", nextConfig],
+      { HOME: home },
+    );
+    expect(humanNext.stdout).toContain("Next: atlas repo add <repo>");
+    expect(humanNext.stdout).toContain("Why:");
+    expect(humanNext.stdout).not.toContain("Alternatives:");
 
     await writeFile(
       nextConfig,
@@ -520,14 +535,14 @@ describe("atlas cli", () => {
     }
   });
 
-	test("prints the package version with short and long version flags", async () => {
-		for (const flag of ["-v", "--version"]) {
-			const result = await runWithCapture([flag]);
-			expect(result.exitCode).toBe(0);
-			expect(result.stdout.trim()).toBe(packageJson.version);
-			expect(result.stderr).toBe("");
-		}
-	});
+  test("prints the package version with short and long version flags", async () => {
+    for (const flag of ["-v", "--version"]) {
+      const result = await runWithCapture([flag]);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.trim()).toBe(packageJson.version);
+      expect(result.stderr).toBe("");
+    }
+  });
 
   test("repo add alias preserves add-repo JSON result shape", async () => {
     const topLevelHome = join(rootDir, "home-repo-add-alias-top-level");
@@ -622,7 +637,9 @@ describe("atlas cli", () => {
     globalThis.fetch = (async (input: RequestInfo | URL) => {
       const url = new URL(String(input));
       if (url.pathname === "/api/v3/repos/platform/docs") {
-        return new Response(JSON.stringify({ id: 1, full_name: "platform/docs" }));
+        return new Response(
+          JSON.stringify({ id: 1, full_name: "platform/docs" }),
+        );
       }
       return new Response("not found", { status: 404 });
     }) as unknown as typeof fetch;
@@ -677,7 +694,10 @@ describe("atlas cli", () => {
       "--default",
     ]);
     const publicArtifactRoot = join(rootDir, "public-fallback-artifact");
-    await createCliArtifactFixture(publicArtifactRoot, "public-fallback-revision");
+    await createCliArtifactFixture(
+      publicArtifactRoot,
+      "public-fallback-revision",
+    );
 
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async (input: RequestInfo | URL) => {
@@ -704,7 +724,9 @@ describe("atlas cli", () => {
         });
       }
       const file = url.pathname.slice(prefix.length);
-      const artifactFile = Bun.file(join(publicArtifactRoot, ".moxel", "atlas", file));
+      const artifactFile = Bun.file(
+        join(publicArtifactRoot, ".moxel", "atlas", file),
+      );
       if (!(await artifactFile.exists())) {
         return new Response(JSON.stringify({ message: "not found" }), {
           status: 404,
@@ -2765,9 +2787,10 @@ repos:
     const stdout = new PassThrough();
     const stderr = new PassThrough();
     let receivedIdentity: unknown;
+    let receivedDiscoveryPolicy: unknown;
     const transport: { onclose?: () => void } = {};
     const context: CliCommandContext = {
-      argv: ["mcp"],
+      argv: ["mcp", "--discovery-policy", "prefer-local"],
       cwd: process.cwd(),
       output: { json: false, verbose: false, quiet: false },
       mcpName: "acme-knowledge",
@@ -2783,8 +2806,9 @@ repos:
       context,
       { db: {} as never, sourceDiffProvider: {} as never, close() {} },
       {
-        createServer(_deps, identity) {
+        createServer(_deps, identity, discoveryPolicy) {
           receivedIdentity = identity;
+          receivedDiscoveryPolicy = discoveryPolicy;
           return {
             tools: [
               "find_docs",
@@ -2815,6 +2839,7 @@ repos:
       title: "Acme Knowledge MCP",
       resourcePrefix: "acme",
     });
+    expect(receivedDiscoveryPolicy).toBe("prefer-local");
   });
 
   test("mcp identity honors ATLAS_MCP_RESOURCE_PREFIX from loaded config env", async () => {
@@ -3201,9 +3226,9 @@ repos: []
         selectedAction: "skip",
         repoId: "github.com/moxellabs/atlas",
       });
-      expect((await loadConfig({ cwd: rootDir, configPath: cfg })).config.repos).toEqual(
-        [],
-      );
+      expect(
+        (await loadConfig({ cwd: rootDir, configPath: cfg })).config.repos,
+      ).toEqual([]);
 
       const indexed = await runWithCapture(
         [
@@ -3246,9 +3271,11 @@ repos: []
       }
     } finally {
       globalThis.fetch = originalFetch;
-      if (originalGitConfigCount === undefined) delete process.env.GIT_CONFIG_COUNT;
+      if (originalGitConfigCount === undefined)
+        delete process.env.GIT_CONFIG_COUNT;
       else process.env.GIT_CONFIG_COUNT = originalGitConfigCount;
-      if (originalGitConfigKey0 === undefined) delete process.env.GIT_CONFIG_KEY_0;
+      if (originalGitConfigKey0 === undefined)
+        delete process.env.GIT_CONFIG_KEY_0;
       else process.env.GIT_CONFIG_KEY_0 = originalGitConfigKey0;
       if (originalGitConfigValue0 === undefined)
         delete process.env.GIT_CONFIG_VALUE_0;
@@ -3674,7 +3701,10 @@ Atlas self-indexing public artifact docs.
 `,
     );
     await writeFile(join(selfRoot, "docs", "archive", "old.md"), "# Old\n");
-    await writeFile(join(selfRoot, "docs", "architecture.md"), "# Architecture\n\nDefault consumer docs metadata.\n");
+    await writeFile(
+      join(selfRoot, "docs", "architecture.md"),
+      "# Architecture\n\nDefault consumer docs metadata.\n",
+    );
     await writeFile(join(selfRoot, ".planning", "ROADMAP.md"), "# Roadmap\n");
     await writeFile(
       join(selfRoot, "skills", "document-codebase", "SKILL.md"),
@@ -3795,7 +3825,12 @@ Internal package docs.
     const docsIndex = JSON.parse(
       await readFile(join(artifactDir, "docs.index.json"), "utf8"),
     ) as {
-      counts: { documents: number; skills: number; packages: number; modules: number };
+      counts: {
+        documents: number;
+        skills: number;
+        packages: number;
+        modules: number;
+      };
       documents: Array<{ path: string }>;
     };
     const paths = docsIndex.documents.map((doc) => doc.path);
@@ -3899,7 +3934,9 @@ Internal package docs.
     const contributorDocsIndex = JSON.parse(
       await readFile(join(artifactDir, "docs.index.json"), "utf8"),
     ) as { documents: Array<{ path: string }> };
-    const contributorPaths = contributorDocsIndex.documents.map((doc) => doc.path);
+    const contributorPaths = contributorDocsIndex.documents.map(
+      (doc) => doc.path,
+    );
     expect(contributorPaths).toContain("README.md");
     expect(contributorPaths).toContain("docs/self-indexing.md");
     expect(contributorPaths).toContain("docs/architecture.md");
@@ -4435,6 +4472,159 @@ Internal package docs.
       "atlas add-repo platform/docs",
       "atlas search deployment",
     ]);
+  });
+  test("agent commands list, plan, install, and remove client integrations", async () => {
+    const home = join(rootDir, "agent-home");
+    const listed = await runWithCapture(["agent", "list", "--json"], {
+      HOME: home,
+    });
+    expect(listed.exitCode).toBe(0);
+    expect(JSON.parse(listed.stdout)).toMatchObject({
+      ok: true,
+      command: "agent list",
+      data: expect.arrayContaining([
+        expect.objectContaining({ client: "codex", kind: "headless" }),
+        expect.objectContaining({ client: "vscode", kind: "ide" }),
+      ]),
+    });
+
+    const printed = await runWithCapture(
+      [
+        "agent",
+        "print-config",
+        "cursor",
+        "--scope",
+        "workspace",
+        "--mode",
+        "prefer-local",
+        "--cwd",
+        rootDir,
+        "--json",
+      ],
+      { HOME: home },
+    );
+    expect(printed.exitCode).toBe(0);
+    expect(JSON.parse(printed.stdout).data).toMatchObject({
+      clientId: "cursor",
+      scope: "workspace",
+      mode: "prefer-local",
+      server: {
+        args: expect.arrayContaining(["--discovery-policy", "prefer-local"]),
+      },
+    });
+    const remoteSecret = "never-render-this-remote-secret-value";
+    const remotePrinted = await runWithCapture(
+      [
+        "agent",
+        "print-config",
+        "cursor",
+        "--scope",
+        "workspace",
+        "--mode",
+        "discoverable",
+        "--remote-url",
+        "https://atlas.example/mcp",
+        "--auth-token-env",
+        "ATLAS_REMOTE_TOKEN",
+        "--cwd",
+        rootDir,
+        "--json",
+      ],
+      { HOME: home, ATLAS_REMOTE_TOKEN: remoteSecret },
+    );
+    expect(remotePrinted.exitCode).toBe(0);
+    expect(remotePrinted.stdout).not.toContain(remoteSecret);
+    expect(JSON.parse(remotePrinted.stdout).data.server.args).toEqual(
+      expect.arrayContaining([
+        "--remote-url",
+        "https://atlas.example/mcp",
+        "--auth-token-env",
+        "ATLAS_REMOTE_TOKEN",
+      ]),
+    );
+    expect(await exists(join(rootDir, ".cursor", "mcp.json"))).toBe(false);
+
+    const installed = await runWithCapture(
+      [
+        "agent",
+        "install",
+        "cursor",
+        "--scope",
+        "workspace",
+        "--cwd",
+        rootDir,
+        "--json",
+      ],
+      { HOME: home },
+    );
+    expect(installed.exitCode, installed.stderr).toBe(0);
+    expect(JSON.parse(installed.stdout).data[0]).toMatchObject({
+      changed: true,
+      plan: { clientId: "cursor", scope: "workspace" },
+    });
+    expect(
+      JSON.parse(await readFile(join(rootDir, ".cursor", "mcp.json"), "utf8")),
+    ).toMatchObject({
+      mcpServers: { atlas: { command: "npx" } },
+    });
+
+    const removed = await runWithCapture(
+      [
+        "agent",
+        "remove",
+        "cursor",
+        "--scope",
+        "workspace",
+        "--cwd",
+        rootDir,
+        "--json",
+      ],
+      { HOME: home },
+    );
+    expect(removed.exitCode).toBe(0);
+    expect(JSON.parse(removed.stdout).data[0].changed).toBe(true);
+    expect(
+      JSON.parse(await readFile(join(rootDir, ".cursor", "mcp.json"), "utf8")),
+    ).toEqual({ mcpServers: {} });
+  });
+
+  test("agent selectors do not consume flag-shaped server arguments", async () => {
+    const home = join(rootDir, "agent-option-home");
+    const printed = await runWithCapture(
+      [
+        "agent",
+        "print-config",
+        "cursor",
+        "--scope",
+        "workspace",
+        "--server-command",
+        "custom-atlas",
+        "--server-arg=--detected",
+        "--server-arg=--dry-run",
+        "--cwd",
+        rootDir,
+        "--json",
+      ],
+      { HOME: home },
+    );
+    expect(printed.exitCode, printed.stderr).toBe(0);
+    expect(JSON.parse(printed.stdout).data).toMatchObject({
+      clientId: "cursor",
+      server: {
+        command: "custom-atlas",
+        args: ["--detected", "--dry-run"],
+      },
+    });
+
+    for (const argv of [
+      ["agent", "install", "cursor", "--detected", "--json"],
+      ["agent", "remove", "cursor", "--all", "--json"],
+      ["agent", "doctor", "cursor", "--all", "--json"],
+    ]) {
+      const result = await runWithCapture(argv, { HOME: home });
+      expect(result.exitCode).toBe(2);
+      expect(JSON.parse(result.stdout).error.code).toBe("CLI_INVALID_OPTIONS");
+    }
   });
 });
 

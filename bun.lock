@@ -7,11 +7,13 @@
       "dependencies": {
         "better-sqlite3": "^12.9.0",
         "commander": "^14.0.3",
+        "cross-spawn": "^7.0.6",
       },
       "devDependencies": {
         "@ianvs/prettier-plugin-sort-imports": "4.7.1",
         "@types/better-sqlite3": "^7.6.13",
         "@types/bun": "1.3.12",
+        "@types/cross-spawn": "^6.0.6",
         "@types/micromatch": "^4.0.10",
         "@types/node": "^25.6.0",
         "@typescript-eslint/eslint-plugin": "8.59.0",
@@ -33,6 +35,7 @@
         "@atlas/core": "workspace:*",
         "@atlas/eval": "workspace:*",
         "@atlas/indexer": "workspace:*",
+        "@atlas/integrations": "workspace:*",
         "@atlas/mcp": "workspace:*",
         "@atlas/retrieval": "workspace:*",
         "@atlas/source-ghes": "workspace:*",
@@ -106,6 +109,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@atlas/core": "workspace:*",
+        "@atlas/store": "workspace:*",
       },
       "devDependencies": {
         "bun-types": "1.3.13",
@@ -123,6 +127,16 @@
         "@atlas/store": "workspace:*",
         "@atlas/tokenizer": "workspace:*",
         "@atlas/topology": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "1.3.13",
+      },
+    },
+    "packages/integrations": {
+      "name": "@atlas/integrations",
+      "version": "0.0.0",
+      "dependencies": {
+        "@atlas/core": "workspace:*",
       },
       "devDependencies": {
         "bun-types": "1.3.13",
@@ -223,6 +237,9 @@
     },
     "tooling": {
       "name": "@atlas/tooling",
+      "dependencies": {
+        "@modelcontextprotocol/sdk": "1.29.0",
+      },
     },
     "tooling/tsconfig": {
       "name": "@atlas/tsconfig",
@@ -240,6 +257,8 @@
     "@atlas/eval": ["@atlas/eval@workspace:packages/eval"],
 
     "@atlas/indexer": ["@atlas/indexer@workspace:packages/indexer"],
+
+    "@atlas/integrations": ["@atlas/integrations@workspace:packages/integrations"],
 
     "@atlas/mcp": ["@atlas/mcp@workspace:packages/mcp"],
 
@@ -426,6 +445,8 @@
     "@types/braces": ["@types/braces@3.0.5", "", {}, "sha512-SQFof9H+LXeWNz8wDe7oN5zu7ket0qwMu5vZubW4GCJ8Kkeh6nBWUz87+KTz/G3Kqsrp0j/W253XJb3KMEeg3w=="],
 
     "@types/bun": ["@types/bun@1.3.12", "", { "dependencies": { "bun-types": "1.3.12" } }, "sha512-DBv81elK+/VSwXHDlnH3Qduw+KxkTIWi7TXkAeh24zpi5l0B2kUg9Ga3tb4nJaPcOFswflgi/yAvMVBPrxMB+A=="],
+
+    "@types/cross-spawn": ["@types/cross-spawn@6.0.6", "", { "dependencies": { "@types/node": "*" } }, "sha512-fXRhhUkG4H3TQk5dBhQ7m/JDdSNHKwR2BBia62lhwEIq9xGiQKLxd6LymNhn47SjXhsUEPmxi+PKw2OkW4LLjA=="],
 
     "@types/debug": ["@types/debug@4.1.13", "", { "dependencies": { "@types/ms": "*" } }, "sha512-KSVgmQmzMwPlmtljOomayoR89W4FynCAi3E8PPs7vmDVPe84hT+vGPKkJfThkmXs0x0jAaa9U8uW8bbfyS2fWw=="],
 

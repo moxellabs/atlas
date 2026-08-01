@@ -163,6 +163,18 @@ From a source checkout, use `bun run cli mcp`.
 
 MCP and server reads operate over local corpus data.
 
+Configure supported agents and IDEs without hand-editing MCP files:
+
+```bash
+atlas agent list
+atlas agent detect
+atlas agent install codex --mode discoverable
+atlas agent install --detected --mode discoverable
+atlas agent doctor --all
+```
+
+Use `--scope workspace` for project-owned configuration and `atlas agent remove <client>` for receipt-verified cleanup. See [Runtime surfaces](https://github.com/moxellabs/atlas/blob/main/docs/runtime-surfaces.md#agent-and-ide-integration) for the support matrix, discovery modes, and authenticated remote Atlas setup.
+
 ## Docs map
 
 The npm package does not include full `docs/**`. These links target repository docs on GitHub/source checkouts. For local searchable docs, run `atlas repo add moxellabs/atlas`.

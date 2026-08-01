@@ -4,6 +4,7 @@ import {
   listPackages,
 } from "../store-mappers";
 import type { AtlasMcpDependencies } from "../types";
+import type { AtlasMcpDiscoveryPolicy } from "../types";
 
 /** A compact, safe-to-advertise description of one locally indexed source. */
 export interface IndexedSourceCatalogEntry {
@@ -79,10 +80,13 @@ export function buildIndexedSourceCatalog(
   };
 }
 
-/** MCP initialization guidance. It is bounded so a large corpus cannot dominate context. */
-export function discoveryInstructions(catalog: IndexedSourceCatalog): string {
+/** Bounded MCP initialization guidance for the selected discovery policy. */
+export function discoveryInstructions(
+  catalog: IndexedSourceCatalog,
+  policy: AtlasMcpDiscoveryPolicy = "neutral",
+): string {
   if (catalog.sources.length === 0) {
-    return "Atlas has no indexed local documentation yet. Do not claim local evidence is available; use other permitted sources when needed.";
+    return "Atlas has no indexed documentation. Coverage is absent; use another permitted source when evidence is needed.";
   }
   const listed = catalog.sources
     .slice(0, MAX_ADVERTISED_SOURCES)
@@ -91,22 +95,24 @@ export function discoveryInstructions(catalog: IndexedSourceCatalog): string {
       return `${source.title} (${source.documentCount} docs, ${freshness}; aliases: ${source.aliases.slice(0, 5).join(", ")}; topics: ${source.topics.slice(0, 8).join(", ")})`;
     });
   const remainder = catalog.sources.length - listed.length;
-  return `Atlas provides local indexed documentation for: ${listed.join("; ")}${remainder > 0 ? `; and ${remainder} more` : ""}. For questions that match one of these sources, prefer its source-specific plan_context tool (or plan_context with repoId) before web search or unsupported memory. Treat coverage=absent or stale as a reason to refine locally or use a permitted fallback; cite returned provenance.`;
+  const catalogSummary = `Atlas provides indexed documentation independently of the current workspace for: ${listed.join("; ")}${remainder > 0 ? `; and ${remainder} more` : ""}. Retrieval reports sufficient, partial, absent, or stale coverage with source-relative provenance.`;
+  if (policy === "neutral") return catalogSummary;
+  return `For questions about a matching repository, library, framework, or API, consult Atlas's source-specific plan_context tool (or plan_context with repoId) before external search. Atlas is read-only and independent of the current workspace. Cite returned source-relative provenance; use another permitted source when coverage is partial, absent, or stale. ${catalogSummary}`;
 }
 
 /** Brief server metadata that remains useful when a client only exposes serverInfo. */
 export function discoveryDescription(catalog: IndexedSourceCatalog): string {
   if (catalog.sources.length === 0) {
-    return "Local documentation retrieval and planning. No indexed sources are currently available.";
+    return "Indexed documentation retrieval and planning. No sources are currently available.";
   }
-  return `Local documentation retrieval and planning for ${catalog.sources.length} indexed source${catalog.sources.length === 1 ? "" : "s"}: ${catalog.sources
+  return `Indexed documentation retrieval and planning for ${catalog.sources.length} source${catalog.sources.length === 1 ? "" : "s"}: ${catalog.sources
     .slice(0, 4)
     .map(
       (source) => `${source.title} (${source.topics.slice(0, 5).join(", ")})`,
     )
     .join(
       "; ",
-    )}${catalog.sources.length > 4 ? "; …" : ""}. Prefer local evidence before web search when it covers the question.`;
+    )}${catalog.sources.length > 4 ? "; …" : ""}. Results include coverage, freshness, and source-relative provenance.`;
 }
 
 function repoAliases(repoId: string): string[] {

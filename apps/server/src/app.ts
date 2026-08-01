@@ -28,19 +28,51 @@ export function createApp(dependencies: AtlasServerDependencies) {
       cors({
         origin: isAllowedLocalOrigin,
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowedHeaders: ["content-type", "x-request-id", "mcp-session-id", "last-event-id", "authorization"],
+        allowedHeaders: [
+          "content-type",
+          "x-request-id",
+          "mcp-session-id",
+          "last-event-id",
+          "authorization",
+        ],
         exposeHeaders: ["mcp-session-id"],
         credentials: false,
         maxAge: 600,
-        preflight: true
-      })
+        preflight: true,
+      }),
     )
     .use(requestContextPlugin)
     .use(timingPlugin)
     .use(createLoggingHook(dependencies.env.logRequests))
-    .use(dependencies.env.enableTelemetry ? telemetryPlugin : new Elysia({ name: "atlas-telemetry-disabled" }))
-    .use(dependencies.env.enableOpenApi ? openApiPlugin : new Elysia({ name: "atlas-openapi-disabled" }))
-    .use(dependencies.env.enableOpenApi ? moxelOpenApiPagePlugin : new Elysia({ name: "moxel-openapi-page-disabled" }))
+    .onBeforeHandle(async ({ request, set }) => {
+      if (dependencies.remoteSecurity.enabled)
+        set.headers["cache-control"] = "private, no-store";
+      const denied = await dependencies.remoteSecurity.authorize(request);
+      if (denied === undefined) return undefined;
+      set.status = denied.status;
+      denied.headers.forEach((value, key) => {
+        if (key !== "content-length") set.headers[key] = value;
+      });
+      return denied.json();
+    })
+    .onAfterHandle(({ request, response }) =>
+      dependencies.remoteSecurity.limitResponse(request, response),
+    )
+    .use(
+      dependencies.env.enableTelemetry && !dependencies.remoteSecurity.enabled
+        ? telemetryPlugin
+        : new Elysia({ name: "atlas-telemetry-disabled" }),
+    )
+    .use(
+      dependencies.env.enableOpenApi
+        ? openApiPlugin
+        : new Elysia({ name: "atlas-openapi-disabled" }),
+    )
+    .use(
+      dependencies.env.enableOpenApi
+        ? moxelOpenApiPagePlugin
+        : new Elysia({ name: "moxel-openapi-page-disabled" }),
+    )
     .get(
       "/",
       ({ set }) => {
@@ -48,7 +80,7 @@ export function createApp(dependencies: AtlasServerDependencies) {
         set.headers.location = "/docs";
         return "";
       },
-      docs.rootRedirect
+      docs.rootRedirect,
     )
     .use(createHealthRoutes(dependencies))
     .use(createReposRoutes(dependencies))
@@ -59,7 +91,11 @@ export function createApp(dependencies: AtlasServerDependencies) {
     .use(createInspectRoutes(dependencies))
     .use(createSyncRoutes(dependencies))
     .use(createBuildRoutes(dependencies))
-    .use(dependencies.env.enableMcp ? createMcpRoutes(dependencies) : new Elysia({ name: "atlas-mcp-disabled" }))
+    .use(
+      dependencies.env.enableMcp
+        ? createMcpRoutes(dependencies)
+        : new Elysia({ name: "atlas-mcp-disabled" }),
+    )
     .use(errorPlugin);
 }
 
@@ -77,5 +113,8 @@ function isAllowedLocalOrigin(request: Request): boolean {
     return false;
   }
 
-  return url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  return (
+    url.protocol === "http:" &&
+    ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
+  );
 }

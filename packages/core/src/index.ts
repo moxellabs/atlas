@@ -29,60 +29,61 @@ export { createSkillId } from "./ids/skill-id";
 export type { SourceChange } from "./types/change.types";
 export type { CorpusChunk } from "./types/chunk.types";
 export type {
-	AtlasDocAudience,
-	AtlasDocMetadataProfile,
-	AtlasDocPurpose,
-	AtlasDocVisibility,
-	CanonicalDocument,
-	CanonicalSection,
-	CodeBlockFragment,
-	DocumentMetadata,
-	DocumentMetadataFilters,
+  AtlasDocAudience,
+  AtlasDocMetadataProfile,
+  AtlasDocPurpose,
+  AtlasDocVisibility,
+  CanonicalDocument,
+  CanonicalSection,
+  CodeBlockFragment,
+  DocumentMetadata,
+  DocumentMetadataFilters,
 } from "./types/doc.types";
 export {
-	BUILT_IN_DOC_METADATA_PROFILES,
-	documentMatchesMetadataFilters,
+  BUILT_IN_DOC_METADATA_PROFILES,
+  documentMatchesMetadataFilters,
 } from "./types/doc.types";
 export type {
-	FreshnessInput,
-	FreshnessSnapshot,
+  FreshnessInput,
+  FreshnessSnapshot,
 } from "./types/freshness.types";
 export { computeFreshness } from "./types/freshness.types";
 export type { Provenance, SourceProvenance } from "./types/provenance.types";
 export type {
-	DocMetadataRule,
-	FileEntry,
-	ModuleNode,
-	PackageNode,
-	PathDiff,
-	RepoConfig,
-	RepoMode,
-	RepoRevision,
-	RepoSourceAdapter,
-	SourceFile,
-	WorkspaceConfig,
+  DocMetadataRule,
+  FileEntry,
+  ModuleNode,
+  PackageNode,
+  PathDiff,
+  RepoConfig,
+  RepoMode,
+  RepoRevision,
+  RepoSourceAdapter,
+  SourceFile,
+  WorkspaceConfig,
 } from "./types/repo.types";
 export type {
-	AmbiguousRetrievalResult,
-	PlannedContext,
-	PlannedContextItem,
-	RetrievalHit,
-	RetrievalQuery,
+  AmbiguousRetrievalResult,
+  PlannedContext,
+  PlannedContextItem,
+  RetrievalHit,
+  RetrievalQuery,
 } from "./types/retrieval.types";
 export type { SummaryArtifact } from "./types/summary.types";
 export type {
-	ClassificationDiagnostic,
-	ClassifiedDoc,
-	DocScope,
-	RepoTopologyAdapter,
-	SkillNode,
-	TopologyContext,
-	TopologyRule,
+  ClassificationDiagnostic,
+  ClassifiedDoc,
+  DocScope,
+  RepoTopologyAdapter,
+  SkillNode,
+  TopologyContext,
+  TopologyRule,
 } from "./types/topology.types";
 export { stableHash } from "./utils/hash";
 export { stableJson } from "./utils/stable-json";
 export {
-	estimateTokenCount,
-	fitsWithinTokenBudget,
-	sumTokenCounts,
+  estimateTokenCount,
+  fitsWithinTokenBudget,
+  sumTokenCounts,
 } from "./utils/tokens";
+export { ATLAS_VERSION } from "./version";

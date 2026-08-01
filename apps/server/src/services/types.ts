@@ -7,6 +7,7 @@ import type { BuildOperationsService } from "./build-operations.service";
 import type { McpBridgeService } from "./mcp-bridge.service";
 import type { RetrievalHttpService } from "./retrieval-http.service";
 import type { StoreReadService } from "./store-read.service";
+import type { RemoteSecurityService } from "./remote-security.service";
 
 /** Explicit dependency graph consumed by the Elysia app composition root. */
 export interface AtlasServerDependencies {
@@ -16,6 +17,8 @@ export interface AtlasServerDependencies {
   config: ResolvedAtlasConfig;
   /** Open SQLite store client. */
   db: AtlasStoreClient;
+  /** Temporary immutable corpus directory owned by a remote-only process. */
+  ownedDbDir?: string | undefined;
   /** Store-backed read service for routes and presenters. */
   store: StoreReadService;
   /** Retrieval-backed query service. */
@@ -26,6 +29,8 @@ export interface AtlasServerDependencies {
   mcp?: McpBridgeService | undefined;
   /** Registered MCP metadata, when MCP is enabled. */
   mcpServer?: AtlasMcpServer | undefined;
+  /** Public-bind authentication, scope, rate, and size boundary. */
+  remoteSecurity: RemoteSecurityService;
   /** Refreshes config-bound runtime services after local config mutation. */
   reloadConfig(config: ResolvedAtlasConfig): void;
 }
