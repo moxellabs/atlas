@@ -152,6 +152,7 @@ export type { AtlasMcpDiscoveryPolicy } from "./types";
 export type {
   AtlasMcpDependencies,
   AtlasMcpDiagnostic,
+  AtlasMcpExposurePolicy,
   AtlasMcpIdentity,
   AtlasMcpServer,
   AtlasSourceDiffProvider,

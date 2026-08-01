@@ -12,7 +12,6 @@ const REMOTE_READ_POST_PATHS = new Set([
   "/api/context/plan",
 ]);
 const REMOTE_READ_GET_PATHS = new Set(["/health", "/version", "/api/repos"]);
-const REMOTE_READ_GET_PREFIXES = ["/api/repos/", "/api/docs/"] as const;
 
 interface RateWindow {
   count: number;
@@ -303,6 +302,10 @@ export function assertRemoteExposureSafe(
     throw new Error(
       "Atlas remote mode requires a non-empty ATLAS_REMOTE_REPO_ALLOWLIST.",
     );
+  if (remote.repoAllowlist.length > 100)
+    throw new Error(
+      "Atlas remote mode supports at most 100 repositories in ATLAS_REMOTE_REPO_ALLOWLIST.",
+    );
   const disallowed = [
     ...new Set([
       ...config.config.repos.map((repo) => repo.repoId),
@@ -327,11 +330,7 @@ export function isLoopbackHost(host: string): boolean {
 function remoteMethodAllowed(method: string, path: string): boolean {
   if (path === "/mcp")
     return method === "GET" || method === "POST" || method === "DELETE";
-  if (method === "GET")
-    return (
-      REMOTE_READ_GET_PATHS.has(path) ||
-      REMOTE_READ_GET_PREFIXES.some((prefix) => path.startsWith(prefix))
-    );
+  if (method === "GET") return REMOTE_READ_GET_PATHS.has(path);
   return method === "POST" && REMOTE_READ_POST_PATHS.has(path);
 }
 

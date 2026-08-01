@@ -562,19 +562,28 @@ function installOperations(
         discoverable: mode !== "standard",
       },
     ];
-  if (adapter.kind === "json")
+  if (adapter.kind === "json") {
+    const relativePath = jsonAdapterRelativePath(adapter, environment.platform);
+    if (relativePath === undefined)
+      return [
+        {
+          kind: "manual",
+          reason: `Automatic ${scope}-scope configuration is not supported on ${environment.platform}.`,
+          config: nestedJsonConfig(
+            adapter.rootPath,
+            adapter.serverValue(server),
+          ),
+        },
+      ];
     return [
       {
         kind: "json-merge",
-        path: adapterPath(
-          jsonAdapterRelativePath(adapter, environment.platform),
-          scope,
-          environment,
-        ),
+        path: adapterPath(relativePath, scope, environment),
         keyPath: [...adapter.rootPath, "atlas"],
         value: adapter.serverValue(server),
       },
     ];
+  }
   if (adapter.kind === "managed-file")
     return [
       {
@@ -594,10 +603,18 @@ function installOperations(
 function jsonAdapterRelativePath(
   adapter: Extract<AgentClientAdapter, { kind: "json" }>,
   platform: NodeJS.Platform,
-): string {
+): string | undefined {
   return typeof adapter.relativePath === "string"
     ? adapter.relativePath
     : adapter.relativePath(platform);
+}
+function nestedJsonConfig(
+  rootPath: readonly string[],
+  serverValue: unknown,
+): unknown {
+  return rootPath.reduceRight<unknown>((value, key) => ({ [key]: value }), {
+    atlas: serverValue,
+  });
 }
 
 function adapterForScope(

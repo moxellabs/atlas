@@ -53,7 +53,9 @@ export interface CodexAdapter {
 
 export interface JsonAdapter {
   readonly kind: "json";
-  readonly relativePath: string | ((platform: NodeJS.Platform) => string);
+  readonly relativePath:
+    | string
+    | ((platform: NodeJS.Platform) => string | undefined);
   readonly rootPath: readonly string[];
   readonly serverValue: (server: ServerLaunchSpec) => unknown;
 }

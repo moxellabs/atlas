@@ -702,6 +702,20 @@ describe("mcp package", () => {
       atlasServer.diagnostics.map((diagnostic) => diagnostic.stage),
     ).toEqual(["tool", "resource", "prompt", "server"]);
   });
+  test("exposes only bounded retrieval surfaces to remote MCP clients", () => {
+    const atlasServer = createAtlasMcpServer({
+      db: store,
+      exposurePolicy: "bounded-remote",
+    });
+
+    expect(atlasServer.tools).toEqual([
+      "plan_context",
+      "find_scopes",
+      "find_docs",
+      "plan_context__atlas",
+    ]);
+    expect(atlasServer.resources).toEqual([]);
+  });
 
   test("keeps autonomous discovery neutral unless prefer-local is explicit", () => {
     const catalog = buildIndexedSourceCatalog({ db: store });

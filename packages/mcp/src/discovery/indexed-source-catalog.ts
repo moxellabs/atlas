@@ -1,8 +1,6 @@
-import {
-  listDocumentsByRepo,
-  listIndexedCoverage,
-  listPackages,
-} from "../store-mappers";
+import { DocRepository } from "@atlas/store";
+
+import { listIndexedCoverage } from "../store-mappers";
 import type { AtlasMcpDependencies } from "../types";
 import type { AtlasMcpDiscoveryPolicy } from "../types";
 
@@ -32,9 +30,18 @@ const MAX_ADVERTISED_SOURCES = 12;
 export function buildIndexedSourceCatalog(
   dependencies: AtlasMcpDependencies,
 ): IndexedSourceCatalog {
-  const sources = listIndexedCoverage(dependencies.db)
+  const coverage = listIndexedCoverage(dependencies.db, MAX_ADVERTISED_SOURCES);
+  const sources = coverage
     .map((coverage) => {
-      const packageNames = listPackages(dependencies.db, coverage.repoId)
+      const packageNames = dependencies.db
+        .all<{ name: string }>(
+          `SELECT name
+           FROM packages
+           WHERE repo_id = $repoId
+           ORDER BY path
+           LIMIT 16`,
+          { $repoId: coverage.repoId },
+        )
         .map((pkg) => pkg.name)
         .filter((name) => name.length > 0);
       const aliases = unique([
@@ -42,14 +49,14 @@ export function buildIndexedSourceCatalog(
         ...packageNames,
       ]);
       const topics = sourceTopics(
-        listDocumentsByRepo(dependencies.db, coverage.repoId).map(
-          (document) => ({
+        new DocRepository(dependencies.db)
+          .listByRepo(coverage.repoId, { limit: 32 })
+          .map((document) => ({
             title: document.title,
             path: document.path,
             description: document.description,
             tags: document.tags,
-          }),
-        ),
+          })),
       );
       return {
         repoId: coverage.repoId,

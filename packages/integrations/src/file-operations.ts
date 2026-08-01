@@ -360,9 +360,7 @@ function mergeCodexConfig(
   operation: CodexConfigOperation,
 ): string {
   const lines = normalizeLines(content);
-  if (
-    findTomlSection(lines, `mcp_servers.${operation.serverName}`) !== undefined
-  ) {
+  if (hasTomlTableOwnership(lines, ["mcp_servers", operation.serverName])) {
     throw new Error(
       `Refusing to overwrite unmanaged Codex MCP server '${operation.serverName}'.`,
     );
@@ -467,17 +465,14 @@ function findTomlSection(
   lines: readonly string[],
   name: string,
 ): { start: number; end: number } | undefined {
-  const separator = name.lastIndexOf(".");
-  const prefix = separator < 0 ? "" : name.slice(0, separator);
-  const key = separator < 0 ? name : name.slice(separator + 1);
-  const headers = new Set([
-    `[${name}]`,
-    ...(prefix.length === 0
-      ? []
-      : [`[${prefix}.${JSON.stringify(key)}]`, `[${prefix}.'${key}']`]),
-  ]);
+  const targetPath = name.split(".");
   const matches = lines
-    .map((line, index) => (headers.has(line.trim()) ? index : -1))
+    .map((line, index) => {
+      const path = tomlTablePath(line);
+      return path !== undefined && sameStringPath(path, targetPath)
+        ? index
+        : -1;
+    })
     .filter((index) => index >= 0);
   if (matches.length > 1)
     throw new Error(`Duplicate TOML section ${name}; refusing to edit.`);
@@ -487,6 +482,136 @@ function findTomlSection(
     (line, index) => index > start && /^\s*\[.*\]\s*$/u.test(line),
   );
   return { start, end: next < 0 ? lines.length : next };
+}
+
+function hasTomlTableOwnership(
+  lines: readonly string[],
+  targetPath: readonly string[],
+): boolean {
+  let tablePath: readonly string[] = [];
+  for (const line of lines) {
+    const headerPath = tomlTablePath(line);
+    if (headerPath !== undefined) {
+      tablePath = headerPath;
+      if (isStringPathPrefix(targetPath, headerPath)) return true;
+      continue;
+    }
+    const assignmentPath = tomlAssignmentPath(line);
+    if (assignmentPath === undefined) continue;
+    const fullPath = [...tablePath, ...assignmentPath];
+    if (
+      isStringPathPrefix(fullPath, targetPath) ||
+      isStringPathPrefix(targetPath, fullPath)
+    )
+      return true;
+  }
+  return false;
+}
+
+function tomlTablePath(line: string): readonly string[] | undefined {
+  const match = line.match(/^\s*\[([^\][\r\n]+)\]\s*(?:#.*)?$/u);
+  return match?.[1] === undefined ? undefined : parseTomlDottedPath(match[1]);
+}
+
+function tomlAssignmentPath(line: string): readonly string[] | undefined {
+  if (line.trimStart().startsWith("#")) return undefined;
+  let quote: "'" | '"' | undefined;
+  let escaped = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (quote === '"') {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === quote) quote = undefined;
+      continue;
+    }
+    if (quote === "'") {
+      if (character === quote) quote = undefined;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+    if (character === "#") return undefined;
+    if (character === "=")
+      return parseTomlDottedPath(line.slice(0, index).trim());
+  }
+  return undefined;
+}
+
+function parseTomlDottedPath(value: string): readonly string[] | undefined {
+  const parts: string[] = [];
+  let current = "";
+  let quote: "'" | '"' | undefined;
+  let escaped = false;
+  for (const character of value) {
+    if (quote === '"') {
+      current += character;
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === quote) quote = undefined;
+      continue;
+    }
+    if (quote === "'") {
+      current += character;
+      if (character === quote) quote = undefined;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      current += character;
+      continue;
+    }
+    if (character === ".") {
+      const key = parseTomlKey(current);
+      if (key === undefined) return undefined;
+      parts.push(key);
+      current = "";
+      continue;
+    }
+    current += character;
+  }
+  if (quote !== undefined) return undefined;
+  const key = parseTomlKey(current);
+  if (key === undefined) return undefined;
+  parts.push(key);
+  return parts;
+}
+
+function parseTomlKey(value: string): string | undefined {
+  const key = value.trim();
+  if (/^[A-Za-z0-9_-]+$/u.test(key)) return key;
+  if (key.startsWith("'") && key.endsWith("'")) return key.slice(1, -1);
+  if (key.startsWith('"') && key.endsWith('"')) {
+    try {
+      const parsed: unknown = JSON.parse(key);
+      return typeof parsed === "string" ? parsed : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+function sameStringPath(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every((part, index) => part === right[index])
+  );
+}
+
+function isStringPathPrefix(
+  prefix: readonly string[],
+  path: readonly string[],
+): boolean {
+  return (
+    prefix.length <= path.length &&
+    prefix.every((part, index) => part === path[index])
+  );
 }
 
 function tomlAssignmentKey(line: string): string | undefined {
