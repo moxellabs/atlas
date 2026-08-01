@@ -47,7 +47,6 @@ const nativeEnvArgs = (server: ServerLaunchSpec): string[] =>
 
 const nativeCheckOutput = (): readonly string[] => ["atlas"];
 const nativeServerKeys = ["type", "command", "args", "env"] as const;
-const claudeServerKeys = [...nativeServerKeys, "tools"] as const;
 
 const claudeScope = (scope: AgentIntegrationScope): string =>
   scope === "user" ? "user" : "project";
@@ -109,8 +108,7 @@ export const AGENT_INTEGRATIONS: readonly AgentIntegrationDescriptor[] = [
       verification: {
         relativePath: ".claude.json",
         rootPath: ["mcpServers"],
-        allowedKeys: claudeServerKeys,
-        expectedValues: { tools: ["*"] },
+        allowedKeys: nativeServerKeys,
       },
     },
     workspace: {
@@ -143,8 +141,7 @@ export const AGENT_INTEGRATIONS: readonly AgentIntegrationDescriptor[] = [
       verification: {
         relativePath: ".mcp.json",
         rootPath: ["mcpServers"],
-        allowedKeys: claudeServerKeys,
-        expectedValues: { tools: ["*"] },
+        allowedKeys: nativeServerKeys,
       },
     },
     notes: [
@@ -253,7 +250,8 @@ export const AGENT_INTEGRATIONS: readonly AgentIntegrationDescriptor[] = [
       verification: {
         relativePath: ".copilot/mcp-config.json",
         rootPath: ["mcpServers"],
-        allowedKeys: nativeServerKeys,
+        allowedKeys: [...nativeServerKeys, "tools"],
+        expectedValues: { tools: ["*"] },
       },
     },
     workspace: json(".github/mcp.json", ["mcpServers"]),
