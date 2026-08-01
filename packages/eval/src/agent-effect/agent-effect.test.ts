@@ -319,7 +319,12 @@ describe("agent effect evaluation", () => {
           headingPath,
           ordinal: 0,
           text: "Recovery repairs only the interrupted append.",
-          codeBlocks: [],
+          codeBlocks: [
+            {
+              lang: "text",
+              code: "scene-session-manifest.json\nscene-frames.jsonl\nscene-index.bin",
+            },
+          ],
         },
       ],
       metadata: { tags: ["recovery", "append"] },
@@ -369,7 +374,7 @@ describe("agent effect evaluation", () => {
     ).toEqual([
       {
         path: evidencePath,
-        text: "Recovery repairs only the interrupted append.",
+        text: "Recovery repairs only the interrupted append.\n\n```text\nscene-session-manifest.json\nscene-frames.jsonl\nscene-index.bin\n```",
       },
     ]);
     expect(() =>

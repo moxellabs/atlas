@@ -45,6 +45,9 @@ export async function prepareFileOperations(
       operation.kind !== "managed-file"
     )
       continue;
+    const previousChange = nextByPath.get(operation.path);
+    const replacesOwnedManagedFile =
+      previousChange !== undefined && previousChange.desired === undefined;
     const staged = await stagedContent(operation.path, nextByPath);
     let desired: string;
     if (operation.kind === "json-merge")
@@ -52,7 +55,7 @@ export async function prepareFileOperations(
     else if (operation.kind === "codex-config")
       desired = mergeCodexConfig(staged.current, operation);
     else {
-      if (staged.current.length > 0)
+      if (staged.expected !== undefined && !replacesOwnedManagedFile)
         throw new Error(
           `Refusing to overwrite unmanaged configuration file: ${operation.path}.`,
         );
@@ -203,7 +206,7 @@ export async function fileOperationMatches(
     return (
       parent !== undefined &&
       key !== undefined &&
-      nativeServerMatches(parent[key], operation.server)
+      nativeServerMatches(parent[key], operation)
     );
   }
   if (operation.kind === "json-merge") {
@@ -247,9 +250,19 @@ export async function fileOperationMatches(
 
 function nativeServerMatches(
   value: unknown,
-  expected: NativeConfigVerification["server"],
+  verification: NativeConfigVerification,
 ): boolean {
-  if (!isUnknownRecord(value) || value.command !== expected.command)
+  const expected = verification.server;
+  const allowedKeys = new Set(verification.allowedKeys);
+  const expectedValues = verification.expectedValues ?? {};
+  if (
+    !isUnknownRecord(value) ||
+    Object.keys(value).some((key) => !allowedKeys.has(key)) ||
+    Object.entries(expectedValues).some(
+      ([key, expectedValue]) => !deepEqual(value[key], expectedValue),
+    ) ||
+    value.command !== expected.command
+  )
     return false;
   if (
     value.type !== undefined &&

@@ -43,6 +43,8 @@ export interface NativeAdapter {
   readonly verification: {
     readonly relativePath: string;
     readonly rootPath: readonly string[];
+    readonly allowedKeys: readonly string[];
+    readonly expectedValues?: Readonly<Record<string, unknown>> | undefined;
   };
 }
 
@@ -115,6 +117,8 @@ export interface NativeConfigVerification {
   readonly path: string;
   readonly keyPath: readonly string[];
   readonly server: ServerLaunchSpec;
+  readonly allowedKeys: readonly string[];
+  readonly expectedValues?: Readonly<Record<string, unknown>> | undefined;
 }
 
 export interface JsonMergeOperation {
