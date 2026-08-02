@@ -685,7 +685,7 @@ describe("mcp package", () => {
         "what_changed",
       ]),
     );
-    expect(atlasServer.tools).toContain("search_docs__atlas");
+    expect(atlasServer.tools).toContain("answer_atlas_docs");
     expect(atlasServer.resources).toContain("atlas-document");
     expect(atlasServer.resources).toContain("atlas-summary");
     expect(atlasServer.resources).toContain("atlas-skill-artifact");
@@ -712,7 +712,7 @@ describe("mcp package", () => {
       "plan_context",
       "find_scopes",
       "find_docs",
-      "search_docs__atlas",
+      "answer_atlas_docs",
     ]);
     expect(atlasServer.resources).toEqual([]);
   });
@@ -805,21 +805,27 @@ describe("mcp package", () => {
 
     const tools = await client.listTools();
     const facade = tools.tools.find(
-      (tool) => tool.name === "search_docs__atlas",
+      (tool) => tool.name === "answer_atlas_docs",
     );
     expect(facade).toMatchObject({
-      title: "Search atlas documentation",
+      title: "Answer from atlas documentation",
       description: expect.stringMatching(/session.*append/),
       annotations: expect.objectContaining({ readOnlyHint: true }),
       _meta: { "anthropic/alwaysLoad": true },
     });
     const result = await client.callTool({
-      name: "search_docs__atlas",
+      name: "answer_atlas_docs",
       arguments: { query: "how do I rotate session tokens?" },
     });
     expect(result.structuredContent).toMatchObject({
       coverage: expect.objectContaining({ status: expect.any(String) }),
       citations: expect.arrayContaining([expect.objectContaining({ repoId })]),
+      exactPassages: expect.arrayContaining([
+        expect.objectContaining({
+          path: "packages/auth/docs/session.md",
+          text: expect.stringContaining("Rotate session tokens"),
+        }),
+      ]),
     });
     const manifest = await client.readResource({ uri: "atlas://manifest" });
     expect(manifest.contents).toHaveLength(1);
@@ -868,7 +874,7 @@ describe("mcp package", () => {
     expect(atlasServer.refreshDiscovery()).toBeTrue();
     await Promise.all([toolListChanged.promise, resourceListChanged.promise]);
     expect((await client.listTools()).tools.map((tool) => tool.name)).toContain(
-      "search_docs__guide",
+      "answer_guide_docs",
     );
     expect(
       (await client.listResources()).resources.map((resource) => resource.name),
