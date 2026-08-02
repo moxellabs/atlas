@@ -231,6 +231,14 @@ try {
     },
     {
       dimension: "hermeticity",
+      passed: treatmentCommand
+        .join(" ")
+        .includes(
+          "--disable apps --disable plugins --disable browser_use --disable in_app_browser --disable computer_use",
+        ),
+    },
+    {
+      dimension: "hermeticity",
       passed:
         /\bHOME\b/.test(codexSource) &&
         /\bGITHUB_TOKEN\b/.test(codexSource) &&

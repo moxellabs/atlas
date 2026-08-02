@@ -267,6 +267,9 @@ describe("agent effect evaluation", () => {
     expect(command).toContain("web_search");
     expect(command).toContain('web_search="live"');
     expect(command).toContain("tools.web_search=true");
+    expect(command.join(" ")).toContain(
+      "--disable apps --disable plugins --disable browser_use --disable in_app_browser --disable computer_use",
+    );
     expect(command).not.toContain("shell_tool");
     expect(command).not.toContain("unified_exec");
     expect(command).toContain('default_permissions="atlas_eval"');
