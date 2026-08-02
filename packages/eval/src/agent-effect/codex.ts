@@ -337,6 +337,8 @@ export function codexAgentCommand(input: {
       `mcp_servers.${mcpServerName}.required=true`,
       "-c",
       `mcp_servers.${mcpServerName}.default_tools_approval_mode="writes"`,
+      "-c",
+      `features.code_mode.direct_only_tool_namespaces=${JSON.stringify([mcpServerName])}`,
     );
   }
   command.push(agentPrompt(input.task));

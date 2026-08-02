@@ -207,6 +207,9 @@ describe("agent effect evaluation", () => {
     expect(command).toContain(
       'mcp_servers.atlas_atlas.default_tools_approval_mode="writes"',
     );
+    expect(command).toContain(
+      'features.code_mode.direct_only_tool_namespaces=["atlas_atlas"]',
+    );
     expect(command.join(" ")).not.toContain("--discovery-policy");
     expect(command).toContain("mcp_servers.atlas_atlas.required=true");
     expect(command).not.toContain("--sandbox");
@@ -217,6 +220,11 @@ describe("agent effect evaluation", () => {
     expect(
       baselineCommand.some((argument) =>
         argument.startsWith("mcp_servers.atlas_atlas."),
+      ),
+    ).toBe(false);
+    expect(
+      baselineCommand.some((argument) =>
+        argument.startsWith("features.code_mode.direct_only_tool_namespaces="),
       ),
     ).toBe(false);
     expect(baselineCommand.at(-1)).toBe(prompt);
