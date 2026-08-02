@@ -111,7 +111,9 @@ export async function createCodexExecutor(input: {
       runAgent: async ({ arm, task, trial }) =>
         runAgent({
           atlasCwd: input.cwd,
+          repoId: input.dataset.repoId,
           cwd: agentCwd,
+          isolateWorkspace: generatedAgentCwd,
           workDir,
           ...(config.configPath === undefined
             ? {}
@@ -151,7 +153,9 @@ export async function createCodexExecutor(input: {
 
 async function runAgent(input: {
   readonly atlasCwd: string;
+  readonly repoId: string;
   readonly cwd: string;
+  readonly isolateWorkspace: boolean;
   readonly workDir: string;
   readonly configPath?: string;
   readonly useGlobal: boolean;
@@ -165,11 +169,13 @@ async function runAgent(input: {
   const startedAt = new Date().toISOString();
   const started = performance.now();
   const suffix = `${input.task.id}-${input.trial}-${input.arm}`;
+  const cwd = input.isolateWorkspace ? join(input.cwd, suffix) : input.cwd;
+  await mkdir(cwd, { recursive: true });
   const outputPath = join(input.workDir, `${suffix}.answer.json`);
-  const command = codexAgentCommand({ ...input, outputPath });
+  const command = codexAgentCommand({ ...input, cwd, outputPath });
   const result = await runCommand(
     command,
-    input.cwd,
+    cwd,
     input.runner.agentTimeoutMs,
     hermeticCodexEnvironment(input.workDir),
   );
@@ -243,7 +249,7 @@ async function judgePair(input: {
       "codex",
       "exec",
       "--ephemeral",
-      ...hermeticCodexOptions(input.workDir),
+      ...hermeticCodexOptions(input.cwd),
       "-C",
       input.cwd,
       "-m",
@@ -281,6 +287,7 @@ async function judgePair(input: {
 
 export function codexAgentCommand(input: {
   readonly atlasCwd: string;
+  readonly repoId: string;
   readonly cwd: string;
   readonly workDir: string;
   readonly configPath?: string;
@@ -293,13 +300,14 @@ export function codexAgentCommand(input: {
   readonly task: AgentEffectTask;
   readonly trial: number;
 }): string[] {
+  const mcpServerName = atlasMcpServerName(input.repoId);
   const command = [
     "codex",
     "exec",
     "--ephemeral",
     ...(input.competitiveTools === true
-      ? competitiveCodexOptions(input.workDir)
-      : hermeticCodexOptions(input.workDir)),
+      ? competitiveCodexOptions(input.cwd)
+      : hermeticCodexOptions(input.cwd)),
     "--json",
     "-C",
     input.cwd,
@@ -322,17 +330,25 @@ export function codexAgentCommand(input: {
     });
     command.push(
       "-c",
-      `mcp_servers.atlas_eval.command=${JSON.stringify(process.execPath)}`,
+      `mcp_servers.${mcpServerName}.command=${JSON.stringify(process.execPath)}`,
       "-c",
-      `mcp_servers.atlas_eval.args=${JSON.stringify(serverArgs)}`,
+      `mcp_servers.${mcpServerName}.args=${JSON.stringify(serverArgs)}`,
       "-c",
-      "mcp_servers.atlas_eval.required=true",
+      `mcp_servers.${mcpServerName}.required=true`,
       "-c",
-      'mcp_servers.atlas_eval.default_tools_approval_mode="writes"',
+      `mcp_servers.${mcpServerName}.default_tools_approval_mode="writes"`,
     );
   }
   command.push(agentPrompt(input.task));
   return command;
+}
+
+export function atlasMcpServerName(repoId: string): string {
+  const source = basename(repoId)
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return `atlas_${source || "source"}`;
 }
 
 export function atlasMcpServerArgs(input: {
@@ -557,7 +573,11 @@ export function traceMcpEvents(stdout: string): McpTraceSummary {
 function traceEvent(
   record: Record<string, unknown>,
 ): McpTraceEvent | undefined {
-  if (record.type === "mcp_tool_call" && record.server === "atlas_eval") {
+  if (
+    record.type === "mcp_tool_call" &&
+    typeof record.server === "string" &&
+    isAtlasEvalServer(record.server)
+  ) {
     const name =
       typeof record.tool === "string"
         ? record.tool
@@ -571,6 +591,7 @@ function traceEvent(
       ok: commandSucceeded(record),
     };
   }
+
   if (record.type === "web_search_call" || record.type === "web_search") {
     return {
       kind: "web_search",
@@ -581,12 +602,16 @@ function traceEvent(
   }
   if (record.type !== "command_execution") return undefined;
   const command = typeof record.command === "string" ? record.command : "";
+  const source = commandSource(command);
   return {
     kind: "command",
-    name: commandExecutable(command),
-    source: commandSource(command),
+    name: evidenceCommandName(command, source),
+    source,
     ok: commandSucceeded(record),
   };
+}
+function isAtlasEvalServer(server: string): boolean {
+  return server === "atlas" || server.startsWith("atlas_");
 }
 
 function commandSucceeded(record: Record<string, unknown>): boolean {
@@ -604,21 +629,42 @@ function commandExecutable(command: string): string {
     : basename(first);
 }
 
+function evidenceCommandName(
+  command: string,
+  source: "shell" | "filesystem" | "github",
+): string {
+  const names =
+    source === "github"
+      ? ["gh", "git"]
+      : source === "filesystem"
+        ? [...FILESYSTEM_COMMANDS]
+        : [];
+  if (names.length === 0) return commandExecutable(command);
+  return embeddedCommand(command, names) ?? commandExecutable(command);
+}
+
+function embeddedCommand(
+  command: string,
+  names: readonly string[],
+): string | undefined {
+  const match = command.match(
+    new RegExp(`(?:^|[\\s/'"])(${names.join("|")})(?=[\\s'"]|$)`),
+  );
+  return match?.[1];
+}
+
 function commandSource(command: string): "shell" | "filesystem" | "github" {
   const executable = commandExecutable(command);
+  const githubCommand = embeddedCommand(command, ["gh", "git"]);
   if (
     executable === "gh" ||
     executable === "git" ||
-    /(?:^|\s)(?:gh|git)(?:\s|$)/.test(command)
+    githubCommand !== undefined
   ) {
     return "github";
   }
-  if (
-    FILESYSTEM_COMMANDS.has(executable) ||
-    /(?:^|\s)(?:cat|find|grep|ls|pwd|readlink|rg|sed|stat)(?:\s|$)/.test(
-      command,
-    )
-  ) {
+  const filesystemCommand = embeddedCommand(command, [...FILESYSTEM_COMMANDS]);
+  if (FILESYSTEM_COMMANDS.has(executable) || filesystemCommand !== undefined) {
     return "filesystem";
   }
   return "shell";
@@ -703,7 +749,7 @@ function hermeticCodexEnvironment(workDir?: string): Record<string, string> {
   };
 }
 
-function competitiveCodexOptions(workDir: string): string[] {
+function competitiveCodexOptions(cwd: string): string[] {
   return [
     "--ignore-user-config",
     "--ignore-rules",
@@ -715,18 +761,15 @@ function competitiveCodexOptions(workDir: string): string[] {
     'web_search="live"',
     "-c",
     "tools.web_search=true",
-    "-c",
-    "sandbox_workspace_write.network_access=false",
+    ...evalPermissionOptions(),
     "-c",
     'shell_environment_policy.inherit="none"',
     "-c",
-    shellEnvironmentSet(workDir),
-    "--sandbox",
-    "workspace-write",
+    shellEnvironmentSet(cwd),
   ];
 }
 
-function hermeticCodexOptions(workDir: string): string[] {
+function hermeticCodexOptions(cwd: string): string[] {
   return [
     "--ignore-user-config",
     "--ignore-rules",
@@ -756,20 +799,25 @@ function hermeticCodexOptions(workDir: string): string[] {
     'web_search="disabled"',
     "-c",
     "tools.web_search=false",
-    "-c",
-    "sandbox_workspace_write.network_access=false",
+    ...evalPermissionOptions(),
     "-c",
     'shell_environment_policy.inherit="none"',
     "-c",
-    shellEnvironmentSet(workDir),
-    "--sandbox",
-    "workspace-write",
+    shellEnvironmentSet(cwd),
   ];
 }
 
-function shellEnvironmentSet(workDir: string): string {
-  const home = join(workDir, "home");
-  return `shell_environment_policy.set={ HOME = ${JSON.stringify(home)}, GH_TOKEN = "", GITHUB_TOKEN = "", XDG_CACHE_HOME = ${JSON.stringify(join(home, ".cache"))}, XDG_CONFIG_HOME = ${JSON.stringify(join(home, ".config"))}, XDG_DATA_HOME = ${JSON.stringify(join(home, ".local", "share"))} }`;
+function evalPermissionOptions(): string[] {
+  return [
+    "-c",
+    'default_permissions="atlas_eval"',
+    "-c",
+    'permissions.atlas_eval={ filesystem = { ":minimal" = "read", ":workspace_roots" = { "." = "write" } }, network = { enabled = false } }',
+  ];
+}
+
+function shellEnvironmentSet(cwd: string): string {
+  return `shell_environment_policy.set={ HOME = ${JSON.stringify(cwd)}, GH_TOKEN = "", GITHUB_TOKEN = "", XDG_CACHE_HOME = ${JSON.stringify(join(cwd, ".cache"))}, XDG_CONFIG_HOME = ${JSON.stringify(join(cwd, ".config"))}, XDG_DATA_HOME = ${JSON.stringify(join(cwd, ".local", "share"))} }`;
 }
 
 async function runText(

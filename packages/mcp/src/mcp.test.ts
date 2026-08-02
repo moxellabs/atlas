@@ -36,6 +36,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import * as publicMcp from "./index";
 import {
   buildIndexedSourceCatalog,
+  discoveryDescription,
   discoveryInstructions,
 } from "./discovery/indexed-source-catalog";
 import { answerFromLocalDocsPrompt } from "./prompts/answer-from-local-docs.prompt";
@@ -725,6 +726,47 @@ describe("mcp package", () => {
     expect(neutral).toContain("Atlas provides indexed documentation");
     expect(neutral).not.toContain("before external search");
     expect(preferLocal).toContain("before external search");
+  });
+
+  test("advertises the root README identity instead of hidden agent artifacts", () => {
+    const readmeDocId = createDocId({ repoId, path: "README.md" });
+    const hiddenDocId = createDocId({
+      repoId,
+      path: ".pi/skills/gsd-phase.md",
+    });
+    const docs = new DocRepository(store);
+    docs.upsert({
+      docId: readmeDocId,
+      repoId,
+      path: "README.md",
+      sourceVersion: "rev_1",
+      title: "WaveBridge",
+      kind: "repo-doc",
+      authority: "canonical",
+      scopes: [{ level: "repo", repoId }],
+      sections: [],
+      metadata: { tags: [] },
+    });
+    docs.upsert({
+      docId: hiddenDocId,
+      repoId,
+      path: ".pi/skills/gsd-phase.md",
+      sourceVersion: "rev_1",
+      title: "Private GSD Phase",
+      kind: "repo-doc",
+      authority: "supplemental",
+      scopes: [{ level: "repo", repoId }],
+      sections: [],
+      metadata: { tags: [] },
+    });
+
+    const catalog = buildIndexedSourceCatalog({ db: store });
+    expect(catalog.sources[0]).toMatchObject({
+      title: "WaveBridge",
+      aliases: expect.arrayContaining(["WaveBridge"]),
+    });
+    expect(catalog.sources[0]?.topics).not.toContain("private");
+    expect(discoveryDescription(catalog)).toContain("WaveBridge");
   });
 
   test("advertises the generic router for additive client preload", async () => {
