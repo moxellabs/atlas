@@ -342,17 +342,9 @@ export function atlasMcpServerArgs(input: {
 }): string[] {
   const cliPath = join(input.atlasCwd, "apps/cli/src/index.ts");
   if (input.configPath !== undefined) {
-    return [
-      cliPath,
-      "--config",
-      input.configPath,
-      "mcp",
-      "--discovery-policy",
-      "prefer-local",
-    ];
+    return [cliPath, "--config", input.configPath, "mcp"];
   }
-  if (input.useGlobal)
-    return [cliPath, "mcp", "--discovery-policy", "prefer-local"];
+  if (input.useGlobal) return [cliPath, "mcp"];
   throw new Error(
     "Atlas MCP treatment requires an explicit local eval config or global runtime.",
   );

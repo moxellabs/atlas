@@ -144,11 +144,16 @@ function sourceTitle(repoId: string): string {
 }
 
 function toolSuffix(repoId: string): string {
-  const normalized = repoId
+  const name =
+    repoId
+      .split("/")
+      .filter((part) => part.length > 0)
+      .at(-1) ?? repoId;
+  const normalized = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
-  return normalized.length > 0 ? normalized.slice(-56) : "source";
+  return normalized.length > 0 ? normalized.slice(0, 48) : "source";
 }
 
 function uniqueToolSuffix(

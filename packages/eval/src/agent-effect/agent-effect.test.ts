@@ -89,7 +89,7 @@ describe("agent effect evaluation", () => {
         item: {
           type: "mcp_tool_call",
           server: "atlas_eval",
-          tool: "plan_context__diffract",
+          tool: "search_docs__diffract",
           error: null,
         },
       },
@@ -146,7 +146,7 @@ describe("agent effect evaluation", () => {
     expect(trace.calls).toEqual([
       {
         kind: "tool",
-        name: "plan_context__diffract",
+        name: "search_docs__diffract",
         source: "atlas",
         ok: true,
       },
@@ -192,7 +192,7 @@ describe("agent effect evaluation", () => {
     expect(command).toContain(
       'mcp_servers.atlas_eval.default_tools_approval_mode="writes"',
     );
-    expect(command.join(" ")).toContain('"--discovery-policy","prefer-local"');
+    expect(command.join(" ")).not.toContain("--discovery-policy");
     expect(command).toContain("mcp_servers.atlas_eval.required=true");
     expect(command.filter((argument) => argument === "--sandbox")).toHaveLength(
       1,
@@ -263,16 +263,9 @@ describe("agent effect evaluation", () => {
       "--config",
       "/tmp/eval.json",
       "mcp",
-      "--discovery-policy",
-      "prefer-local",
     ]);
     expect(atlasMcpServerArgs({ atlasCwd: "/atlas", useGlobal: true })).toEqual(
-      [
-        "/atlas/apps/cli/src/index.ts",
-        "mcp",
-        "--discovery-policy",
-        "prefer-local",
-      ],
+      ["/atlas/apps/cli/src/index.ts", "mcp"],
     );
     expect(() =>
       atlasMcpServerArgs({ atlasCwd: "/atlas", useGlobal: false }),
@@ -524,7 +517,7 @@ describe("agent effect evaluation", () => {
                 : [
                     {
                       kind: "tool",
-                      name: "plan_context__fixture",
+                      name: "search_docs__fixture",
                       source: "atlas",
                       ok: true,
                     },
