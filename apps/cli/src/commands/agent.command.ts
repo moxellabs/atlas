@@ -23,7 +23,7 @@ import {
   EXIT_INPUT_ERROR,
   EXIT_PARTIAL_FAILURE,
 } from "../utils/errors";
-import { readArgvString, renderRows, renderSuccess } from "./shared";
+import { renderRows, renderSuccess } from "./shared";
 
 export async function runAgentCommand(
   context: CliCommandContext,

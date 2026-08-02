@@ -14,9 +14,7 @@ import { isUnknownRecord } from "./guards";
 import type {
   CodexConfigOperation,
   IntegrationOperation,
-  JsonMergeOperation,
   NativeConfigVerification,
-  ManagedFileOperation,
 } from "./types";
 
 export interface FileBackup {
