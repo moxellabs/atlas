@@ -178,6 +178,7 @@ describe("agent effect evaluation", () => {
 
     expect(command).toContain("--ignore-user-config");
     expect(command).toContain("--ignore-rules");
+    expect(command).toContain("deferred_tool_world_state");
     expect(command).toContain("web_search");
     expect(command).toContain("standalone_web_search");
     expect(command).toContain("shell_tool");
@@ -241,6 +242,7 @@ describe("agent effect evaluation", () => {
     });
 
     expect(command).toContain("--enable");
+    expect(command).toContain("deferred_tool_world_state");
     expect(command).toContain("web_search");
     expect(command).toContain('web_search="live"');
     expect(command).toContain("tools.web_search=true");
