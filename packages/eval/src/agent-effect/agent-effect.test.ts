@@ -539,7 +539,14 @@ describe("agent effect evaluation", () => {
           mcp: {
             calls:
               arm === "baseline"
-                ? []
+                ? [
+                    {
+                      kind: "web_search",
+                      name: "web_search",
+                      source: "web",
+                      ok: true,
+                    },
+                  ]
                 : [
                     {
                       kind: "tool",
