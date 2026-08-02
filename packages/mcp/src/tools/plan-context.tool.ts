@@ -16,9 +16,11 @@ export const PLAN_CONTEXT_TOOL = "plan_context";
 
 const sourcePlanContextInputSchema = z
   .object({
-    query: z.string().trim().min(1),
-    budgetTokens: z.number().int().min(1).max(200_000).default(2_000),
-    detail: z.enum(["agent", "debug"]).default("agent"),
+    query: z
+      .string()
+      .trim()
+      .min(1)
+      .describe("The question to answer from this indexed source."),
   })
   .strict();
 
@@ -126,14 +128,14 @@ export function registerSourcePlanContextTool(
   dependencies: AtlasMcpDependencies,
   source: IndexedSourceCatalogEntry,
 ) {
-  const name = `${PLAN_CONTEXT_TOOL}__${source.toolSuffix}`;
+  const name = `search_docs__${source.toolSuffix}`;
   return {
     name,
     handle: server.registerTool(
       name,
       {
-        title: `Answer from indexed ${source.title} documentation`,
-        description: `Answer questions about ${source.title} from its indexed documentation. Matches these source names: ${source.aliases.slice(0, 8).join(", ")}. Searchable topics include: ${source.topics.slice(0, 24).join(", ")}. Returns source-relative evidence and coverage status from ${source.documentCount} indexed documents; the source is currently ${source.fresh ? "fresh" : "stale"}.`,
+        title: `Search ${source.title} documentation`,
+        description: `Search ${source.documentCount} indexed ${source.title} documents and return cited evidence for a question. Also known as: ${source.aliases.slice(0, 8).join(", ")}. Coverage includes: ${source.topics.slice(0, 24).join(", ")}. Index freshness: ${source.fresh ? "fresh" : "stale"}.`,
         inputSchema: sourcePlanContextInputSchema,
         outputSchema: jsonOutputSchema,
         annotations: {
@@ -142,10 +144,21 @@ export function registerSourcePlanContextTool(
           idempotentHint: true,
           openWorldHint: false,
         },
+        _meta: { "anthropic/alwaysLoad": true },
       },
       (input) =>
         toolResult(
-          executePlanContext({ ...input, repoId: source.repoId }, dependencies),
+          executePlanContext(
+            {
+              query: input.query,
+              repoId: source.repoId,
+              budgetTokens: 4_000,
+              candidateLimit: 20,
+              summaryLimit: 5,
+              expansionLimit: 12,
+            },
+            dependencies,
+          ),
         ),
     ),
   };

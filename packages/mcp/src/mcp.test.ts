@@ -685,7 +685,7 @@ describe("mcp package", () => {
         "what_changed",
       ]),
     );
-    expect(atlasServer.tools).toContain("plan_context__atlas");
+    expect(atlasServer.tools).toContain("search_docs__atlas");
     expect(atlasServer.resources).toContain("atlas-document");
     expect(atlasServer.resources).toContain("atlas-summary");
     expect(atlasServer.resources).toContain("atlas-skill-artifact");
@@ -712,7 +712,7 @@ describe("mcp package", () => {
       "plan_context",
       "find_scopes",
       "find_docs",
-      "plan_context__atlas",
+      "search_docs__atlas",
     ]);
     expect(atlasServer.resources).toEqual([]);
   });
@@ -805,15 +805,16 @@ describe("mcp package", () => {
 
     const tools = await client.listTools();
     const facade = tools.tools.find(
-      (tool) => tool.name === "plan_context__atlas",
+      (tool) => tool.name === "search_docs__atlas",
     );
     expect(facade).toMatchObject({
-      title: "Answer from indexed atlas documentation",
+      title: "Search atlas documentation",
       description: expect.stringMatching(/session.*append/),
       annotations: expect.objectContaining({ readOnlyHint: true }),
+      _meta: { "anthropic/alwaysLoad": true },
     });
     const result = await client.callTool({
-      name: "plan_context__atlas",
+      name: "search_docs__atlas",
       arguments: { query: "how do I rotate session tokens?" },
     });
     expect(result.structuredContent).toMatchObject({
@@ -867,11 +868,11 @@ describe("mcp package", () => {
     expect(atlasServer.refreshDiscovery()).toBeTrue();
     await Promise.all([toolListChanged.promise, resourceListChanged.promise]);
     expect((await client.listTools()).tools.map((tool) => tool.name)).toContain(
-      "plan_context__github_com_example_guide",
+      "search_docs__guide",
     );
     expect(
       (await client.listResources()).resources.map((resource) => resource.name),
-    ).toContain("atlas-source-github_com_example_guide");
+    ).toContain("atlas-source-guide");
     expect(atlasServer.refreshDiscovery()).toBeFalse();
 
     await Promise.all([client.close(), atlasServer.server.close()]);

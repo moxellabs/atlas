@@ -68,11 +68,11 @@ try {
   ]);
   const listed = await client.listTools();
   const sourceTool = listed.tools.find(
-    (tool) => tool.name === "plan_context__github_com_justmrmendez_diffract",
+    (tool) => tool.name === "search_docs__diffract",
   );
   const plan = await client.callTool({
-    name: "plan_context__github_com_justmrmendez_diffract",
-    arguments: { query, budgetTokens: 2_000 },
+    name: "search_docs__diffract",
+    arguments: { query },
   });
   const structured = asRecord(plan.structuredContent);
   const coverage = asRecord(structured?.coverage);
@@ -341,7 +341,7 @@ function traceFixture(): string {
       item: {
         type: "mcp_tool_call",
         server: "atlas_eval",
-        tool: "plan_context__github_com_justmrmendez_diffract",
+        tool: "search_docs__diffract",
         error: null,
       },
     },
