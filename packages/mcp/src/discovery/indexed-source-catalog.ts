@@ -1,8 +1,12 @@
-import { DocRepository } from "@atlas/store";
-
 import { listIndexedCoverage } from "../store-mappers";
 import type { AtlasMcpDependencies } from "../types";
 import type { AtlasMcpDiscoveryPolicy } from "../types";
+type SourceDocumentMetadata = {
+  title?: string | undefined;
+  path: string;
+  description?: string | undefined;
+  tags: readonly string[];
+};
 
 /** A compact, safe-to-advertise description of one locally indexed source. */
 export interface IndexedSourceCatalogEntry {
@@ -44,24 +48,42 @@ export function buildIndexedSourceCatalog(
         )
         .map((pkg) => pkg.name)
         .filter((name) => name.length > 0);
+      const documents = dependencies.db
+        .all<{
+          path: string;
+          title: string | null;
+          description: string | null;
+          tags_json: string;
+        }>(
+          `SELECT path, title, description, tags_json
+           FROM documents
+           WHERE repo_id = $repoId
+             AND path NOT LIKE '.%'
+           ORDER BY CASE WHEN lower(path) = 'readme.md' THEN 0 ELSE 1 END, path
+           LIMIT 64`,
+          { $repoId: coverage.repoId },
+        )
+        .map(
+          (document): SourceDocumentMetadata => ({
+            path: document.path,
+            ...(document.title === null ? {} : { title: document.title }),
+            ...(document.description === null
+              ? {}
+              : { description: document.description }),
+            tags: parseStringArray(document.tags_json),
+          }),
+        );
+      const title = sourceTitle(coverage.repoId, documents);
       const aliases = unique([
         ...repoAliases(coverage.repoId),
+        title,
         ...packageNames,
       ]);
-      const topics = sourceTopics(
-        new DocRepository(dependencies.db)
-          .listByRepo(coverage.repoId, { limit: 32 })
-          .map((document) => ({
-            title: document.title,
-            path: document.path,
-            description: document.description,
-            tags: document.tags,
-          })),
-      );
+      const topics = sourceTopics(documents);
       return {
         repoId: coverage.repoId,
         toolSuffix: toolSuffix(coverage.repoId),
-        title: sourceTitle(coverage.repoId),
+        title,
         aliases,
         topics,
         documentCount: coverage.documentCount,
@@ -138,7 +160,14 @@ function repoAliases(repoId: string): string[] {
   );
 }
 
-function sourceTitle(repoId: string): string {
+function sourceTitle(
+  repoId: string,
+  documents: readonly SourceDocumentMetadata[],
+): string {
+  const readmeTitle = documents
+    .find((document) => document.path.toLowerCase() === "readme.md")
+    ?.title?.trim();
+  if (readmeTitle !== undefined && readmeTitle.length > 0) return readmeTitle;
   const parts = repoId.split("/").filter((part) => part.length > 0);
   return parts.length >= 2 ? parts.slice(-2).join("/") : repoId;
 }
@@ -189,14 +218,18 @@ function stableHash(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
-function sourceTopics(
-  documents: readonly {
-    title?: string | undefined;
-    path: string;
-    description?: string | undefined;
-    tags: readonly string[];
-  }[],
-): string[] {
+function parseStringArray(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((entry): entry is string => typeof entry === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function sourceTopics(documents: readonly SourceDocumentMetadata[]): string[] {
   const counts = new Map<string, number>();
   for (const document of documents) {
     const searchable = [

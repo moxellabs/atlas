@@ -18,6 +18,7 @@ import { isolateCorpusSnapshot, readCorpusEvidence } from "./corpus-snapshot";
 import { assertHermeticAtlasDiscovery, runAgentEffectEvaluation } from "./run";
 import {
   atlasMcpServerArgs,
+  atlasMcpServerName,
   codexAgentCommand,
   judgePrompt,
   traceMcpEvents,
@@ -68,7 +69,7 @@ describe("agent effect evaluation", () => {
         type: "item.completed",
         item: {
           type: "mcp_tool_call",
-          server: "atlas_eval",
+          server: "atlas_diffract",
           tool: "plan_context",
           error: null,
         },
@@ -88,7 +89,7 @@ describe("agent effect evaluation", () => {
         type: "item.completed",
         item: {
           type: "mcp_tool_call",
-          server: "atlas_eval",
+          server: "atlas_diffract",
           tool: "answer_diffract_docs",
           error: null,
         },
@@ -137,6 +138,14 @@ describe("agent effect evaluation", () => {
           exit_code: 0,
         },
       },
+      {
+        type: "item.completed",
+        item: {
+          type: "command_execution",
+          command: "bash -lc 'find /tmp -name answer.json'",
+          exit_code: 1,
+        },
+      },
     ]
       .map((event) => JSON.stringify(event))
       .join("\n");
@@ -156,6 +165,7 @@ describe("agent effect evaluation", () => {
       { kind: "command", name: "gh", source: "github", ok: false },
       { kind: "command", name: "cat", source: "filesystem", ok: true },
       { kind: "command", name: "git", source: "github", ok: true },
+      { kind: "command", name: "find", source: "filesystem", ok: false },
     ]);
     expect(trace.protocolErrors).toBe(0);
   });
@@ -163,6 +173,7 @@ describe("agent effect evaluation", () => {
   test("builds an isolated treatment command without hiding Atlas in the prompt", () => {
     const common = {
       atlasCwd: "/atlas",
+      repoId: dataset.repoId,
       cwd: "/consumer",
       workDir: "/tmp/eval",
       configPath: "/tmp/eval/atlas.config.json",
@@ -185,26 +196,27 @@ describe("agent effect evaluation", () => {
     expect(command).toContain("unified_exec");
     expect(command).toContain('web_search="disabled"');
     expect(command).toContain("tools.web_search=false");
-    expect(command).toContain("sandbox_workspace_write.network_access=false");
+    expect(command).toContain('default_permissions="atlas_eval"');
+    expect(command).toContain(
+      'permissions.atlas_eval={ filesystem = { ":minimal" = "read", ":workspace_roots" = { "." = "write" } }, network = { enabled = false } }',
+    );
     expect(command).toContain('shell_environment_policy.inherit="none"');
     expect(command).toContain(
-      `mcp_servers.atlas_eval.command=${JSON.stringify(process.execPath)}`,
+      `mcp_servers.atlas_atlas.command=${JSON.stringify(process.execPath)}`,
     );
     expect(command).toContain(
-      'mcp_servers.atlas_eval.default_tools_approval_mode="writes"',
+      'mcp_servers.atlas_atlas.default_tools_approval_mode="writes"',
     );
     expect(command.join(" ")).not.toContain("--discovery-policy");
-    expect(command).toContain("mcp_servers.atlas_eval.required=true");
-    expect(command.filter((argument) => argument === "--sandbox")).toHaveLength(
-      1,
-    );
+    expect(command).toContain("mcp_servers.atlas_atlas.required=true");
+    expect(command).not.toContain("--sandbox");
     expect(prompt).toContain(dataset.tasks[0]!.prompt);
     expect(prompt).not.toContain("Use Atlas");
     expect(prompt).not.toContain("plan_context");
     const baselineCommand = codexAgentCommand({ ...common, arm: "baseline" });
     expect(
       baselineCommand.some((argument) =>
-        argument.startsWith("mcp_servers.atlas_eval."),
+        argument.startsWith("mcp_servers.atlas_atlas."),
       ),
     ).toBe(false);
     expect(baselineCommand.at(-1)).toBe(prompt);
@@ -228,6 +240,7 @@ describe("agent effect evaluation", () => {
   test("exposes normal competing tools without weakening workspace isolation", () => {
     const command = codexAgentCommand({
       atlasCwd: "/atlas",
+      repoId: dataset.repoId,
       cwd: "/consumer",
       workDir: "/tmp/eval",
       configPath: "/tmp/eval/atlas.config.json",
@@ -248,12 +261,15 @@ describe("agent effect evaluation", () => {
     expect(command).toContain("tools.web_search=true");
     expect(command).not.toContain("shell_tool");
     expect(command).not.toContain("unified_exec");
-    expect(command).toContain("sandbox_workspace_write.network_access=false");
+    expect(command).toContain('default_permissions="atlas_eval"');
     expect(command).toContain('shell_environment_policy.inherit="none"');
     expect(command.at(-1)).toContain(dataset.tasks[0]!.prompt);
   });
 
   test("selects checkout or global Atlas MCP arguments explicitly", () => {
+    expect(atlasMcpServerName("github.com/justmrmendez/diffract")).toBe(
+      "atlas_diffract",
+    );
     expect(
       atlasMcpServerArgs({
         atlasCwd: "/atlas",
