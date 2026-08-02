@@ -21,7 +21,11 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 
 import { loadAgentEffectDataset } from "../../packages/eval/src/agent-effect/dataset";
-import { traceMcpEvents } from "../../packages/eval/src/agent-effect/codex";
+import {
+  atlasMcpServerName,
+  codexAgentCommand,
+  traceMcpEvents,
+} from "../../packages/eval/src/agent-effect/codex";
 import { createAtlasMcpServer } from "../../packages/mcp/src/server/create-mcp-server";
 
 const repoId = "github.com/justmrmendez/diffract";
@@ -102,6 +106,30 @@ try {
     "plan_context",
   ];
 
+  const mcpServerName = atlasMcpServerName(dataset.repoId);
+  const commandInput = {
+    atlasCwd: cwd,
+    repoId: dataset.repoId,
+    cwd: "/tmp/atlas-autoresearch-consumer",
+    workDir: "/tmp/atlas-autoresearch-run",
+    configPath: "/tmp/atlas-autoresearch-config.json",
+    useGlobal: false,
+    competitiveTools: true,
+    outputSchemaPath: "/tmp/atlas-autoresearch-schema.json",
+    outputPath: "/tmp/atlas-autoresearch-answer.json",
+    runner: dataset.runner,
+    task: task!,
+    trial: 1,
+  };
+  const treatmentCommand = codexAgentCommand({
+    ...commandInput,
+    arm: "treatment",
+  });
+  const baselineCommand = codexAgentCommand({
+    ...commandInput,
+    arm: "baseline",
+  });
+
   const checks: Check[] = [
     {
       dimension: "prompt",
@@ -125,6 +153,17 @@ try {
     {
       dimension: "prompt",
       passed: dataset.runner.trialsPerTask >= 3,
+    },
+    {
+      dimension: "discovery",
+      passed:
+        mcpServerName === "atlas_diffract" &&
+        treatmentCommand.some((argument) =>
+          argument.startsWith(`mcp_servers.${mcpServerName}.command=`),
+        ) &&
+        baselineCommand.every(
+          (argument) => !argument.startsWith("mcp_servers."),
+        ),
     },
     {
       dimension: "discovery",
@@ -340,7 +379,7 @@ function traceFixture(): string {
       type: "item.completed",
       item: {
         type: "mcp_tool_call",
-        server: "atlas_eval",
+        server: "atlas_diffract",
         tool: "answer_diffract_docs",
         error: null,
       },
