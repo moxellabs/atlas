@@ -26,16 +26,17 @@ bun run eval
 
 What to run locally:
 
-| Command                                            | When                                                                                                                    |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `bun run eval` or `bun run eval:full`              | Default: full MCP/retrieval manifest; writes `evals/reports/*.json` and `*.html` (same underlying script).              |
-| `bun run eval:quick`                               | Fast smoke subset; reports under `/tmp`.                                                                                |
-| `bun run eval:ci`                                  | Same dataset as full, plus CI thresholds; writes under `/tmp` (GitHub Actions uses this).                               |
-| `bun run eval:baseline:update`                     | After reviewing a full run: promote metrics into `evals/baseline/`.                                                     |
-| `bun run eval:luna`                                | Run the local Luna paired benchmark and write ignored output under `/tmp`. Requires an authenticated local Codex CLI.   |
-| `bun run eval:luna:smoke`                          | One paired Diffract documentation trial over the global corpus. Requires a successful Atlas MCP tool call.             |
-| `bun run eval:luna:release -- --release-id vX.Y.Z` | Run the full local benchmark and write a sanitized, versioned release snapshot under `evals/history/luna/`.             |
-| `bun run eval:release:dashboard`                   | Compose a release dashboard from the current deterministic report and the newest compatible Luna snapshot.              |
+| Command                                            | When                                                                                                                  |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `bun run eval` or `bun run eval:full`              | Default: full MCP/retrieval manifest; writes `evals/reports/*.json` and `*.html` (same underlying script).            |
+| `bun run eval:quick`                               | Fast smoke subset; reports under `/tmp`.                                                                              |
+| `bun run eval:ci`                                  | Same dataset as full, plus CI thresholds; writes under `/tmp` (GitHub Actions uses this).                             |
+| `bun run eval:baseline:update`                     | After reviewing a full run: promote metrics into `evals/baseline/`.                                                   |
+| `bun run eval:luna`                                | Run the local Luna paired benchmark and write ignored output under `/tmp`. Requires an authenticated local Codex CLI. |
+| `bun run eval:luna:smoke`                          | Run three paired Diffract trials against an isolated snapshot of the indexed global corpus; requires Atlas adoption.  |
+| `bun run eval:luna:competitive`                    | Run the same three trials with normal web, shell, and filesystem tools visible to both arms; writes under `/tmp`.     |
+| `bun run eval:luna:release -- --release-id vX.Y.Z` | Run the full local benchmark and write a sanitized, versioned release snapshot under `evals/history/luna/`.           |
+| `bun run eval:release:dashboard`                   | Compose a release dashboard from the current deterministic report and the newest compatible Luna snapshot.            |
 
 Default full-suite outputs:
 
@@ -80,14 +81,14 @@ Path-substring expectations are used instead of generated document IDs so the su
 
 ## Local Luna agent-effect benchmark
 
-`evals/datasets/luna-agent-effect.json` is a human-authored paired benchmark with versioned scoring criteria tied to public evidence paths. The runner is source-neutral: the indexed source is defined by the dataset, while Codex runs from a separate consumer workspace that does not expose the source checkout. A full run executes three paired trials per task:
+`evals/datasets/luna-agent-effect.json` is the full human-authored paired benchmark; `evals/datasets/luna-agent-discovery-smoke.json` is the focused Diffract discovery case. Both use versioned scoring criteria tied to evidence paths. The runner is source-neutral: the indexed source is defined by the dataset, while Codex runs from a separate consumer workspace that does not expose the source checkout. A full or discovery run executes three paired trials per task:
 
-- **Baseline** — Codex with its normal available tools.
-- **Treatment** — the identical Codex configuration plus Atlas MCP over the locally indexed corpus.
+- **Baseline** — Codex without Atlas MCP.
+- **Treatment** — the identical Codex configuration plus Atlas MCP over a read-only corpus snapshot containing only the dataset repository.
 
-Both arms use `gpt-5.6-luna` with high effort. The task prompt never names Atlas, MCP, or a tool. MCP startup failures are tracked separately from a completed treatment run with no Atlas use; lack of adoption is an outcome, not an infrastructure success. Adoption, Atlas-first ordering, local-only completion, web fallback, protocol errors, answer completion, grounding, citations, unsupported claims, and abstention are measured from actual runs. A separate anonymous Luna judge grades both answers against the human-authored criteria.
+Both arms use `gpt-5.6-luna` with high effort. The task prompt never names Atlas, MCP, local documentation, retrieval, or a tool. The treatment MCP namespace derives its source suffix from the dataset repository ID so Codex can see which indexed source the namespace covers without prompt instructions. MCP startup failures are tracked separately from a completed treatment run with no Atlas use; lack of adoption is an outcome, not an infrastructure success. Adoption, Atlas-first ordering, local-only completion, fallback, protocol errors, answer completion, grounding, citations, unsupported claims, and abstention are measured from actual runs. A separate anonymous Luna judge grades both answers against the human-authored criteria and judge-only corpus evidence.
 
-The runner uses ephemeral Codex configuration and never calls `codex mcp add`, modifies user configuration, reads API tokens into the report, or runs in CI. Use `--workspace <consumer-workspace>` to evaluate from a real consumer project; without it, the runner creates an empty isolated consumer workspace. The Diffract discovery smoke passes `--global` so its treatment reads the user's explicitly indexed global corpus; standard and release runs continue to use the repo-local artifact. Raw Codex JSONL remains local; the committed release snapshot is sanitized and contains bounded final answers, citations, judge outcomes, and MCP trace summaries only.
+The runner uses ephemeral Codex configuration and never calls `codex mcp add`, modifies user configuration, or runs in CI. Its default consumer workspace is empty. Both arms ignore user/project rules and configuration, receive isolated `HOME`/XDG directories with GitHub tokens cleared, and cannot read outside the per-run workspace. `--competitive-tools` exposes the same web, shell, and filesystem capabilities to both arms while preserving those boundaries. The treatment receives a read-only snapshot of the selected indexed repository; neither arm receives the source checkout or authenticated GitHub access. Successful and failed evidence-capable activity from Atlas, web, shell, filesystem, and GitHub is recorded for both arms. Raw Codex JSONL remains local; committed release snapshots contain bounded final answers, citations, judge outcomes, provenance digests, and trace summaries only.
 
 ## Adding or changing cases
 
