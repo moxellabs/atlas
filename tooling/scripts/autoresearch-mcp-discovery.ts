@@ -161,8 +161,15 @@ try {
         treatmentCommand.some((argument) =>
           argument.startsWith(`mcp_servers.${mcpServerName}.command=`),
         ) &&
+        treatmentCommand.includes(
+          `features.code_mode.direct_only_tool_namespaces=${JSON.stringify([mcpServerName])}`,
+        ) &&
         baselineCommand.every(
-          (argument) => !argument.startsWith("mcp_servers."),
+          (argument) =>
+            !argument.startsWith("mcp_servers.") &&
+            !argument.startsWith(
+              "features.code_mode.direct_only_tool_namespaces=",
+            ),
         ),
     },
     {
