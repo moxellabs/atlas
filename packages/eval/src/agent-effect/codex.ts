@@ -708,6 +708,8 @@ function competitiveCodexOptions(workDir: string): string[] {
     "--ignore-user-config",
     "--ignore-rules",
     "--enable",
+    "deferred_tool_world_state",
+    "--enable",
     "web_search",
     "-c",
     'web_search="live"',
@@ -728,6 +730,8 @@ function hermeticCodexOptions(workDir: string): string[] {
   return [
     "--ignore-user-config",
     "--ignore-rules",
+    "--enable",
+    "deferred_tool_world_state",
     "--disable",
     "web_search",
     "--disable",
