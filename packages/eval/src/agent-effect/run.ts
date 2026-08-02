@@ -120,20 +120,23 @@ export function aggregateAgentEffect(
     treatment: armMetrics(dataset, treatment),
     paired,
     mcp: {
-      adoptionRate: rate(treatment, ({ run }) => atlasCalls(run).length > 0),
+      adoptionRate: rate(
+        treatment,
+        ({ run }) => successfulAtlasCalls(run).length > 0,
+      ),
       atlasFirstRate: rate(treatment, ({ run }) => {
-        const calls = run.mcp?.calls ?? [];
+        const calls = successfulEvidenceCalls(run);
         return calls.length > 0 && calls[0]?.source === "atlas";
       }),
       localOnlyRate: rate(treatment, ({ run }) => {
-        const calls = run.mcp?.calls ?? [];
+        const calls = successfulEvidenceCalls(run);
         return (
-          atlasCalls(run).length > 0 &&
+          successfulAtlasCalls(run).length > 0 &&
           calls.every((call) => call.source === "atlas")
         );
       }),
       fallbackRate: rate(treatment, ({ run }) =>
-        (run.mcp?.calls ?? []).some((call) => call.source !== "atlas"),
+        successfulEvidenceCalls(run).some((call) => call.source !== "atlas"),
       ),
       averageCalls:
         treatment.length === 0 ? 0 : treatmentCalls.length / treatment.length,
@@ -176,10 +179,8 @@ export function assertHermeticAtlasDiscovery(
   const failedPairs = snapshot.pairs.filter((pair) => {
     const baselineTrace = pair.baseline.mcp;
     const treatmentTrace = pair.treatment.mcp;
-    const atlasCalls =
-      treatmentTrace?.calls.filter(
-        (call) => call.source === "atlas" && call.kind === "tool" && call.ok,
-      ) ?? [];
+    const successfulCalls = successfulEvidenceCalls(pair.treatment);
+    const atlasCalls = successfulAtlasCalls(pair.treatment);
     return (
       pair.treatment.status !== "completed" ||
       baselineTrace === undefined ||
@@ -187,8 +188,8 @@ export function assertHermeticAtlasDiscovery(
       treatmentTrace === undefined ||
       treatmentTrace.protocolErrors !== 0 ||
       atlasCalls.length === 0 ||
-      treatmentTrace.calls[0]?.source !== "atlas" ||
-      treatmentTrace.calls.some((call) => call.source !== "atlas") ||
+      successfulCalls[0]?.source !== "atlas" ||
+      successfulCalls.some((call) => call.source !== "atlas") ||
       pair.judge.treatment.unsupportedClaimCount !== 0 ||
       pair.judge.treatment.criteria.some((criterion) => !criterion.passed)
     );
@@ -205,8 +206,12 @@ export function assertHermeticAtlasDiscovery(
   }
 }
 
-function atlasCalls(run: AgentRun) {
-  return (run.mcp?.calls ?? []).filter((call) => call.source === "atlas");
+function successfulEvidenceCalls(run: AgentRun) {
+  return (run.mcp?.calls ?? []).filter((call) => call.ok);
+}
+
+function successfulAtlasCalls(run: AgentRun) {
+  return successfulEvidenceCalls(run).filter((call) => call.source === "atlas");
 }
 
 export function selectRepresentativeTraces(

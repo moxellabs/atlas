@@ -145,7 +145,7 @@ export function registerSourcePlanContextTool(
       name,
       {
         title: `Answer from ${source.title} documentation`,
-        description: `Answer a question from the ${source.fresh ? "fresh" : "stale"} indexed ${source.title} documentation corpus (${source.documentCount} documents). Returns exact passages and source-relative citations. Source names: ${source.aliases.slice(0, 8).join(", ")}. Covered topics: ${source.topics.slice(0, 24).join(", ")}.`,
+        description: `Answer a question from the ${source.fresh ? "fresh" : "stale"} indexed ${source.title} documentation corpus (${source.documentCount} documents), which is independent of the client's current workspace. Returns exact passages and source-relative citations. Source names: ${source.aliases.slice(0, 8).join(", ")}. Covered topics: ${source.topics.slice(0, 24).join(", ")}.`,
         inputSchema: sourcePlanContextInputSchema,
         outputSchema: jsonOutputSchema,
         annotations: {

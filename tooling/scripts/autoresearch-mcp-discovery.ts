@@ -240,6 +240,9 @@ try {
     {
       dimension: "hermeticity",
       passed:
+        smokeCommand.includes("--snapshot-global-corpus") &&
+        smokeCommand.includes("--competitive-tools") &&
+        smokeCommand.includes("--require-atlas-adoption") &&
         !smokeCommand.includes("--global") &&
         !smokeCommand.includes("--workspace"),
     },

@@ -549,6 +549,12 @@ describe("agent effect evaluation", () => {
                   ]
                 : [
                     {
+                      kind: "command",
+                      name: "rg",
+                      source: "filesystem",
+                      ok: false,
+                    },
+                    {
                       kind: "tool",
                       name: "answer_fixture_docs",
                       source: "atlas",
@@ -577,6 +583,13 @@ describe("agent effect evaluation", () => {
       },
     });
 
+    expect(snapshot.metrics.mcp).toMatchObject({
+      adoptionRate: 1,
+      atlasFirstRate: 1,
+      localOnlyRate: 1,
+      fallbackRate: 0,
+      protocolErrorRate: 0,
+    });
     expect(() => assertHermeticAtlasDiscovery(snapshot)).not.toThrow();
     expect(() => assertHermeticAtlasDiscovery(snapshot, 4)).toThrow("trials=");
 

@@ -369,7 +369,7 @@ export function atlasMcpServerArgs(input: {
 }
 
 function agentPrompt(task: AgentEffectTask): string {
-  return `You are answering a software-engineering question.\n\nTask:\n${task.prompt}\n\nReturn only the required JSON object. Cite source-relative paths for factual statements. Do not invent commands, files, or behavior; when evidence is unavailable, say so plainly.`;
+  return `Task:\n${task.prompt}\n\nReturn only the required JSON object. Cite source-relative paths for factual statements. Do not invent commands, files, or behavior; when evidence is unavailable, say so plainly.`;
 }
 
 export function judgePrompt(
