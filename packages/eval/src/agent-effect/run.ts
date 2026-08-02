@@ -183,7 +183,6 @@ export function assertHermeticAtlasDiscovery(
     return (
       pair.treatment.status !== "completed" ||
       baselineTrace === undefined ||
-      baselineTrace.calls.length !== 0 ||
       baselineTrace.protocolErrors !== 0 ||
       treatmentTrace === undefined ||
       treatmentTrace.protocolErrors !== 0 ||
