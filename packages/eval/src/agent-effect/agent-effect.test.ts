@@ -89,7 +89,7 @@ describe("agent effect evaluation", () => {
         item: {
           type: "mcp_tool_call",
           server: "atlas_eval",
-          tool: "search_docs__diffract",
+          tool: "answer_diffract_docs",
           error: null,
         },
       },
@@ -146,7 +146,7 @@ describe("agent effect evaluation", () => {
     expect(trace.calls).toEqual([
       {
         kind: "tool",
-        name: "search_docs__diffract",
+        name: "answer_diffract_docs",
         source: "atlas",
         ok: true,
       },
@@ -517,7 +517,7 @@ describe("agent effect evaluation", () => {
                 : [
                     {
                       kind: "tool",
-                      name: "search_docs__fixture",
+                      name: "answer_fixture_docs",
                       source: "atlas",
                       ok: true,
                     },

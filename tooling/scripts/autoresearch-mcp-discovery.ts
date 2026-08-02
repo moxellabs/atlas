@@ -68,10 +68,10 @@ try {
   ]);
   const listed = await client.listTools();
   const sourceTool = listed.tools.find(
-    (tool) => tool.name === "search_docs__diffract",
+    (tool) => tool.name === "answer_diffract_docs",
   );
   const plan = await client.callTool({
-    name: "search_docs__diffract",
+    name: "answer_diffract_docs",
     arguments: { query },
   });
   const structured = asRecord(plan.structuredContent);
@@ -341,7 +341,7 @@ function traceFixture(): string {
       item: {
         type: "mcp_tool_call",
         server: "atlas_eval",
-        tool: "search_docs__diffract",
+        tool: "answer_diffract_docs",
         error: null,
       },
     },

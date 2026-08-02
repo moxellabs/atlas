@@ -36,6 +36,6 @@ function indexedSourcePayload(source: IndexedSourceCatalogEntry) {
     packageCount: source.packageCount,
     moduleCount: source.moduleCount,
     freshness: source.fresh ? "fresh" : "stale",
-    recommendedTool: `search_docs__${source.toolSuffix}`,
+    recommendedTool: `answer_${source.toolSuffix}_docs`,
   };
 }

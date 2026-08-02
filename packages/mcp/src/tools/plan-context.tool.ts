@@ -1,4 +1,5 @@
 import { planContext } from "@atlas/retrieval";
+import { SectionRepository } from "@atlas/store";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
@@ -24,11 +25,24 @@ const sourcePlanContextInputSchema = z
   })
   .strict();
 
+interface PlanCitation {
+  repoId: string;
+  path: string;
+  docId: string;
+}
+
 /** Executes token-budgeted context planning for an MCP caller. */
 export function executePlanContext(
   input: PlanContextToolInput,
   dependencies: AtlasMcpDependencies,
 ): McpJsonObject {
+  return buildPlanContextResult(input, dependencies);
+}
+
+function buildPlanContextResult(
+  input: PlanContextToolInput,
+  dependencies: AtlasMcpDependencies,
+) {
   const parsed = planContextInputSchema.parse(input);
   const plan = planContext({
     db: dependencies.db,
@@ -82,11 +96,7 @@ export function executePlanContext(
     query: parsed.query,
     coverage: {
       status: coverage,
-      selectedSources: selected.map((entry) => ({
-        repoId: entry.provenance.repoId,
-        fresh: freshnessByRepo.get(entry.provenance.repoId)?.fresh ?? false,
-        stale: freshnessByRepo.get(entry.provenance.repoId)?.stale ?? true,
-      })),
+      selectedSources: uniqueSelectedSources(selected, freshnessByRepo),
     },
     nextAction,
     context: plan.contextPacket,
@@ -122,20 +132,20 @@ export function registerPlanContextTool(
   );
 }
 
-/** Registers a source-bound alias so tool search can surface local knowledge by name. */
+/** Registers a source-bound answer tool that is discoverable by source name. */
 export function registerSourcePlanContextTool(
   server: McpServer,
   dependencies: AtlasMcpDependencies,
   source: IndexedSourceCatalogEntry,
 ) {
-  const name = `search_docs__${source.toolSuffix}`;
+  const name = `answer_${source.toolSuffix}_docs`;
   return {
     name,
     handle: server.registerTool(
       name,
       {
-        title: `Search ${source.title} documentation`,
-        description: `Search ${source.documentCount} indexed ${source.title} documents and return cited evidence for a question. Also known as: ${source.aliases.slice(0, 8).join(", ")}. Coverage includes: ${source.topics.slice(0, 24).join(", ")}. Index freshness: ${source.fresh ? "fresh" : "stale"}.`,
+        title: `Answer from ${source.title} documentation`,
+        description: `Answer a question from the ${source.fresh ? "fresh" : "stale"} indexed ${source.title} documentation corpus (${source.documentCount} documents). Returns exact passages and source-relative citations. Source names: ${source.aliases.slice(0, 8).join(", ")}. Covered topics: ${source.topics.slice(0, 24).join(", ")}.`,
         inputSchema: sourcePlanContextInputSchema,
         outputSchema: jsonOutputSchema,
         annotations: {
@@ -146,29 +156,165 @@ export function registerSourcePlanContextTool(
         },
         _meta: { "anthropic/alwaysLoad": true },
       },
-      (input) =>
-        toolResult(
-          executePlanContext(
-            {
-              query: input.query,
-              repoId: source.repoId,
-              budgetTokens: 4_000,
-              candidateLimit: 20,
-              summaryLimit: 5,
-              expansionLimit: 12,
-            },
+      (input) => {
+        const result = buildPlanContextResult(
+          {
+            query: input.query,
+            repoId: source.repoId,
+            budgetTokens: 4_000,
+            candidateLimit: 40,
+            summaryLimit: 5,
+            expansionLimit: 16,
+          },
+          dependencies,
+        );
+        return toolResult({
+          ...result,
+          exactPassages: selectExactPassages(
+            input.query,
+            result.citations,
             dependencies,
           ),
-        ),
+        });
+      },
     ),
   };
 }
+
+function uniqueSelectedSources(
+  selected: readonly {
+    provenance: { repoId: string };
+  }[],
+  freshnessByRepo: ReadonlyMap<
+    string,
+    { readonly fresh: boolean; readonly stale: boolean }
+  >,
+) {
+  return [...new Set(selected.map((entry) => entry.provenance.repoId))].map(
+    (repoId) => ({
+      repoId,
+      fresh: freshnessByRepo.get(repoId)?.fresh ?? false,
+      stale: freshnessByRepo.get(repoId)?.stale ?? true,
+    }),
+  );
+}
+
+function selectExactPassages(
+  query: string,
+  citations: readonly PlanCitation[],
+  dependencies: AtlasMcpDependencies,
+) {
+  const terms = queryTerms(query);
+  const compounds = [
+    ...query.toLowerCase().matchAll(/[a-z0-9]+(?:[._/-][a-z0-9]+)+/g),
+  ].map((match) => match[0]!);
+  const sections = new SectionRepository(dependencies.db);
+  return citations
+    .slice(0, 3)
+    .flatMap((citation, citationIndex) =>
+      sections
+        .listByDocument(citation.docId)
+        .map((section) => ({
+          citation,
+          citationIndex,
+          section,
+          score: passageScore(section, terms, compounds, citationIndex),
+        }))
+        .filter((candidate) => candidate.score > 0)
+        .sort(
+          (left, right) =>
+            right.score - left.score ||
+            left.section.ordinal - right.section.ordinal,
+        )
+        .slice(0, 2),
+    )
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        left.citationIndex - right.citationIndex ||
+        left.section.ordinal - right.section.ordinal,
+    )
+    .slice(0, 6)
+    .map(({ citation, section }) => ({
+      ...citation,
+      sectionId: section.sectionId,
+      headingPath: section.headingPath,
+      text: section.text,
+      codeBlocks: section.codeBlocks,
+    }));
+}
+
+function passageScore(
+  section: {
+    readonly headingPath: readonly string[];
+    readonly text: string;
+  },
+  terms: ReadonlySet<string>,
+  compounds: readonly string[],
+  citationIndex: number,
+): number {
+  const heading = normalizeSearchText(section.headingPath.join(" "));
+  const text = normalizeSearchText(section.text);
+  let score = Math.max(0, 3 - citationIndex);
+  for (const term of terms) {
+    if (heading.includes(term)) score += 3;
+    if (text.includes(term)) score += 1;
+  }
+  for (const compound of compounds) {
+    const normalized = normalizeSearchText(compound);
+    if (heading.includes(normalized)) score += 6;
+    if (text.includes(normalized)) score += 4;
+  }
+  return score;
+}
+
+function queryTerms(query: string): ReadonlySet<string> {
+  return new Set(
+    normalizeSearchText(query)
+      .split(" ")
+      .map((term) => stem(term))
+      .filter((term) => term.length >= 3 && !PASSAGE_STOP_WORDS.has(term)),
+  );
+}
+
+function normalizeSearchText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(/\s+/)
+    .filter((term) => term.length > 0)
+    .map((term) => stem(term))
+    .join(" ");
+}
+
+function stem(term: string): string {
+  if (term.length > 5 && term.endsWith("ing")) return term.slice(0, -3);
+  if (term.length > 4 && term.endsWith("ed")) return term.slice(0, -2);
+  if (term.length > 4 && term.endsWith("s")) return term.slice(0, -1);
+  return term;
+}
+
+const PASSAGE_STOP_WORDS = new Set([
+  "after",
+  "and",
+  "exactly",
+  "from",
+  "how",
+  "make",
+  "may",
+  "perform",
+  "the",
+  "this",
+  "what",
+  "which",
+  "with",
+]);
 
 function uniqueCitations(
   selected: readonly {
     provenance: { repoId: string; path: string; docId: string };
   }[],
-) {
+): PlanCitation[] {
   const seen = new Set<string>();
   return selected.flatMap((entry) => {
     const citation = {
