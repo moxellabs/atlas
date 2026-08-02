@@ -61,7 +61,7 @@ export class RemoteSecurityService {
         "remote_read_only",
         "This route is not available on a remote read-only server.",
       );
-    if (!this.takeRateSlot(request))
+    if (!this.takeRateSlot())
       return this.deny(
         request,
         429,
@@ -184,7 +184,7 @@ export class RemoteSecurityService {
         );
   }
 
-  private takeRateSlot(request: Request): boolean {
+  private takeRateSlot(): boolean {
     const now = Date.now();
     // One deployment token is one trust boundary. Forwarded client headers are
     // not trusted as rate-limit keys because callers can spoof them.
