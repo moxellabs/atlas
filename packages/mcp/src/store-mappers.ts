@@ -1,4 +1,4 @@
-import type { Provenance } from "@atlas/core";
+import { freshnessFromRecords } from "@atlas/retrieval";
 import { computeFreshness } from "@atlas/core";
 import {
   DocRepository,
@@ -21,28 +21,6 @@ import {
   type SummaryRecord,
   SummaryRepository,
 } from "@atlas/store";
-
-/** Creates provenance from a stored document and optional heading/skill overrides. */
-export function provenanceFromDocument(
-  document: DocumentRecord,
-  headingPath?: readonly string[],
-  skillId?: string,
-): Provenance {
-  const effectiveSkillId = skillId ?? document.skillId;
-  return {
-    repoId: document.repoId,
-    ...(document.packageId === undefined
-      ? {}
-      : { packageId: document.packageId }),
-    ...(document.moduleId === undefined ? {} : { moduleId: document.moduleId }),
-    ...(effectiveSkillId === undefined ? {} : { skillId: effectiveSkillId }),
-    docId: document.docId,
-    path: document.path,
-    ...(headingPath === undefined ? {} : { headingPath: [...headingPath] }),
-    sourceVersion: document.sourceVersion,
-    authority: document.authority,
-  };
-}
 
 /** Returns repository metadata by ID. */
 export function getRepo(
@@ -128,22 +106,6 @@ export function listIndexedCoverage(
       },
     ];
   });
-}
-
-/** Presents local freshness from stored repository and manifest revisions. */
-export function freshnessForRepo(
-  repo: RepoRecord,
-  manifest: ManifestRecord | undefined,
-) {
-  return {
-    ...computeFreshness({
-      repoId: repo.repoId,
-      repoRevision: repo.revision,
-      indexedRevision: manifest?.indexedRevision,
-      lastSyncAt: manifest?.buildTimestamp,
-    }),
-    manifest,
-  };
 }
 
 /** Returns package metadata by ID. */
@@ -262,7 +224,7 @@ export function getFreshnessForSkillRepo(
   const repo = new RepoRepository(db).get(skill.repoId);
   return repo === undefined
     ? undefined
-    : freshnessForRepo(repo, new ManifestRepository(db).get(skill.repoId));
+    : freshnessFromRecords(repo, new ManifestRepository(db).get(skill.repoId));
 }
 
 /** Lists artifacts bundled with one skill. */

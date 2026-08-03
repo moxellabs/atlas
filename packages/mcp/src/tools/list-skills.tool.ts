@@ -1,35 +1,48 @@
+import { listSkills } from "@atlas/retrieval";
+
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { toolResult } from "../mcp-result";
-import { jsonOutputSchema, listSkillsInputSchema, type ListSkillsInput } from "../schemas/tool-schemas";
-import { listSkills, summarizeSkillArtifacts } from "../store-mappers";
+import {
+  jsonOutputSchema,
+  listSkillsInputSchema,
+  type ListSkillsInput,
+} from "../schemas/tool-schemas";
 import type { AtlasMcpDependencies, McpJsonObject } from "../types";
 
 export const LIST_SKILLS_TOOL = "list_skills";
 
 /** Lists stored skills for optional repo/package/module scope constraints. */
-export function executeListSkills(input: ListSkillsInput, dependencies: AtlasMcpDependencies): McpJsonObject {
+export function executeListSkills(
+  input: ListSkillsInput,
+  dependencies: AtlasMcpDependencies,
+): McpJsonObject {
   const parsed = listSkillsInputSchema.parse(input);
   return {
     skills: listSkills(dependencies.db, {
       ...(parsed.repoId === undefined ? {} : { repoId: parsed.repoId }),
-      ...(parsed.packageId === undefined ? {} : { packageId: parsed.packageId }),
+      ...(parsed.packageId === undefined
+        ? {}
+        : { packageId: parsed.packageId }),
       ...(parsed.moduleId === undefined ? {} : { moduleId: parsed.moduleId }),
-      ...(parsed.limit === undefined ? {} : { limit: parsed.limit })
-    }).map((skill) => {
-      const artifactSummary = summarizeSkillArtifacts(dependencies.db, skill.skillId);
-      return {
-        ...skill,
-        invocationAliases: invocationAliasesForSkill(skill, dependencies.identity?.resourcePrefix ?? "atlas"),
-        artifactSummary,
-        hasScripts: artifactSummary.scripts > 0
-      };
-    })
+      ...(parsed.limit === undefined ? {} : { limit: parsed.limit }),
+    }).map(({ skill, artifactSummary, hasScripts }) => ({
+      ...skill,
+      invocationAliases: invocationAliasesForSkill(
+        skill,
+        dependencies.identity?.resourcePrefix ?? "atlas",
+      ),
+      artifactSummary,
+      hasScripts,
+    })),
   };
 }
 
 /** Registers the list_skills MCP tool. */
-export function registerListSkillsTool(server: McpServer, dependencies: AtlasMcpDependencies): void {
+export function registerListSkillsTool(
+  server: McpServer,
+  dependencies: AtlasMcpDependencies,
+): void {
   server.registerTool(
     LIST_SKILLS_TOOL,
     {
@@ -37,16 +50,34 @@ export function registerListSkillsTool(server: McpServer, dependencies: AtlasMcp
       description: "List stored skills with optional scope constraints.",
       inputSchema: listSkillsInputSchema,
       outputSchema: jsonOutputSchema,
-      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
-    (input) => toolResult(executeListSkills(input, dependencies))
+    (input) => toolResult(executeListSkills(input, dependencies)),
   );
 }
 
-function invocationAliasesForSkill(skill: { title?: string | undefined; sourceDocPath: string; aliases: readonly string[] }, prefix: string): string[] {
-  const names = [skillSlug(skill.sourceDocPath), skill.title, ...skill.aliases].flatMap((value) => {
+function invocationAliasesForSkill(
+  skill: {
+    title?: string | undefined;
+    sourceDocPath: string;
+    aliases: readonly string[];
+  },
+  prefix: string,
+): string[] {
+  const names = [
+    skillSlug(skill.sourceDocPath),
+    skill.title,
+    ...skill.aliases,
+  ].flatMap((value) => {
     const slug = slugify(value);
-    return slug === undefined ? [] : [`${prefix}-${slug}`, `$${prefix}-${slug}`];
+    return slug === undefined
+      ? []
+      : [`${prefix}-${slug}`, `$${prefix}-${slug}`];
   });
   return [...new Set(names)].sort((left, right) => left.localeCompare(right));
 }
