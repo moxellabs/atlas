@@ -47,10 +47,20 @@ interface Check {
 const dataset = await loadAgentEffectDataset(
   resolve(cwd, "evals/datasets/luna-agent-discovery-smoke.json"),
 );
-const codexSource = await readFile(
-  resolve(cwd, "packages/eval/src/agent-effect/codex.ts"),
-  "utf8",
-);
+const codexSource = (
+  await Promise.all(
+    [
+      "codex-command-policy.ts",
+      "codex-executor.ts",
+      "codex-process-runner.ts",
+    ].map((fileName) =>
+      readFile(
+        resolve(cwd, "packages/eval/src/agent-effect", fileName),
+        "utf8",
+      ),
+    ),
+  )
+).join("\n");
 const packageJson = JSON.parse(
   await readFile(resolve(cwd, "package.json"), "utf8"),
 ) as { scripts?: Record<string, string> };
@@ -243,7 +253,7 @@ try {
         /\bHOME\b/.test(codexSource) &&
         /\bGITHUB_TOKEN\b/.test(codexSource) &&
         /\bGH_TOKEN\b/.test(codexSource) &&
-        /Bun\.spawn\([^]*?env:/.test(codexSource),
+        /Bun\.spawn\([^]*?\{[^}]*\benv(?:\s*:|[,}])/.test(codexSource),
     },
     {
       dimension: "hermeticity",
