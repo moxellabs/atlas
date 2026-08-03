@@ -1,0 +1,112 @@
+body.moxel-openapi-body
+  #headlessui-portal-root.scalar-app
+  .scalar-modal-layout {
+  left: var(--moxel-openapi-sidebar-width, 288px) !important;
+  width: calc(100dvw - var(--moxel-openapi-sidebar-width, 288px)) !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  animation-duration: 0.15s !important;
+}
+
+body.moxel-openapi-body
+  #headlessui-portal-root.scalar-app
+  .scalar-modal-layout::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 3, 10, 0.2);
+  pointer-events: none;
+}
+
+body.moxel-openapi-body
+  #headlessui-portal-root.scalar-app
+  .scalar-modal.scalar-modal-search {
+  --scalar-background-1: rgba(3, 7, 17, 0.92);
+  --scalar-background-2: rgba(6, 15, 28, 0.9);
+  --scalar-background-3: rgba(12, 24, 38, 0.94);
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(70, 215, 255, 0.34) !important;
+  background-color: rgba(3, 7, 17, 0.92) !important;
+  box-shadow:
+    0 28px 82px rgba(0, 0, 0, 0.58),
+    inset 0 1px 0 rgba(109, 242, 214, 0.08) !important;
+  backdrop-filter: blur(12px) saturate(112%);
+  animation-duration: 0.15s !important;
+  animation-delay: 0.05s !important;
+}
+
+body.moxel-openapi-body
+  #headlessui-portal-root.scalar-app
+  .scalar-modal.scalar-modal-search
+  .scalar-modal-body {
+  background: rgba(3, 7, 17, 0.92) !important;
+}
+
+body.moxel-openapi-body
+  #headlessui-portal-root.scalar-app
+  .scalar-modal.scalar-modal-search
+  label {
+  border-bottom: 1px solid rgba(70, 215, 255, 0.2) !important;
+  background: rgba(6, 15, 28, 0.9) !important;
+  color: var(--fg-100) !important;
+}
+
+body.moxel-openapi-body
+  #headlessui-portal-root.scalar-app
+  .scalar-modal.scalar-modal-search
+  input[role="combobox"] {
+  background: transparent !important;
+  color: var(--fg-100) !important;
+}
+
+body.moxel-openapi-body
+  #headlessui-portal-root.scalar-app
+  .scalar-modal.scalar-modal-search
+  input[role="combobox"]::placeholder {
+  color: rgba(195, 210, 240, 0.62) !important;
+}
+
+body.moxel-openapi-body
+  #headlessui-portal-root.scalar-app
+  .scalar-modal.scalar-modal-search
+  [role="listbox"] {
+  background: rgba(3, 7, 17, 0.92) !important;
+}
+
+body.moxel-openapi-body
+  #headlessui-portal-root.scalar-app
+  .scalar-modal.scalar-modal-search
+  [role="option"] {
+  color: var(--fg-100) !important;
+}
+
+body.moxel-openapi-body
+  #headlessui-portal-root.scalar-app
+  .scalar-modal.scalar-modal-search
+  [role="option"]:hover,
+body.moxel-openapi-body
+  #headlessui-portal-root.scalar-app
+  .scalar-modal.scalar-modal-search
+  [role="option"][aria-selected="true"] {
+  background: rgba(53, 240, 255, 0.11) !important;
+  color: var(--fg-100) !important;
+}
+
+body.moxel-openapi-body
+  #headlessui-portal-root.scalar-app
+  .scalar-modal.scalar-modal-search
+  .ref-search-meta {
+  border-top: 1px solid rgba(70, 215, 255, 0.18) !important;
+  background: rgba(3, 7, 17, 0.94) !important;
+  color: rgba(195, 210, 240, 0.72) !important;
+}
+
+@media (max-width: 1000px) {
+  body.moxel-openapi-body
+    #headlessui-portal-root.scalar-app
+    .scalar-modal-layout {
+    left: 0 !important;
+    width: 100dvw !important;
+  }
+}

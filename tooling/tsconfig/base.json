@@ -21,7 +21,7 @@
 			"@atlas/source-ghes": ["packages/source-ghes/src/index.ts"],
 			"@atlas/topology": ["packages/topology/src/index.ts"],
 			"@atlas/compiler": ["packages/compiler/src/index.ts"],
-			"@atlas/tokenizer": ["packages/tokenizer/src/index.ts"],
+			"@atlas/presentation-assets/*": ["packages/presentation-assets/src/*.ts"],
 			"@atlas/store": ["packages/store/src/index.ts"],
 			"@atlas/indexer": ["packages/indexer/src/index.ts"],
 			"@atlas/retrieval": ["packages/retrieval/src/index.ts"],

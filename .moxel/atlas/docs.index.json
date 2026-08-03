@@ -1,7 +1,7 @@
 {
   "schema": "moxel-atlas-docs-index/v1",
   "repoId": "github.com/moxellabs/atlas",
-  "generatedAt": "2026-08-03T14:56:45.466Z",
+  "generatedAt": "2026-08-03T15:35:14.669Z",
   "counts": {
     "documents": 11,
     "skills": 0,
@@ -24,7 +24,7 @@
       ],
       "visibility": "public",
       "contentHash": "4c07b7e98c79a2af535bf0c73ee06f7ad9f38e74c60dd61152a980bdbd5d9e62",
-      "sourceVersion": "df98859b2b7ae1ac067a607fca8c9140b1587d2b",
+      "sourceVersion": "bde6d27db92d64bab738ee123b10f42f7ebe2030",
       "tags": [],
       "scopes": [
         {
@@ -51,7 +51,7 @@
       "visibility": "public",
       "order": 20,
       "contentHash": "01f389dde842f2f05a1868ea35583964d348424e5b8da20fa849e0670dfdba3f",
-      "sourceVersion": "df98859b2b7ae1ac067a607fca8c9140b1587d2b",
+      "sourceVersion": "bde6d27db92d64bab738ee123b10f42f7ebe2030",
       "tags": [],
       "scopes": [
         {
@@ -78,7 +78,7 @@
       "visibility": "public",
       "order": 55,
       "contentHash": "50182a99b8044c75d23072cead8a9165c3b4b296eacad788704cc1ff3618c924",
-      "sourceVersion": "df98859b2b7ae1ac067a607fca8c9140b1587d2b",
+      "sourceVersion": "bde6d27db92d64bab738ee123b10f42f7ebe2030",
       "tags": [],
       "scopes": [
         {
@@ -106,7 +106,7 @@
       "visibility": "public",
       "order": 10,
       "contentHash": "2daafe2d2d4fb7ab3efe56ba017ac804ec28c3ae456c47301eb93d799928ef25",
-      "sourceVersion": "df98859b2b7ae1ac067a607fca8c9140b1587d2b",
+      "sourceVersion": "bde6d27db92d64bab738ee123b10f42f7ebe2030",
       "tags": [],
       "scopes": [
         {
@@ -134,7 +134,7 @@
       "visibility": "public",
       "order": 30,
       "contentHash": "28e9d029517103a6fcaaf3eb45523534a996a2add09b1001672d83775e76875d",
-      "sourceVersion": "df98859b2b7ae1ac067a607fca8c9140b1587d2b",
+      "sourceVersion": "bde6d27db92d64bab738ee123b10f42f7ebe2030",
       "tags": [],
       "scopes": [
         {
@@ -162,7 +162,7 @@
       "visibility": "public",
       "order": 40,
       "contentHash": "f3f96a689849d02a7d6d0a9c3d17e005c17e9ebd20385701b56f786c1cbd02cf",
-      "sourceVersion": "df98859b2b7ae1ac067a607fca8c9140b1587d2b",
+      "sourceVersion": "bde6d27db92d64bab738ee123b10f42f7ebe2030",
       "tags": [],
       "scopes": [
         {
@@ -190,7 +190,7 @@
       "visibility": "public",
       "order": 50,
       "contentHash": "854f64e2ae6ca71cb7ce782f254a4548f08452696687118a5a3573dad168f34d",
-      "sourceVersion": "df98859b2b7ae1ac067a607fca8c9140b1587d2b",
+      "sourceVersion": "bde6d27db92d64bab738ee123b10f42f7ebe2030",
       "tags": [],
       "scopes": [
         {
@@ -217,7 +217,7 @@
       "visibility": "public",
       "order": 60,
       "contentHash": "be2438137651cc7a524f5a6dfc26c7521fd29008ea7d956bba47a4b96f8ca32f",
-      "sourceVersion": "df98859b2b7ae1ac067a607fca8c9140b1587d2b",
+      "sourceVersion": "bde6d27db92d64bab738ee123b10f42f7ebe2030",
       "tags": [],
       "scopes": [
         {
@@ -244,7 +244,7 @@
       "visibility": "public",
       "order": 70,
       "contentHash": "c05e965fc04cfcfde730f3f18ce6871485b131944d6b3a791e9146fd805bf742",
-      "sourceVersion": "df98859b2b7ae1ac067a607fca8c9140b1587d2b",
+      "sourceVersion": "bde6d27db92d64bab738ee123b10f42f7ebe2030",
       "tags": [],
       "scopes": [
         {
@@ -271,7 +271,7 @@
       "visibility": "public",
       "order": 90,
       "contentHash": "f4e10da47ef9d4c5f0700b9a4bebe2dae82ec010c13aa05dc97d31eca1d9ba13",
-      "sourceVersion": "df98859b2b7ae1ac067a607fca8c9140b1587d2b",
+      "sourceVersion": "bde6d27db92d64bab738ee123b10f42f7ebe2030",
       "tags": [],
       "scopes": [
         {
@@ -298,7 +298,7 @@
       "visibility": "public",
       "order": 1,
       "contentHash": "f84be40b9835abf505f27aa32343e0d00a121e89f70903ad0cf71aac694acdca",
-      "sourceVersion": "df98859b2b7ae1ac067a607fca8c9140b1587d2b",
+      "sourceVersion": "bde6d27db92d64bab738ee123b10f42f7ebe2030",
       "tags": [],
       "scopes": [
         {
