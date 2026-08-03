@@ -11,7 +11,6 @@ import {
 import { readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError } from "../utils/errors";
-import { runProcess } from "../utils/node-runtime";
 import { resolveCliPath } from "../utils/paths";
 import {
 	type NextProbeIssue,
@@ -19,12 +18,14 @@ import {
 	type NextTargetState,
 	recommendNextStep,
 } from "./next-recommendation";
-import { readRepoTargetArg, resolveRepoTarget } from "./repo-target";
+import { resolveCliArtifactRoot } from "./artifact-root";
+import { gitOutput, readGitOrigin, readGitRoot } from "./git";
 import {
-	listRepoMetadata,
-	renderSuccess,
-	resolveCliArtifactRoot,
-} from "./shared";
+	readRepoTargetArg,
+	resolveRepoIdentity,
+} from "./repo-identity";
+import { listRepoMetadata } from "./repo-metadata";
+import { renderSuccess } from "./render";
 
 export type { NextStepState } from "./next-recommendation";
 
@@ -37,16 +38,6 @@ async function pathExists(path: string): Promise<boolean> {
 	}
 }
 
-async function gitOutput(cwd: string, args: readonly string[]) {
-	try {
-		const { exitCode, stdout } = await runProcess(["git", ...args], { cwd });
-		if (exitCode !== 0) return undefined;
-		const value = stdout.trim();
-		return value.length > 0 ? value : undefined;
-	} catch {
-		return undefined;
-	}
-}
 
 /** Probes local state only. It never creates or migrates the runtime corpus. */
 export async function probeNextStepState(
@@ -54,13 +45,9 @@ export async function probeNextStepState(
 ): Promise<NextStepState> {
 	const configPath = readStringOption(context, "config");
 	const issues: NextProbeIssue[] = [];
-	const gitRoot = await gitOutput(context.cwd, [
-		"rev-parse",
-		"--show-toplevel",
-	]);
-	const gitOrigin = gitRoot
-		? await gitOutput(gitRoot, ["remote", "get-url", "origin"])
-		: undefined;
+	const gitRoot = await readGitRoot(context.cwd);
+	const gitOrigin =
+		gitRoot === undefined ? undefined : await readGitOrigin(gitRoot);
 	const checkout = await probeCheckout(context, gitRoot, issues);
 
 	let loadedConfig: Awaited<ReturnType<typeof loadConfig>> | undefined;
@@ -177,12 +164,10 @@ async function resolveNextTarget(
 ) {
 	const args = readRepoTargetArg(context, 0);
 	try {
-		return await resolveRepoTarget(context, {
-			config,
+		return await resolveRepoIdentity(context, { intent: "target", config,
 			...args,
 			command: "next",
-			nonInteractive: true,
-		});
+			nonInteractive: true, });
 	} catch (error) {
 		if (args.explicit !== undefined || args.positional !== undefined) throw error;
 		if (

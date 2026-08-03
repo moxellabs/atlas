@@ -20,7 +20,7 @@ import type {
   CliCommandContext,
   CliCommandResult,
 } from "../runtime/types";
-import { createCliConsole } from "./shared";
+import { createCliConsole } from "./render";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 
 type StdioTransport = ReturnType<typeof createStdioTransport>;

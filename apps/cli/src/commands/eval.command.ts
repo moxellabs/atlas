@@ -10,7 +10,8 @@ import {
 import { readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_FAILURE, EXIT_INPUT_ERROR } from "../utils/errors";
-import { loadDependenciesFromGlobal, renderSuccess } from "./shared";
+import { loadDependenciesFromGlobal } from "./dependencies";
+import { renderSuccess } from "./render";
 
 const DEFAULT_EVAL_BUDGET_TOKENS = 1200;
 const MCP_ADOPTION_KIND = "mcp-adoption";

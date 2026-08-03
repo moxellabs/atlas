@@ -242,7 +242,7 @@ And emits a warning that .moxel/atlas exists but was not used or migrated
 - `apps/cli/src/commands/init.command.ts` — Warn before writing custom metadata if default exists.
 - `apps/cli/src/commands/build.command.ts` — Warn during repo-local discovery.
 - `apps/cli/src/commands/artifact.command.ts` — Warn during inspect/verify.
-- `apps/cli/src/commands/shared.ts` or new warning utility — Shared rendering.
+- `apps/cli/src/commands/artifact-root.ts` — Resolve the selected artifact root and render migration warnings.
 
 ### FR-7: Configure MCP server identity for LLM-visible branding
 

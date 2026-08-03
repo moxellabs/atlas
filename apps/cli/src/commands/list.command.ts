@@ -2,12 +2,9 @@ import { canonicalizeRepoId, loadConfig } from "@atlas/config";
 import { readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
-import {
-	inspectArtifacts,
-	loadDependenciesFromGlobal,
-	renderRows,
-	renderSuccess,
-} from "./shared";
+import { loadDependenciesFromGlobal } from "./dependencies";
+import { inspectArtifacts } from "./inspection";
+import { renderRows, renderSuccess } from "./render";
 
 /** Lists configured or stored ATLAS entities quickly. */
 export async function runListCommand(

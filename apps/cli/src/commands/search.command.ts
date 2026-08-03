@@ -8,7 +8,7 @@ import {
 } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
-import { renderRows, renderSuccess } from "./shared";
+import { renderRows, renderSuccess } from "./render";
 
 export async function runSearchCommand(
 	context: CliCommandContext,
