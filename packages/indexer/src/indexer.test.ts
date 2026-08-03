@@ -9,7 +9,10 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ResolvedAtlasConfig } from "@atlas/config";
+import {
+  type ResolvedAtlasConfig,
+  resolveRuntimeRepoConfigs,
+} from "@atlas/config";
 import {
   ATLAS_VERSION,
   createDocId,
@@ -940,8 +943,8 @@ function createResolvedConfig(
   localRepoPath: string,
   options: { includeGhesRepo?: boolean | undefined } = {},
 ): ResolvedAtlasConfig {
-  return {
-    config: {
+  const configPath = join(localRepoPath, "..", "atlas.config.json");
+  const config: ResolvedAtlasConfig["config"] = {
       version: 1,
       cacheDir: join(localRepoPath, ".."),
       corpusDbPath: join(localRepoPath, "..", "atlas.db"),
@@ -957,6 +960,7 @@ function createResolvedConfig(
           default: true,
         },
       ],
+    docs: { metadata: { rules: [], profiles: {} } },
       repos: [
         {
           repoId,
@@ -994,9 +998,12 @@ function createResolvedConfig(
             ]
           : []),
       ],
-    },
+  };
+  return {
+    config,
+    runtimeRepos: resolveRuntimeRepoConfigs(config, configPath),
     source: {
-      configPath: join(localRepoPath, "..", "atlas.config.json"),
+      configPath,
       loadedFrom: "explicit",
     },
     env: {},

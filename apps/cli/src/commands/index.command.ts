@@ -55,6 +55,7 @@ export async function runIndexCommand(
 		if (!(error instanceof AtlasConfigNotFoundError)) throw error;
 		loaded = {
 			config: buildDefaultConfig(identityProfile.runtimeRoot),
+      runtimeRepos: [],
 			source: {
 				configPath:
 					explicitConfigPath ??
@@ -80,7 +81,8 @@ export async function runIndexCommand(
 		...(hostFlag === undefined ? {} : { host: hostFlag }),
 		nonInteractive: context.argv.includes("--non-interactive"),
 	});
-	const rawRepoId = readArgvString(context.argv, "--repo-id") ?? resolved.repoId;
+  const rawRepoId =
+    readArgvString(context.argv, "--repo-id") ?? resolved.repoId;
 	let repoId: string;
 	try {
 		repoId = canonicalizeRepoId(rawRepoId);

@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
-import { type AtlasConfig, atlasConfigSchema } from "../atlas-config.schema";
+import type { AtlasConfig } from "../atlas-config.schema";
 import {
 	buildDefaultConfig,
 	DEFAULT_MOXEL_ATLAS_CONFIG_RELATIVE_PATH,
@@ -13,7 +13,10 @@ import {
 	AtlasConfigNotFoundError,
 	type LoadConfigOptions,
 	loadConfig,
+  resolveAtlasConfig,
+  validateAtlasFileConfig,
 } from "./load-config";
+import { loadEnv } from "./load-env";
 
 /** Returns the config source path if it exists, otherwise the default creation target. */
 export async function resolveAtlasConfigTarget(
@@ -55,24 +58,25 @@ export async function mutateAtlasConfigFile(
 	const targetPath = await resolveAtlasConfigTarget(options);
 	const existing = await fileExists(targetPath);
 	const format = targetPath.endsWith(".json") ? "json" : "yaml";
-	const current = existing
-		? atlasConfigSchema.parse(
-				format === "json"
+  const rawCurrent = existing
+    ? format === "json"
 					? JSON.parse(await readFile(targetPath, "utf8"))
-					: (parseYaml(await readFile(targetPath, "utf8")) as unknown),
-			)
+      : (parseYaml(await readFile(targetPath, "utf8")) as unknown)
 		: (options.createDefault ?? buildDefaultConfig());
-	const next = atlasConfigSchema.parse(mutate(current));
+  const current = validateAtlasFileConfig(rawCurrent, targetPath);
+  const nextFileConfig = validateAtlasFileConfig(mutate(current), targetPath);
+  const env = await loadEnv(options.env ?? process.env);
+  const resolvedNext = resolveAtlasConfig(nextFileConfig, targetPath, env);
 	const serialized =
 		format === "json"
-			? `${JSON.stringify(next, null, 2)}\n`
-			: stringifyYaml(next);
+      ? `${JSON.stringify(nextFileConfig, null, 2)}\n`
+      : stringifyYaml(nextFileConfig);
 	await mkdir(dirname(targetPath), { recursive: true });
 	await writeFile(`${targetPath}.tmp`, serialized);
 	await rename(`${targetPath}.tmp`, targetPath);
 	return {
 		configPath: targetPath,
-		config: next,
+    config: resolvedNext,
 		format,
 	};
 }

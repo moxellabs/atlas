@@ -345,6 +345,7 @@ async function loadAddRepoConfig(
 		}
 		return {
 			config: buildDefaultConfig(identityProfile.runtimeRoot),
+      runtimeRepos: [],
 			source: {
 				configPath: explicitConfigPath ?? defaultConfigPath,
 				loadedFrom:

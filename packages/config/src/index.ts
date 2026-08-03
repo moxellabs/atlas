@@ -79,7 +79,10 @@ export {
 	AtlasConfigValidationError,
 	loadConfig,
 	resolveAtlasConfig,
+  validateAtlasConfig,
+  validateAtlasFileConfig,
 } from "./loaders/load-config";
+export { resolveRuntimeRepoConfigs } from "./runtime-repos";
 export { AtlasEnvValidationError, loadEnv } from "./loaders/load-env";
 export {
 	mutateAtlasConfigFile,

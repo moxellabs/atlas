@@ -11,7 +11,7 @@ order: 20
 
 Atlas setup creates `~/.moxel/atlas/config.yaml` for functional local runtime paths, hosts, and repo sources. Atlas config is loaded by `@atlas/config` from that user-home file when created through CLI setup/repo add, from existing `atlas.config.yaml`, `atlas.config.yml`, or `atlas.config.json` project files, from an explicit `--config`, or from `ATLAS_CONFIG`. Enterprise Commander wrappers can mount Atlas with supported default fields in wrapper code; see [Enterprise CLI Mount](enterprise-cli-mount.md).
 
-The config package is the source of truth for config schema validation, path normalization, defaults, repo source shape validation, and credential resolution. CLI and server code should call the config loaders instead of reading config files directly.
+The config package owns schema validation, defaults, path normalization, repository source contracts, and credential resolution. CLI, server, indexer, topology, and source adapters use its resolved output instead of rebuilding those rules.
 
 ## Core Fields
 
@@ -22,7 +22,7 @@ The config package is the source of truth for config schema validation, path nor
 - `server`: transport, host, and port.
 - `repos`: configured source repositories.
 
-Paths are normalized relative to the config file when appropriate. This lets the same config be used by the CLI, the HTTP server, tests, and MCP-hosting workflows without each runtime inventing path rules.
+`loadConfig` normalizes paths relative to the config file and returns `runtimeRepos` for indexer and source adapters. CLI, HTTP, tests, and MCP-hosting workflows therefore use the same repository root and source contract.
 
 ## Repo Source Modes
 
@@ -65,9 +65,9 @@ Secrets should be referenced by environment variable name rather than written in
 
 ## Mutation Rules
 
-The CLI owns config mutation workflows such as `atlas setup` and repository registration through `atlas repo add`. Setup creates `~/.moxel/atlas`, `~/.moxel/atlas/repos`, and the config/corpus parents as needed. Standalone setup does not ask for wrapper namespace, MCP display identity, or visual branding fields; those belong in embedded Commander wrapper code. Server-side mutation must preserve the same local-first behavior and should use config mutation helpers rather than editing YAML or JSON ad hoc.
+The CLI owns config mutation workflows such as `atlas setup` and repository registration through `atlas repo add`. Setup creates `~/.moxel/atlas`, `~/.moxel/atlas/repos`, and the config and corpus parent directories as needed. Standalone setup does not ask for wrapper namespace, MCP display identity, or visual branding fields. Those settings belong in embedded Commander wrapper code. Server mutation uses the same defaults, validation, and path normalization stages as `loadConfig` before writing YAML or JSON.
 
-Config changes should remain compatible with the schema and with both source adapters. When adding a config field, update schema validation, defaults, docs, CLI/server usage, and tests together.
+Config changes must remain compatible with the schema and both source adapters. When adding a field, update validation, defaults, docs, CLI and server usage, and tests together.
 
 ## Repo registry
 
