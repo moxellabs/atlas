@@ -1,3 +1,8 @@
+import {
+	ATLAS_DOC_AUDIENCES,
+	ATLAS_DOC_PURPOSES,
+	ATLAS_DOC_VISIBILITIES,
+} from "@atlas/core";
 import { z } from "zod";
 
 import { logLevelSchema } from "./env.schema";
@@ -173,25 +178,9 @@ export const atlasWorkspaceConfigSchema = z.object({
 	packageManifestFiles: uniqueStringArray("packageManifestFiles"),
 });
 
-export const atlasDocVisibilitySchema = z.enum(["public", "internal"]);
-export const atlasDocAudienceSchema = z.enum([
-	"consumer",
-	"contributor",
-	"maintainer",
-	"internal",
-]);
-export const atlasDocPurposeSchema = z.enum([
-	"guide",
-	"reference",
-	"api",
-	"architecture",
-	"operations",
-	"workflow",
-	"planning",
-	"implementation",
-	"archive",
-	"troubleshooting",
-]);
+export const atlasDocVisibilitySchema = z.enum(ATLAS_DOC_VISIBILITIES);
+export const atlasDocAudienceSchema = z.enum(ATLAS_DOC_AUDIENCES);
+export const atlasDocPurposeSchema = z.enum(ATLAS_DOC_PURPOSES);
 
 export const atlasDocMetadataRuleMetadataSchema = z
 	.object({

@@ -26,6 +26,10 @@ export type { SectionIdInput } from "./ids/section-id";
 export { createSectionId } from "./ids/section-id";
 export type { SkillIdInput } from "./ids/skill-id";
 export { createSkillId } from "./ids/skill-id";
+export {
+  BUILT_IN_DOC_METADATA_RULES,
+  UNCLASSIFIED_FRONTMATTER_METADATA_RULE,
+} from "./policy/document-metadata-rules";
 export type { SourceChange } from "./types/change.types";
 export type { CorpusChunk } from "./types/chunk.types";
 export type {
@@ -40,6 +44,9 @@ export type {
   DocumentMetadataFilters,
 } from "./types/doc.types";
 export {
+  ATLAS_DOC_AUDIENCES,
+  ATLAS_DOC_PURPOSES,
+  ATLAS_DOC_VISIBILITIES,
   BUILT_IN_DOC_METADATA_PROFILES,
   documentMatchesMetadataFilters,
 } from "./types/doc.types";
@@ -81,6 +88,10 @@ export type {
 } from "./types/topology.types";
 export { stableHash } from "./utils/hash";
 export { stableJson } from "./utils/stable-json";
+export {
+  matchesAnyRepoPath,
+  matchesRepoPath,
+} from "./utils/repo-path-match";
 export {
   estimateTokenCount,
   fitsWithinTokenBudget,
