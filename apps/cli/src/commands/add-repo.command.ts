@@ -37,14 +37,14 @@ import {
 	renderMaintainerInstructions,
 	renderMissingArtifactHumanLines,
 } from "./missing-artifact";
-import { type ResolvedRepoInput, resolveRepoInput } from "./repo-resolver";
 import {
-	appendRepoConfig,
-	renderSuccess,
-	resolveCliArtifactRoot,
-	resolveRepoConfigInput,
-	writeRepoArtifactMetadata,
-} from "./shared";
+	type ResolvedConfigureRepoIdentity,
+	resolveRepoIdentity,
+} from "./repo-identity";
+import { resolveCliArtifactRoot } from "./artifact-root";
+import { appendRepoConfig, resolveRepoConfigInput } from "./repo-config";
+import { writeRepoArtifactMetadata } from "./repo-metadata";
+import { renderSuccess } from "./render";
 
 
 async function fileExists(path: string): Promise<boolean> {
@@ -152,7 +152,7 @@ async function renderMissingArtifactResult(
 
 export async function findLocalCheckoutArtifact(
 	_context: CliCommandContext,
-	resolved: ResolvedRepoInput | undefined,
+	resolved: ResolvedConfigureRepoIdentity | undefined,
 	artifactRoot: string,
 ): Promise<string | undefined> {
 	if (!resolved?.localPath) return undefined;
@@ -215,7 +215,7 @@ async function resolveRepoApiToken(
 }
 
 type LoadedAddRepoConfig = Awaited<ReturnType<typeof loadConfig>>;
-type AddRepoResolvedInput = Awaited<ReturnType<typeof resolveRepoInput>>;
+type AddRepoResolvedInput = ResolvedConfigureRepoIdentity;
 type AddRepoArtifactSource = "local-artifact" | "remote-artifact";
 
 interface AddRepoSetup {
@@ -363,11 +363,9 @@ async function resolveAddRepoInput(
 ): Promise<AddRepoResolvedInput | undefined> {
 	if (positional === undefined) return undefined;
 	const hostFlag = readStringOption(context, "host");
-	let resolved = await resolveRepoInput(context, loadedConfig.config, {
-		input: positional,
+	let resolved = await resolveRepoIdentity(context, { intent: "configure", config: loadedConfig.config, input: positional,
 		...(hostFlag === undefined ? {} : { host: hostFlag }),
-		nonInteractive: readBooleanOption(context, "nonInteractive"),
-	});
+		nonInteractive: readBooleanOption(context, "nonInteractive"), });
 	resolved = await fallbackWhenPrimaryRepoMissing(resolved);
 	const explicitRepoId = readStringOption(context, "repoId");
 	if (explicitRepoId && !readBooleanOption(context, "force")) {
