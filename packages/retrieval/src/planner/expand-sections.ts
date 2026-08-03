@@ -45,11 +45,17 @@ export function expandSections(
 	let added = 0;
 	const seenDocs = new Set(state.selected.map((item) => item.provenance.docId));
 	for (const hit of orderExpansionHits(input.rankedHits, input.queryKind)) {
-		if (added >= limit) {
-			state.omitted.push(toPlannedItem(hit, "Expansion limit reached."));
+    if (!isExpansionTarget(hit)) {
 			continue;
 		}
-		if (!isExpansionTarget(hit)) {
+    if (hit.factors.qualityAdjustment < 0) {
+      state.omitted.push(
+        toPlannedItem(hit, "Omitted by low-signal path quality policy."),
+      );
+      continue;
+    }
+    if (added >= limit) {
+      state.omitted.push(toPlannedItem(hit, "Expansion limit reached."));
 			continue;
 		}
 		if (

@@ -25,9 +25,11 @@ import {
 } from "@atlas/store";
 
 import { classifyQuery } from "./classify/classify-query";
+import { expandSections } from "./planner/expand-sections";
 import { finalizeContext } from "./planner/finalize-context";
 import { gatherCandidates } from "./planner/gather-candidates";
 import { planContext } from "./planner/plan-context";
+import { selectSummaries, toPlannedItem } from "./planner/select-summaries";
 import { expandQuery } from "./query/expand-query";
 import { authorityWeight } from "./ranking/authority-weight";
 import { localityWeight } from "./ranking/locality-weight";
@@ -223,6 +225,55 @@ describe("retrieval", () => {
 		);
 	});
 
+  test("prefers an exact heading over higher-authority generic evidence", () => {
+    const direct = candidate(
+      "section",
+      "security-guidance",
+      "preferred",
+      "AGENTS.md",
+      0.7,
+      "Encrypted key management requirements.",
+    );
+    const directWithHeading: RetrievalCandidate = {
+      ...direct,
+      provenance: { ...direct.provenance, headingPath: ["Security"] },
+    };
+    const generic = candidate(
+      "section",
+      "generic-canonical",
+      "canonical",
+      "docs/perps/whitepaper.md",
+      0.7,
+      "General product overview.",
+    );
+
+    const ranked = rankCandidates({
+      query: "How does wallet security work?",
+      classification: classifyQuery("How does wallet security work?"),
+      candidates: [generic, directWithHeading],
+    });
+
+    expect(ranked[0]?.targetId).toBe("security-guidance");
+    const context = finalizeContext({
+      query: "How does wallet security work?",
+      classification: classifyQuery("How does wallet security work?"),
+      scopes: [],
+      state: {
+        budgetTokens: 100,
+        usedTokens: 24,
+        selected: [
+          toPlannedItem(ranked[1]!, "Selected for test."),
+          toPlannedItem(ranked[0]!, "Selected for test."),
+        ],
+        omitted: [],
+        warnings: [],
+      },
+      rankedHits: ranked,
+      diagnostics: [],
+    });
+    expect(context.selected[0]?.targetId).toBe("security-guidance");
+  });
+
 	test("applies redundancy penalties after base ranking regardless of candidate order", () => {
 		const classification = classifyQuery("session rotation usage");
 		const stronger = candidate(
@@ -338,6 +389,88 @@ describe("retrieval", () => {
 				.evidenceMatch,
 		).toBeGreaterThan(0);
 	});
+
+  test("omits negatively scored low-signal paths from planned context", () => {
+    const query = "How does wallet security work?";
+    const classification = classifyQuery(query);
+    const rankedHits = rankCandidates({
+      query,
+      classification,
+      candidates: [
+        candidate(
+          "summary",
+          "security-summary",
+          "canonical",
+          "docs/security.md",
+          0.7,
+          "Wallet security overview.",
+        ),
+        candidate(
+          "summary",
+          "skill-summary",
+          "preferred",
+          "tests/skills/security/SKILL.md",
+          1,
+          "Wallet security overview.",
+        ),
+        candidate(
+          "section",
+          "security-detail",
+          "canonical",
+          "docs/security.md",
+          0.7,
+          "Keys remain encrypted at rest.",
+        ),
+        candidate(
+          "section",
+          "changelog-detail",
+          "supplemental",
+          "CHANGELOG.md",
+          1,
+          "Wallet security fix.",
+        ),
+      ],
+    });
+    const initialState = {
+      budgetTokens: 500,
+      usedTokens: 0,
+      selected: [],
+      omitted: [],
+      warnings: [],
+    };
+    const afterSummaries = selectSummaries({
+      rankedHits,
+      queryKind: classification.kind,
+      query,
+      state: initialState,
+      limit: 2,
+    });
+    const afterExpansion = expandSections({
+      rankedHits,
+      queryKind: classification.kind,
+      query,
+      state: afterSummaries,
+      limit: 4,
+    });
+    const context = finalizeContext({
+      query,
+      classification,
+      scopes: [],
+      state: afterExpansion,
+      rankedHits,
+      diagnostics: [],
+    });
+
+    expect(context.selected.map((item) => item.targetId)).toEqual([
+      "security-summary",
+      "security-detail",
+    ]);
+    expect(
+      context.omissionDiagnostics
+        .filter((item) => item.reason === "quality")
+        .map((item) => item.targetId),
+    ).toEqual(expect.arrayContaining(["skill-summary", "changelog-detail"]));
+  });
 
 	test("plans overview context with summary plus concrete evidence when budget allows", () => {
 		const plan = planContext({
@@ -489,6 +622,92 @@ describe("retrieval", () => {
 			),
 		).toBe(true);
 	});
+
+  test("uses precise lexical evidence before Atlas-specific expansions", () => {
+    const lexicalQueries: string[] = [];
+    const pathQueries: string[] = [];
+    const trackedStore: RetrievalStore = {
+      ...retrievalStore,
+      lexicalSearch(options) {
+        lexicalQueries.push(options.query);
+        return retrievalStore.lexicalSearch(options);
+      },
+      pathSearch(options) {
+        pathQueries.push(options.path);
+        return retrievalStore.pathSearch(options);
+      },
+    };
+
+    const candidates = gatherCandidates(trackedStore, {
+      query: "How does session rotation work?",
+      expandedQuery:
+        "How does session rotation work? credentials docs/architecture.md",
+      scopes: [],
+      candidateLimit: 40,
+      countTokens: () => 1,
+    });
+
+    expect(lexicalQueries).toEqual(["session rotation"]);
+    expect(pathQueries).toEqual([]);
+    expect(
+      candidates.some(
+        (candidate) => candidate.provenance.docId === sessionDocId,
+      ),
+    ).toBe(true);
+    expect(
+      candidates.some((candidate) => candidate.provenance.docId === repoDocId),
+    ).toBe(false);
+    lexicalQueries.length = 0;
+    pathQueries.length = 0;
+    gatherCandidates(trackedStore, {
+      query: "How does session rotation work?",
+      expandedQuery:
+        "How does session rotation work? credentials docs/architecture.md",
+      repoId,
+      scopes: [],
+      candidateLimit: 40,
+      countTokens: () => 1,
+    });
+    expect(lexicalQueries).toEqual([
+      "session rotation",
+      "session rotation credentials docs architecture md",
+    ]);
+    expect(pathQueries).toEqual(["docs/architecture.md", "architecture.md"]);
+  });
+
+  test("uses expanded terms and path hints only for sparse original matches", () => {
+    const lexicalQueries: string[] = [];
+    const pathQueries: string[] = [];
+    const trackedStore: RetrievalStore = {
+      ...retrievalStore,
+      lexicalSearch(options) {
+        lexicalQueries.push(options.query);
+        return retrievalStore.lexicalSearch(options);
+      },
+      pathSearch(options) {
+        pathQueries.push(options.path);
+        return retrievalStore.pathSearch(options);
+      },
+    };
+
+    const candidates = gatherCandidates(trackedStore, {
+      query: "quantum scheduler",
+      expandedQuery: "quantum scheduler `docs/architecture.md`",
+      repoId,
+      scopes: [],
+      candidateLimit: 40,
+      countTokens: () => 1,
+    });
+
+    expect(lexicalQueries).toEqual([
+      "quantum scheduler",
+      "quantum scheduler docs architecture md",
+    ]);
+    expect(pathQueries).toEqual(["docs/architecture.md", "architecture.md"]);
+    expect(
+      candidates.some((candidate) => candidate.provenance.docId === repoDocId),
+    ).toBe(true);
+  });
 
   test("bounds repository scans behind the retrieval store port", () => {
     const repos = new RepoRepository(store);

@@ -13,7 +13,7 @@ bun run eval
 `eval` runs the full suite. Other scripts:
 
 | Command | Notes |
-| --- | --- |
+| ---------------------- | ------------------------------------------------------- |
 | `bun run eval` | Full manifest → `evals/reports/` |
 | `eval:quick` | Smoke subset → `/tmp` |
 | `eval:ci` | Full suite + CI gates → `/tmp` (used in GitHub Actions) |
@@ -38,6 +38,46 @@ These files are generated output and may change on every run because they includ
 - `evals/reports/` - generated JSON/HTML reports and the local trend log. Gitignored.
 
 Case IDs must be unique across the full manifest. Prefer stable path-substring and term expectations over generated IDs so cases survive corpus rebuilds.
+
+## Large-monorepo acceptance
+
+Issue #18 has a focused MetaMask Mobile dataset at
+`evals/datasets/metamask-mobile-large-monorepo.json`. It is intentionally
+separate from the public Atlas corpus gate because it indexes an external
+checkout. The dataset records the validated source revision and asserts path
+precedence, so canonical answer sources must rank before changelog, skill, and
+tracking noise rather than merely appearing somewhere in the result set.
+
+Run it against the recorded checkout in an isolated Atlas home:
+
+```sh
+export METAMASK_MOBILE_PATH=/path/to/metamask-mobile
+eval_home="$(mktemp -d)"
+HOME="$eval_home" bun run cli setup --non-interactive --json
+HOME="$eval_home" bun run cli index "$METAMASK_MOBILE_PATH" \
+  --repo-id github.com/metamask/metamask-mobile \
+  --non-interactive \
+  --json
+HOME="$eval_home" bun tooling/scripts/mcp-retrieval-eval.ts \
+  --dataset evals/datasets/metamask-mobile-large-monorepo.json \
+  --use-global \
+  --no-baseline \
+  --min-docs 200 \
+  --min-pass-rate 1 \
+  --min-path-recall 1 \
+  --min-term-recall 1 \
+  --min-recall-at-5 1 \
+  --max-p95-latency-ms 1500 \
+  --out /tmp/atlas-metamask-retrieval-report.json \
+  --html /tmp/atlas-metamask-retrieval-report.html \
+  --trend-log none
+rm -rf "$eval_home"
+```
+
+The controller, wallet-security, and Perps cases deliberately expect `low`
+confidence with zero inferred scopes. Flat `docs/**` topology is not evidence
+for a package or module scope; retrieval quality comes from lexical evidence,
+authority, headings, and explicit low-signal path policy.
 
 ## CI and publishing
 

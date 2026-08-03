@@ -145,6 +145,8 @@ export interface RankingFactors {
 	freshness: number;
 	/** Exact path, heading, or canonical-doc evidence contribution. */
 	evidenceMatch: number;
+  /** Signed architecture/reference boost or low-signal path penalty. */
+  qualityAdjustment: number;
 	/** Redundancy subtraction. */
 	redundancyPenalty: number;
 }
@@ -209,6 +211,7 @@ export type ContextOmissionReason =
 	| "budget"
 	| "authority"
 	| "freshness"
+  | "quality"
 	| "archive"
 	| "redundancy";
 
