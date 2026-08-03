@@ -24,4 +24,4 @@ Transport creation should not open stores, run retrieval, sync sources, or compi
 
 ## Tests
 
-`packages/mcp/src/mcp.test.ts` covers server/tool/resource behavior. Transport changes should include tests for explicit stream binding or HTTP lifecycle behavior where feasible, plus validation that tool registration remains available through the server factory.
+`packages/mcp/src/mcp.server-protocol.test.ts` and `mcp.transports-session-isolation.test.ts` cover server registration and transport behavior; tool and resource contracts live in their matching `mcp.*.test.ts` suites. Transport changes should include tests for explicit stream binding or HTTP lifecycle behavior where feasible, plus validation that tool registration remains available through the server factory.
