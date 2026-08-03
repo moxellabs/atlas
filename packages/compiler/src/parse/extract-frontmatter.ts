@@ -1,4 +1,4 @@
-import matter from "gray-matter";
+import { parse as parseYaml } from "yaml";
 
 import { compilerDiagnostic } from "../diagnostics";
 import { CompilerFrontmatterError } from "../errors";
@@ -12,7 +12,10 @@ export interface ExtractFrontmatterOptions {
 }
 
 /** Extracts optional YAML frontmatter from markdown and returns stripped body content. */
-export function extractFrontmatter(markdown: string, options: ExtractFrontmatterOptions = {}): FrontmatterExtraction {
+export function extractFrontmatter(
+  markdown: string,
+  options: ExtractFrontmatterOptions = {},
+): FrontmatterExtraction {
   const content = normalizeLineEndings(markdown);
   if (!startsWithFrontmatter(content)) {
     return {
@@ -24,34 +27,46 @@ export function extractFrontmatter(markdown: string, options: ExtractFrontmatter
           stage: "frontmatter",
           code: "frontmatter.absent",
           message: "No frontmatter block was present.",
-          path: options.path
-        })
-      ]
+          path: options.path,
+        }),
+      ],
     };
   }
 
-  assertFrontmatterIsClosed(content, options.path);
+  const lines = content.split("\n");
+  const closingIndex = lines.findIndex(
+    (line, index) => index > 0 && /^---[ \t]*$/.test(line),
+  );
+  if (closingIndex === -1) {
+    throw new CompilerFrontmatterError(
+      "Frontmatter opening marker is missing a closing marker.",
+      {
+        path: options.path,
+      },
+    );
+  }
 
   try {
-    const parsed = matter(content);
-    const data = toPlainFrontmatterData(parsed.data, options.path);
+    const yaml = lines.slice(1, closingIndex).join("\n");
+    const parsed = yaml.trim() === "" ? {} : parseYaml(yaml);
+    const data = toPlainFrontmatterData(parsed, options.path);
     return {
       present: true,
       data,
-      content: normalizeLineEndings(parsed.content),
+      content: lines.slice(closingIndex + 1).join("\n"),
       diagnostics: [
         compilerDiagnostic({
           stage: "frontmatter",
           code: "frontmatter.present",
           message: `Parsed ${Object.keys(data).length} frontmatter field(s).`,
-          path: options.path
-        })
-      ]
+          path: options.path,
+        }),
+      ],
     };
   } catch (error) {
     throw new CompilerFrontmatterError("Malformed frontmatter block.", {
       path: options.path,
-      cause: error
+      cause: error,
     });
   }
 }
@@ -60,17 +75,17 @@ function startsWithFrontmatter(content: string): boolean {
   return /^---[ \t]*\n/.test(content);
 }
 
-function assertFrontmatterIsClosed(content: string, path: string | undefined): void {
-  const lines = content.split("\n");
-  const closingIndex = lines.findIndex((line, index) => index > 0 && /^---[ \t]*$/.test(line));
-  if (closingIndex === -1) {
-    throw new CompilerFrontmatterError("Frontmatter opening marker is missing a closing marker.", { path });
-  }
-}
-
-function toPlainFrontmatterData(value: unknown, path: string | undefined): FrontmatterData {
+function toPlainFrontmatterData(
+  value: unknown,
+  path: string | undefined,
+): FrontmatterData {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new CompilerFrontmatterError("Frontmatter must parse to a mapping object.", { path });
+    throw new CompilerFrontmatterError(
+      "Frontmatter must parse to a mapping object.",
+      { path },
+    );
   }
-  return Object.fromEntries(Object.entries(value).filter(([, fieldValue]) => fieldValue !== undefined));
+  return Object.fromEntries(
+    Object.entries(value).filter(([, fieldValue]) => fieldValue !== undefined),
+  );
 }

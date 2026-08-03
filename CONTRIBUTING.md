@@ -14,10 +14,13 @@ Run relevant focused tests first, then full CI-equivalent checks before opening 
 
 ```bash
 bun install --frozen-lockfile
+bun run audit:production
 bun run typecheck
 bun run lint
 bun test
+bun run eval:ci
 bun run smoke:distribution
+bun run uat:production
 bun run release:check
 bun apps/cli/src/index.ts artifact verify --fresh
 ```

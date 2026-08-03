@@ -65,10 +65,13 @@ Validate workspace with the same checks used by public CI:
 
 ```bash
 bun install --frozen-lockfile
+bun run audit:production
 bun run typecheck
 bun run lint
 bun test
+bun run eval:ci
 bun run smoke:distribution
+bun run uat:production
 bun run release:check
 bun apps/cli/src/index.ts artifact verify --fresh
 ```

@@ -413,6 +413,18 @@ describe("server app", () => {
     ).rejects.toThrow("skill artifact payload");
   });
 
+  test("serves health with opt-in telemetry enabled locally", async () => {
+    const telemetryApp = createApp(
+      createDependencies(store, dbPath, { enableTelemetry: true }),
+    );
+
+    const response = await telemetryApp.handle(
+      new Request("http://atlas.local/health"),
+    );
+
+    expect(response.status).toBe(200);
+  });
+
   test("serves health, version, repo, manifest, freshness, and topology inspection", async () => {
     expect(await json(app, "/health")).toMatchObject({
       ok: true,
