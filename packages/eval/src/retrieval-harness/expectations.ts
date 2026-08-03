@@ -22,6 +22,17 @@ export function evaluateExpectations(
 	const matchedPathExcludes = pathExcludes.filter((pathPart) =>
 		input.topPaths.some((path) => path.includes(pathPart)),
 	);
+  const failedPathPrecedence = (expected.pathPrecedes ?? []).flatMap(
+    ({ preferred, over }) => {
+      const preferredRank = input.topPaths.findIndex((path) =>
+        path.includes(preferred),
+      );
+      const lowerRank = input.topPaths.findIndex((path) => path.includes(over));
+      return preferredRank >= 0 && (lowerRank < 0 || preferredRank < lowerRank)
+        ? []
+        : [`${preferred} before ${over}`];
+    },
+  );
 	const missingTerms = terms.filter(
 		(term) => !input.textHaystack.includes(term.toLowerCase()),
 	);
@@ -57,6 +68,7 @@ export function evaluateExpectations(
 	const missing: CaseResult["missing"] = {
 		pathIncludes: missingPathIncludes,
 		pathExcludes: matchedPathExcludes,
+    pathPrecedes: failedPathPrecedence,
 		terms: missingTerms,
 		diagnosticsInclude: missingDiagnostics,
 		rankedHits: missingRankedHits,
@@ -76,6 +88,7 @@ export function evaluateExpectations(
 		passed:
 			missingPathIncludes.length === 0 &&
 			matchedPathExcludes.length === 0 &&
+      failedPathPrecedence.length === 0 &&
 			missingTerms.length === 0 &&
 			missingDiagnostics.length === 0 &&
 			missingRankedHits.length === 0 &&
@@ -115,7 +128,11 @@ function recall(total: number, missing: number): number {
 	return total === 0 ? 1 : round((total - missing) / total);
 }
 
-function recallAtK(expectedPaths: string[], topPaths: string[], k: number): number {
+function recallAtK(
+  expectedPaths: string[],
+  topPaths: string[],
+  k: number,
+): number {
 	if (expectedPaths.length === 0) {
 		return 1;
 	}
@@ -168,4 +185,3 @@ function countDistinctParents(paths: string[]): number {
 function round(value: number): number {
 	return Number(value.toFixed(4));
 }
-

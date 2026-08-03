@@ -1,0 +1,122 @@
+{
+  "name": "metamask-mobile-large-monorepo-retrieval",
+  "description": "Focused issue #18 acceptance set for a local MetaMask Mobile checkout. Validated against revision fda751e2e06baa8dfb9e4b617692f9998c43f86f (233 indexed Markdown documents): canonical controller/security/Perps evidence must precede changelog, skill, and tracking noise while flat docs topology remains explicitly low-confidence.",
+  "repoId": "github.com/metamask/metamask-mobile",
+  "cases": [
+    {
+      "id": "metamask-transaction-controller",
+      "category": "large-monorepo-retrieval",
+      "query": "How does the transaction controller work?",
+      "expected": {
+        "pathIncludes": [
+          "docs/perps/perps-metametrics-reference.md",
+          "docs/musd/musd-convert-list.md"
+        ],
+        "pathPrecedes": [
+          {
+            "preferred": "docs/musd/musd-convert-list.md",
+            "over": "/skills/"
+          },
+          {
+            "preferred": "docs/musd/musd-convert-list.md",
+            "over": "CHANGELOG.md"
+          }
+        ],
+        "terms": ["TransactionController.ts", "event publishing"],
+        "minRankedHits": 5,
+        "confidence": "low",
+        "diagnosticsInclude": ["Inferred 0 candidate scopes"]
+      },
+      "profile": "contributor",
+      "feature": "controller-architecture",
+      "scenario": "flat-docs-controller-overview",
+      "priority": "p0",
+      "capability": "Large-monorepo architecture retrieval",
+      "claim": "Canonical feature and controller references rank before generated skill and changelog neighbors.",
+      "whyItMatters": "Controller questions in a flat docs monorepo must produce implementation evidence rather than test-agent or release-history noise.",
+      "expectedBehavior": "Return canonical transaction-controller references in the top path window, rank them before skills and changelog, and expose deliberate low confidence when no structural scope can be inferred.",
+      "coverageType": "source-recall+path-precedence+confidence",
+      "riskArea": "large-monorepo-ranking"
+    },
+    {
+      "id": "metamask-wallet-security",
+      "category": "large-monorepo-retrieval",
+      "query": "How does wallet security work?",
+      "expected": {
+        "pathIncludes": ["AGENTS.md"],
+        "pathPrecedes": [
+          {
+            "preferred": "AGENTS.md",
+            "over": "CHANGELOG.md"
+          },
+          {
+            "preferred": "AGENTS.md",
+            "over": "myx-jira-tracking.md"
+          },
+          {
+            "preferred": "AGENTS.md",
+            "over": "docs/qr-sync/"
+          }
+        ],
+        "terms": [
+          "SecureKeychain",
+          "Vault encryption",
+          "Hardware wallet support"
+        ],
+        "minRankedHits": 5,
+        "confidence": "low",
+        "diagnosticsInclude": ["Inferred 0 candidate scopes"]
+      },
+      "profile": "contributor",
+      "feature": "wallet-security",
+      "scenario": "flat-docs-security-overview",
+      "priority": "p0",
+      "capability": "Large-monorepo security retrieval",
+      "claim": "The exact repository security section ranks before changelog, tracking, and QR-sync neighbors.",
+      "whyItMatters": "Broad security questions must lead with actionable repository guidance without inventing structural scope.",
+      "expectedBehavior": "Rank the exact Security heading first, retain explicit low confidence for zero-scope retrieval, and keep known noise below the answer source.",
+      "coverageType": "source-recall+term-grounding+path-precedence+confidence",
+      "riskArea": "broad-query-precision"
+    },
+    {
+      "id": "metamask-perps-architecture",
+      "category": "large-monorepo-retrieval",
+      "query": "How does the Perps architecture work?",
+      "expected": {
+        "pathIncludes": [
+          "docs/perps/perps-architecture.md",
+          "docs/perps/perps-caching-architecture.md",
+          "docs/perps/perps-connection-architecture.md"
+        ],
+        "pathPrecedes": [
+          {
+            "preferred": "docs/perps/perps-architecture.md",
+            "over": "CHANGELOG.md"
+          },
+          {
+            "preferred": "docs/perps/perps-architecture.md",
+            "over": "myx-jira-tracking.md"
+          },
+          {
+            "preferred": "docs/perps/perps-architecture.md",
+            "over": "/skills/"
+          }
+        ],
+        "terms": ["PerpsController", "PerpsConnectionManager", "WebSocket"],
+        "minRankedHits": 5,
+        "confidence": "low",
+        "diagnosticsInclude": ["Inferred 0 candidate scopes"]
+      },
+      "profile": "contributor",
+      "feature": "perps-architecture",
+      "scenario": "strong-title-regression-guard",
+      "priority": "p0",
+      "capability": "Large-monorepo architecture retrieval",
+      "claim": "The existing strong Perps architecture result remains dominant after monorepo precision hardening.",
+      "whyItMatters": "Noise suppression must not weaken topical documentation with strong titles and headings.",
+      "expectedBehavior": "Return the primary, caching, and connection architecture documents ahead of low-signal alternatives.",
+      "coverageType": "source-recall+term-grounding+path-precedence+regression",
+      "riskArea": "ranking-regression"
+    }
+  ]
+}
