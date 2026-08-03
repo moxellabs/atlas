@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ResolvedAtlasConfig } from "@atlas/config";
+import {
+  type ResolvedAtlasConfig,
+  resolveRuntimeRepoConfigs,
+} from "@atlas/config";
 import {
   ATLAS_VERSION,
   type CanonicalDocument,
@@ -1581,8 +1584,7 @@ function createResolvedConfig(
   corpusDbPath: string,
   configPath = "/tmp/atlas.config.json",
 ): ResolvedAtlasConfig {
-  return {
-    config: {
+  const config: ResolvedAtlasConfig["config"] = {
       version: 1,
       cacheDir: corpusDbPath.replace(/\/atlas\.db$/, ""),
       corpusDbPath,
@@ -1598,6 +1600,7 @@ function createResolvedConfig(
           default: true,
         },
       ],
+    docs: { metadata: { rules: [], profiles: {} } },
       repos: [
         {
           repoId,
@@ -1624,7 +1627,10 @@ function createResolvedConfig(
           ],
         },
       ],
-    },
+  };
+  return {
+    config,
+    runtimeRepos: resolveRuntimeRepoConfigs(config, configPath),
     source: { configPath, loadedFrom: "explicit" },
     env: {},
   };

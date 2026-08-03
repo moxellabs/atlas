@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AtlasEnv } from "../env.schema";
@@ -10,6 +10,7 @@ import {
 	loadConfig,
 	resolveAtlasConfig,
 } from "./load-config";
+import { mutateAtlasConfigFile } from "./mutate-config";
 
 const emptyEnv: AtlasEnv = {};
 
@@ -103,6 +104,69 @@ describe("loadConfig", () => {
 		expect(resolved.config.repos[0]?.repoId).toBe(
 			"github.mycorp.com/platform/docs",
 		);
+    expect(resolved.config.docs.metadata.profiles.public?.visibility).toEqual([
+      "public",
+    ]);
+    expect(resolved.runtimeRepos[0]).toMatchObject({
+      repoId: "github.mycorp.com/platform/docs",
+      workspace: { rootPath: join(fixtureDir, "repos", "identity") },
+      docs: {
+        metadata: {
+          profiles: {
+            public: { visibility: ["public"] },
+          },
+        },
+      },
+    });
+  });
+
+  test("mutates through shared validation and path normalization", async () => {
+    const configPath = join(fixtureDir, "atlas.config.yaml");
+    await writeFile(configPath, validYamlConfig);
+
+    const result = await mutateAtlasConfigFile(
+      {
+        cwd: fixtureDir,
+        env: { ATLAS_CACHE_DIR: "runtime-cache" },
+        requireGhesAuth: false,
+      },
+      (config) => ({
+        ...config,
+        repos: config.repos.map((repo) => ({
+          ...repo,
+          git:
+            repo.git === undefined
+              ? undefined
+              : { ...repo.git, localPath: "repos/changed" },
+        })),
+      }),
+    );
+
+    expect(await readFile(configPath, "utf8")).toContain(
+      "localPath: repos/changed",
+    );
+    expect(result.config.cacheDir).toBe(join(fixtureDir, "runtime-cache"));
+    expect(result.config.repos[0]?.git?.localPath).toBe(
+      join(fixtureDir, "repos", "changed"),
+    );
+    expect(result.config.docs.metadata.profiles.public).toBeDefined();
+  });
+
+  test("does not write a mutation that fails shared validation", async () => {
+    const configPath = join(fixtureDir, "atlas.config.yaml");
+    await writeFile(configPath, validYamlConfig);
+    const before = await readFile(configPath, "utf8");
+
+    await expect(
+      mutateAtlasConfigFile(
+        { cwd: fixtureDir, env: {}, requireGhesAuth: false },
+        (config) => ({
+          ...config,
+          repos: config.repos.map((repo) => ({ ...repo, git: undefined })),
+        }),
+      ),
+    ).rejects.toBeInstanceOf(AtlasConfigValidationError);
+    expect(await readFile(configPath, "utf8")).toBe(before);
 	});
 
 	test("uses ATLAS_CONFIG before discovery", async () => {
@@ -265,7 +329,6 @@ describe("loadConfig", () => {
 				},
 				join(fixtureDir, "atlas.config.yaml"),
 				emptyEnv,
-				{ GHES_TOKEN: "token" },
 			),
 		).toThrow(AtlasConfigValidationError);
 	});

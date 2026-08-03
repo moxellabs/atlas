@@ -146,9 +146,9 @@ describe("docs metadata profiles", () => {
 		repos: [],
 	});
 
-	test("accepts metadata rules and merges built-in profiles", async () => {
+  test("validates metadata rules without composing runtime profiles", async () => {
 		const { atlasConfigSchema } = await import("./atlas-config.schema");
-		const parsed = atlasConfigSchema.parse({
+    const input = {
 			...config(),
 			docs: {
 				metadata: {
@@ -156,18 +156,23 @@ describe("docs metadata profiles", () => {
 						{
 							id: "planning",
 							match: { include: [".planning/**"] },
-							metadata: { visibility: "internal", audience: ["internal"], purpose: ["planning"] },
+              metadata: {
+                visibility: "internal",
+                audience: ["internal"],
+                purpose: ["planning"],
+              },
 							priority: 100,
 						},
 					],
 					profiles: {},
 				},
 			},
-		});
-		expect(parsed.docs?.metadata.profiles.public?.visibility).toEqual(["public"]);
-		expect(parsed.docs?.metadata.profiles.contributor).toBeDefined();
-		expect(parsed.docs?.metadata.profiles.maintainer).toBeDefined();
-		expect(parsed.docs?.metadata.profiles.internal).toBeDefined();
+    } as const;
+    const original = structuredClone(input);
+    const parsed = atlasConfigSchema.parse(input);
+    expect(parsed.docs.metadata.rules).toHaveLength(1);
+    expect(parsed.docs.metadata.profiles).toEqual({});
+    expect(input).toEqual(original);
 	});
 
 	test("rejects invalid docs metadata enum values and duplicate rule ids", async () => {
@@ -175,14 +180,70 @@ describe("docs metadata profiles", () => {
 		const baseRule = {
 			id: "docs",
 			match: { include: ["docs/**"] },
-			metadata: { visibility: "public", audience: ["consumer"], purpose: ["guide"] },
+      metadata: {
+        visibility: "public",
+        audience: ["consumer"],
+        purpose: ["guide"],
+      },
 			priority: 1,
 		};
-		expect(atlasConfigSchema.safeParse({ ...config(), docs: { metadata: { rules: [{ ...baseRule, metadata: { visibility: "private" } }], profiles: {} } } }).success).toBe(false);
-		expect(atlasConfigSchema.safeParse({ ...config(), docs: { metadata: { rules: [{ ...baseRule, metadata: { audience: ["admin"] } }], profiles: {} } } }).success).toBe(false);
-		expect(atlasConfigSchema.safeParse({ ...config(), docs: { metadata: { rules: [{ ...baseRule, metadata: { purpose: ["misc"] } }], profiles: {} } } }).success).toBe(false);
-		expect(atlasConfigSchema.safeParse({ ...config(), docs: { metadata: { rules: [baseRule, baseRule], profiles: {} } } }).success).toBe(false);
-		expect(atlasConfigSchema.safeParse({ ...config(), docs: { metadata: { rules: [{ ...baseRule, match: { include: [] } }], profiles: {} } } }).success).toBe(false);
-		expect(atlasConfigSchema.safeParse({ ...config(), docs: { metadata: { rules: [{ ...baseRule, metadata: {} }], profiles: {} } } }).success).toBe(false);
+    expect(
+      atlasConfigSchema.safeParse({
+        ...config(),
+        docs: {
+          metadata: {
+            rules: [{ ...baseRule, metadata: { visibility: "private" } }],
+            profiles: {},
+          },
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      atlasConfigSchema.safeParse({
+        ...config(),
+        docs: {
+          metadata: {
+            rules: [{ ...baseRule, metadata: { audience: ["admin"] } }],
+            profiles: {},
+          },
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      atlasConfigSchema.safeParse({
+        ...config(),
+        docs: {
+          metadata: {
+            rules: [{ ...baseRule, metadata: { purpose: ["misc"] } }],
+            profiles: {},
+          },
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      atlasConfigSchema.safeParse({
+        ...config(),
+        docs: { metadata: { rules: [baseRule, baseRule], profiles: {} } },
+      }).success,
+    ).toBe(false);
+    expect(
+      atlasConfigSchema.safeParse({
+        ...config(),
+        docs: {
+          metadata: {
+            rules: [{ ...baseRule, match: { include: [] } }],
+            profiles: {},
+          },
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      atlasConfigSchema.safeParse({
+        ...config(),
+        docs: {
+          metadata: { rules: [{ ...baseRule, metadata: {} }], profiles: {} },
+        },
+      }).success,
+    ).toBe(false);
 	});
 });

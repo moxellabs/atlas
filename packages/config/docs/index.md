@@ -22,14 +22,15 @@ order: 210
 
 ## Public Surface
 
-The package exports config and environment schemas, default builders, config loaders, config mutation helpers, GHES auth resolution, and structured config errors. Consumers should use `loadConfig` or `resolveAtlasConfig` instead of reading config files directly.
+The package exports schemas, default builders, loaders, mutation helpers, GHES credential resolution, and structured errors. `loadConfig` returns the effective config and the `runtimeRepos` contracts used by source adapters. Consumers should use `loadConfig` or `resolveAtlasConfig` instead of reading config files directly.
 
 ## Invariants
 
-- Validation happens before runtime services consume config.
-- Relative paths are resolved consistently from the config target.
-- Credential resolution returns source metadata and token values without requiring downstream packages to know discovery rules.
-- Config mutation helpers should preserve valid schema output and avoid unrelated rewrites.
+- Schema validation is pure. Runtime profile composition and path normalization happen after validation.
+- Relative paths are resolved from the config target before runtime services receive them.
+- `runtimeRepos` is the repository contract consumed by indexer, topology, and source adapters.
+- Credential resolution returns source metadata and token values without exposing discovery rules downstream.
+- Config mutation runs the same defaults, validation, and normalization stages before it writes.
 
 ## Boundaries
 
