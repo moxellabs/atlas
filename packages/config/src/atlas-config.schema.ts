@@ -1,4 +1,3 @@
-import { BUILT_IN_DOC_METADATA_PROFILES } from "@atlas/core";
 import { z } from "zod";
 
 import { logLevelSchema } from "./env.schema";
@@ -33,11 +32,7 @@ const canonicalRepoIdMessage =
 
 export function parseCanonicalRepoId(repoId: string): CanonicalRepoIdParts {
 	const trimmed = repoId.trim();
-	if (
-		trimmed.includes("://") ||
-		trimmed.includes("\\") ||
-		/\s/.test(trimmed)
-	) {
+  if (trimmed.includes("://") || trimmed.includes("\\") || /\s/.test(trimmed)) {
 		throw new Error(canonicalRepoIdMessage);
 	}
 	const segments = trimmed.split("/");
@@ -45,7 +40,11 @@ export function parseCanonicalRepoId(repoId: string): CanonicalRepoIdParts {
 		throw new Error(canonicalRepoIdMessage);
 	}
 	const [hostRaw, ownerRaw, nameRaw] = segments;
-	if (hostRaw === undefined || ownerRaw === undefined || nameRaw === undefined) {
+  if (
+    hostRaw === undefined ||
+    ownerRaw === undefined ||
+    nameRaw === undefined
+  ) {
 		throw new Error(canonicalRepoIdMessage);
 	}
 	const host = hostRaw.toLowerCase();
@@ -381,7 +380,9 @@ export const atlasConfigSchema = z
 			},
 		]),
 		identity: atlasIdentityConfigSchema.optional(),
-		docs: atlasDocsConfigSchema.optional(),
+    docs: atlasDocsConfigSchema.default({
+      metadata: { rules: [], profiles: {} },
+    }),
 		repos: z.array(atlasRepoConfigSchema),
 	})
 	.strict()
@@ -406,11 +407,6 @@ export const atlasConfigSchema = z
 				path: ["hosts"],
 			});
 		}
-		config.docs ??= { metadata: { rules: [], profiles: {} } };
-		config.docs.metadata.profiles = {
-			...BUILT_IN_DOC_METADATA_PROFILES,
-			...config.docs.metadata.profiles,
-		};
 		const defaults = config.hosts.filter((host) => host.default);
 		if (config.hosts.length > 0 && defaults.length !== 1) {
 			ctx.addIssue({

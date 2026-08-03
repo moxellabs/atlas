@@ -1,7 +1,11 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type AtlasConfig, defaultGithubHostConfig } from "@atlas/config";
+import {
+  type AtlasConfig,
+  defaultGithubHostConfig,
+  resolveRuntimeRepoConfigs,
+} from "@atlas/config";
 import {
 	type AtlasDocAudience,
 	type AtlasDocPurpose,
@@ -45,7 +49,10 @@ const REPO_METADATA_FILE = "atlas.repo.json";
 const COMMIT_HINT =
 	"Review and commit artifact root when ready; Atlas does not stage, commit, branch, or push.";
 
-function filterArtifactCorpusByProfile(db: StoreDatabase, profile: string): void {
+function filterArtifactCorpusByProfile(
+  db: StoreDatabase,
+  profile: string,
+): void {
 	type Candidate = {
 		doc_id: string;
 		path: string;
@@ -58,7 +65,9 @@ function filterArtifactCorpusByProfile(db: StoreDatabase, profile: string): void
 	);
 	const removeDocIds: string[] = [];
 	for (const document of documents) {
-		if (!documentMatchesMetadataFilters(documentMetadata(document), { profile })) {
+    if (
+      !documentMatchesMetadataFilters(documentMetadata(document), { profile })
+    ) {
 			removeDocIds.push(document.doc_id);
 		}
 	}
@@ -100,9 +109,7 @@ const AVAILABLE_ARTIFACT_PROFILES = Object.keys(BUILT_IN_DOC_METADATA_PROFILES);
 
 function availableArtifactProfilesFor(profile: string): string[] {
 	const index = AVAILABLE_ARTIFACT_PROFILES.indexOf(profile);
-	return index === -1
-		? []
-		: AVAILABLE_ARTIFACT_PROFILES.slice(0, index + 1);
+  return index === -1 ? [] : AVAILABLE_ARTIFACT_PROFILES.slice(0, index + 1);
 }
 
 interface BuildCommandInput {
@@ -427,6 +434,10 @@ async function runRepoLocalBuild(
 		const { service } = createIndexerServices({
 			config: {
 				config,
+        runtimeRepos: resolveRuntimeRepoConfigs(
+          config,
+          join(repoLocal.root, repoLocal.artifactRoot, REPO_METADATA_FILE),
+        ),
 				source: {
 					configPath: join(
 						repoLocal.root,
