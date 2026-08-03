@@ -48,7 +48,7 @@ MCP adapts package services to protocol surfaces. It should not implement retrie
 
 ## Tests
 
-Primary coverage lives in `packages/mcp/src/mcp.test.ts`.
+Primary coverage is split by protocol domain under `packages/mcp/src/mcp.*.test.ts`, backed by `mcp.test-fixtures.ts`.
 
 ```bash
 bun --cwd packages/mcp run typecheck
@@ -71,5 +71,5 @@ See this package/app source entrypoint and exported docs for supported contribut
 ## Validation Pointer
 
 ```bash
-bun test packages/mcp/src/mcp.test.ts
+bun test packages/mcp
 ```

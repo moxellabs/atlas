@@ -48,12 +48,12 @@ Server code should not implement compiler, topology, store, retrieval ranking, o
 Focused validation:
 
 ```bash
-bun test apps/server/src/server.test.ts --test-name-pattern "docs|OpenAPI|redirect"
+bun test apps/server/src/server.openapi.test.ts apps/server/src/server.retrieval-docs-skills.test.ts
 ```
 
 ## Tests
 
-Primary route and runtime coverage lives in `apps/server/src/server.test.ts`.
+Primary route and runtime coverage is split by domain under `apps/server/src/server.*.test.ts`, backed by `server.test-fixtures.ts`.
 
 ```bash
 bun --cwd apps/server run typecheck
@@ -72,5 +72,5 @@ Behavior should remain deterministic for the same inputs, preserve local-first b
 ## Validation Pointer
 
 ```bash
-bun test apps/server/src/server.test.ts
+bun test apps/server
 ```
