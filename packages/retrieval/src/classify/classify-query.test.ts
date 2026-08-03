@@ -1,0 +1,38 @@
+import { describe, expect, test } from "bun:test";
+
+import { classifyQuery } from "./classify-query";
+
+describe("classifyQuery", () => {
+  test("classifies query intent deterministically", () => {
+    expect(classifyQuery("how do I use the session skill?")).toMatchObject({
+      kind: "skill-invocation",
+      confidence: "high",
+    });
+    expect(
+      classifyQuery("where is packages/auth/docs/session.md?"),
+    ).toMatchObject({
+      kind: "exact-lookup",
+      confidence: "high",
+    });
+    expect(classifyQuery("packages/auth/docs/session.md")).toMatchObject({
+      kind: "exact-lookup",
+    });
+    expect(
+      classifyQuery(
+        "How does a maintainer build and publish .moxel/atlas artifacts?",
+      ),
+    ).not.toMatchObject({ kind: "exact-lookup" });
+    expect(classifyQuery("compare login and session flows")).toMatchObject({
+      kind: "compare",
+    });
+    expect(classifyQuery("how does MCP context retrieval work?")).toMatchObject(
+      { kind: "usage" },
+    );
+    expect(
+      classifyQuery("how do repo artifacts build publish and sync?"),
+    ).toMatchObject({ kind: "usage" });
+    expect(
+      classifyQuery("explain SQLite FTS corpus index search"),
+    ).toMatchObject({ kind: "usage" });
+  });
+});
