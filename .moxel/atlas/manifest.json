@@ -4,9 +4,9 @@
   "host": "github.com",
   "owner": "moxellabs",
   "name": "atlas",
-  "ref": "ab217bd4e10ca088e3946876541faee374777b6a",
-  "indexedRevision": "ab217bd4e10ca088e3946876541faee374777b6a",
-  "createdAt": "2026-08-03T16:08:22.245Z",
+  "ref": "1a4e372821eda6158e04696eb033ad3243e44277",
+  "indexedRevision": "1a4e372821eda6158e04696eb033ad3243e44277",
+  "createdAt": "2026-08-03T16:49:24.156Z",
   "atlasVersion": "0.3.0",
   "format": {
     "version": 1,
