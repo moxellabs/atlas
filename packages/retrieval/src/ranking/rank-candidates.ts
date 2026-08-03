@@ -1,5 +1,6 @@
 import type { QueryKind } from "@atlas/core";
 
+import { dedupeCandidates } from "../planner/candidate-utils";
 import { buildHitRationale } from "../presenters/hit-rationale";
 import { expandQuery } from "../query/expand-query";
 import type {
@@ -115,54 +116,57 @@ function normalizeBaseScore(score: number): number {
 	return Number(Math.min(1, score).toFixed(3));
 }
 
-function queryKindWeight(
-	candidate: RetrievalCandidate,
-	kind: QueryKind,
-): number {
-	if (kind === "overview") {
-		return targetTypeWeight(candidate.targetType, {
+type QueryKindWeightPolicy = (candidate: RetrievalCandidate) => number;
+
+const QUERY_KIND_WEIGHTS: Record<QueryKind, QueryKindWeightPolicy> = {
+	overview: (candidate) =>
+		targetTypeWeight(candidate.targetType, {
 			summary: candidate.provenance.skillId === undefined ? 0.72 : 0.2,
 			document: candidate.provenance.skillId === undefined ? 0.62 : 0.22,
 			section: 0.34,
 			chunk: 0.34,
 			skill: 0.12,
 			fallback: 0.18,
-		});
-	}
-	if (kind === "usage" || kind === "troubleshooting") {
-		return targetTypeWeight(candidate.targetType, {
-			section: 0.9,
-			chunk: 0.9,
-			document: 0.48,
-			skill: 0.12,
-			summary: candidate.provenance.skillId === undefined ? 0.26 : 0.1,
-			fallback: 0.22,
-		});
-	}
-	if (kind === "skill-invocation") {
-		return skillInvocationWeight(candidate);
-	}
-	if (kind === "exact-lookup" || kind === "location") {
-		return lookupWeight(candidate);
-	}
-	if (kind === "compare") {
-		return targetTypeWeight(candidate.targetType, {
+		}),
+	usage: usageWeight,
+	troubleshooting: usageWeight,
+	"skill-invocation": skillInvocationWeight,
+	"exact-lookup": lookupWeight,
+	location: lookupWeight,
+	compare: (candidate) =>
+		targetTypeWeight(candidate.targetType, {
 			summary: 0.58,
 			section: 0.74,
 			chunk: 0.74,
 			document: 0.5,
 			fallback: 0.28,
-		});
-	}
-	if (kind === "diff") {
-		return targetTypeWeight(candidate.targetType, {
+		}),
+	diff: (candidate) =>
+		targetTypeWeight(candidate.targetType, {
 			document: 0.54,
 			section: 0.54,
 			chunk: 0.54,
 			fallback: 0.22,
-		});
-	}
-	return 0.25;
+		}),
+	unknown: () => 0.25,
+};
+
+function queryKindWeight(
+	candidate: RetrievalCandidate,
+	kind: QueryKind,
+): number {
+	return QUERY_KIND_WEIGHTS[kind](candidate);
+}
+
+function usageWeight(candidate: RetrievalCandidate): number {
+	return targetTypeWeight(candidate.targetType, {
+		section: 0.9,
+		chunk: 0.9,
+		document: 0.48,
+		skill: 0.12,
+		summary: candidate.provenance.skillId === undefined ? 0.26 : 0.1,
+		fallback: 0.22,
+	});
 }
 
 function skillInvocationWeight(candidate: RetrievalCandidate): number {
@@ -247,9 +251,8 @@ function pathQualityAdjustment(
 		adjustment += 0.16;
 	}
 	// Demote common monorepo noise unless the query asks for it.
-	const wantsChangelog = /\b(changelog|release notes|what's new|whats new)\b/.test(
-		queryText,
-	);
+  const wantsChangelog =
+    /\b(changelog|release notes|what's new|whats new)\b/.test(queryText);
 	const wantsSkill = /\b(skill|agent prompt|playbook)\b/.test(queryText);
 	const wantsTracking = /\b(jira|ticket|tracking|backlog)\b/.test(queryText);
 	if (!wantsChangelog && /(^|\/)changelog(\.md)?$/.test(path)) {
@@ -519,25 +522,6 @@ function tokenEfficiency(tokenCount: number | undefined): number {
 		return 0.28;
 	}
 	return 0;
-}
-
-function dedupeCandidates(
-	candidates: readonly RetrievalCandidate[],
-): RetrievalCandidate[] {
-	const byKey = new Map<string, RetrievalCandidate>();
-	for (const candidate of candidates) {
-		const key = `${candidate.targetType}:${candidate.targetId}`;
-		const existing = byKey.get(key);
-		if (
-			existing === undefined ||
-			candidate.source === "path" ||
-			(existing.source !== "path" &&
-				(candidate.score ?? 0) > (existing.score ?? 0))
-		) {
-			byKey.set(key, candidate);
-		}
-	}
-	return [...byKey.values()];
 }
 
 function sortRankedHits(left: RankedHit, right: RankedHit): number {

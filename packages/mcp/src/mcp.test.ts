@@ -13,6 +13,7 @@ import {
   createSectionId,
   createSkillId,
 } from "@atlas/core";
+import { createRetrievalStore } from "@atlas/retrieval";
 import {
   type AtlasStoreClient,
   ChunkRepository,
@@ -147,7 +148,10 @@ describe("mcp package", () => {
   });
 
   test("executes retrieval-backed tool contracts", () => {
-    const dependencies = { db: store };
+    const dependencies = {
+      db: store,
+      retrievalStore: createRetrievalStore(store),
+    };
 
     expect(
       executeFindScopes(

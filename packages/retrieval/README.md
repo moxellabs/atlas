@@ -8,6 +8,7 @@ This package classifies user queries, infers likely scopes, gathers candidates f
 
 - Classifies query intent such as overview, exact lookup, usage, troubleshooting, skill invocation, diff, location, and compare.
 - Infers repo/package/module/skill scopes from stored metadata.
+- Uses a required `RetrievalStore` read port created once per runtime, so planner calls do not allocate repository wrappers.
 - Ranks candidates by lexical score, authority, locality, query-kind fit, token efficiency, and redundancy.
 - Selects summaries first when appropriate, then expands into sections/chunks/skills under budget.
 - Returns explicit ambiguity and omission information.
@@ -16,6 +17,7 @@ This package classifies user queries, infers likely scopes, gathers candidates f
 ## Public API
 
 - `classifyQuery`
+- `createRetrievalStore`
 - `inferScopes`
 - `rankCandidates`
 - `planContext`

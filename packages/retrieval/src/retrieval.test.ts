@@ -26,6 +26,7 @@ import {
 
 import { classifyQuery } from "./classify/classify-query";
 import { finalizeContext } from "./planner/finalize-context";
+import { gatherCandidates } from "./planner/gather-candidates";
 import { planContext } from "./planner/plan-context";
 import { expandQuery } from "./query/expand-query";
 import { authorityWeight } from "./ranking/authority-weight";
@@ -33,7 +34,8 @@ import { localityWeight } from "./ranking/locality-weight";
 import { rankCandidates } from "./ranking/rank-candidates";
 import { redundancyPenalty } from "./ranking/redundancy-penalty";
 import { inferScopes } from "./scopes/infer-scopes";
-import type { PlannedItem, RetrievalCandidate } from "./types";
+import { createRetrievalStore } from "./store/retrieval-store";
+import type { PlannedItem, RetrievalCandidate, RetrievalStore } from "./types";
 
 const repoId = "atlas";
 const authPackageId = createPackageId({ repoId, path: "packages/auth" });
@@ -73,6 +75,7 @@ const sessionSkillId = createSkillId({
 describe("retrieval", () => {
 	let dbPath: string;
 	let store: AtlasStoreClient;
+  let retrievalStore: RetrievalStore;
 
 	beforeEach(async () => {
 		dbPath = join(
@@ -81,6 +84,7 @@ describe("retrieval", () => {
 		);
 		store = openStore({ path: dbPath, migrate: true });
 		seedStore(store);
+    retrievalStore = createRetrievalStore(store);
 	});
 
 	afterEach(async () => {
@@ -127,7 +131,7 @@ describe("retrieval", () => {
 	test("infers scored package, module, and skill scopes from store metadata", () => {
 		const classification = classifyQuery("use the session skill in auth");
 		const result = inferScopes({
-			db: store,
+      store: retrievalStore,
 			query: "use the session skill in auth",
 			classification,
 			repoId,
@@ -148,7 +152,7 @@ describe("retrieval", () => {
 	test("scores authority, locality, redundancy, and final rank rationales explicitly", () => {
 		const classification = classifyQuery("session rotation usage");
 		const scopes = inferScopes({
-			db: store,
+      store: retrievalStore,
 			query: "session rotation usage",
 			classification,
 			repoId,
@@ -337,7 +341,7 @@ describe("retrieval", () => {
 
 	test("plans overview context with summary plus concrete evidence when budget allows", () => {
 		const plan = planContext({
-			db: store,
+      store: retrievalStore,
 			repoId,
 			query: "what is the auth architecture overview?",
 			budgetTokens: 160,
@@ -358,7 +362,7 @@ describe("retrieval", () => {
 
 	test("forces detail evidence for overview queries with commands tools and path-like tokens", () => {
 		const plan = planContext({
-			db: store,
+      store: retrievalStore,
 			repoId,
 			query:
 				"overview of auth docs for `rotateSessionToken` in packages/auth/docs/session.md",
@@ -375,7 +379,7 @@ describe("retrieval", () => {
 
 	test("expands into local sections and chunks for usage queries", () => {
 		const plan = planContext({
-			db: store,
+      store: retrievalStore,
 			repoId,
 			query: "how do I rotate session tokens?",
 			budgetTokens: 220,
@@ -394,7 +398,7 @@ describe("retrieval", () => {
 
 	test("uses path candidates for exact lookup and preserves omitted budget decisions", () => {
 		const plan = planContext({
-			db: store,
+      store: retrievalStore,
 			repoId,
 			query: "where is packages/auth/docs/session.md",
 			budgetTokens: 24,
@@ -455,7 +459,7 @@ describe("retrieval", () => {
 
 	test("recovers candidates for natural-language queries with no strict lexical AND match", () => {
 		const plan = planContext({
-			db: store,
+      store: retrievalStore,
 			repoId,
 			query:
 				"How should operators renew session credentials with nonexistent jargon?",
@@ -470,7 +474,7 @@ describe("retrieval", () => {
 
 	test("adds broad fallback candidates from document metadata when lexical search is sparse", () => {
 		const plan = planContext({
-			db: store,
+      store: retrievalStore,
 			repoId,
 			query: "How do payment ledger aliases work?",
 			budgetTokens: 220,
@@ -485,6 +489,43 @@ describe("retrieval", () => {
 			),
 		).toBe(true);
 	});
+
+  test("bounds repository scans behind the retrieval store port", () => {
+    const repos = new RepoRepository(store);
+    for (let index = 0; index < 12; index += 1) {
+      repos.upsert({
+        repoId: `fallback-${index.toString().padStart(2, "0")}`,
+        mode: "local-git",
+        revision: "rev_1",
+      });
+    }
+
+    let listReposCalls = 0;
+    const scannedRepoIds: string[] = [];
+    const boundedStore: RetrievalStore = {
+      ...retrievalStore,
+      listRepos() {
+        listReposCalls += 1;
+        return retrievalStore.listRepos();
+      },
+      listDocumentsByRepo(scannedRepoId) {
+        scannedRepoIds.push(scannedRepoId);
+        return [];
+      },
+    };
+
+    const candidates = gatherCandidates(boundedStore, {
+      query: "quantum cache scheduler",
+      expandedQuery: "quantum cache scheduler",
+      scopes: [],
+      candidateLimit: 40,
+      countTokens: () => 1,
+    });
+
+    expect(candidates).toEqual([]);
+    expect(listReposCalls).toBe(1);
+    expect(scannedRepoIds).toHaveLength(8);
+  });
 
 	test("expands Atlas query vocabulary for lexical candidate generation", () => {
 		expect(expandQuery("How do I publish artifacts?")).toContain(
@@ -515,7 +556,7 @@ describe("retrieval", () => {
 		).toContain("docs/retrieval-and-context.md");
 
 		const plan = planContext({
-			db: store,
+      store: retrievalStore,
 			repoId,
 			query: "How do I publish artifacts?",
 			budgetTokens: 220,
@@ -528,7 +569,7 @@ describe("retrieval", () => {
 
 	test("surfaces low-confidence ambiguity for no-result queries", () => {
 		const plan = planContext({
-			db: store,
+      store: retrievalStore,
 			repoId,
 			query: "where is the quantum cache scheduler?",
 			budgetTokens: 120,
