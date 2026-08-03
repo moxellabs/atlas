@@ -77,7 +77,7 @@
     "type": "github",
     "url": "https://github.com/sponsors/moxellabs"
   },
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Local-first documentation ingestion, retrieval, and MCP/server access for multi-repo engineering docs.",
   "engines": {
     "node": ">=22.0.0"

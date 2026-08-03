@@ -3,7 +3,7 @@
   "name": "io.github.moxellabs/atlas",
   "title": "Atlas Local Knowledge",
   "description": "Search indexed repository documentation with fresh, source-relative evidence.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "websiteUrl": "https://github.com/moxellabs/atlas",
   "repository": {
     "url": "https://github.com/moxellabs/atlas",
@@ -13,7 +13,7 @@
     {
       "registryType": "npm",
       "identifier": "@mrmendez/atlas",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "transport": {
         "type": "stdio"
       },
