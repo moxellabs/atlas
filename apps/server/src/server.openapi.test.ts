@@ -1,24 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import {
-  type ResolvedAtlasConfig,
-  resolveRuntimeRepoConfigs,
-} from "@atlas/config";
 import { SCALAR_CDN_URL } from "@atlas/presentation-assets/openapi";
-import type { IndexerService } from "@atlas/indexer";
-import { type AtlasStoreClient, openStore, RepoRepository } from "@atlas/store";
-
 import { createApp } from "./app";
-import type { ServerEnv } from "./env";
-import { BuildOperationsService } from "./services/build-operations.service";
-import { RetrievalHttpService } from "./services/retrieval-http.service";
-import { RemoteSecurityService } from "./services/remote-security.service";
-import { StoreReadService } from "./services/store-read.service";
-import type { AtlasServerDependencies } from "./services/types";
 
-const repoId = "atlas";
+import {
+  corsPreflight,
+  createResolvedConfig,
+  createStubIndexer,
+  createServerTestFixture,
+  json,
+  repoId,
+  response as request,
+  type ServerTestFixture,
+} from "./server.test-fixtures";
 
 type OpenApiSchema = {
   type?: string;
@@ -54,30 +47,41 @@ type OpenApiSpec = {
   tags: Array<{ name: string; description?: string }>;
   paths: Record<string, Record<string, OpenApiOperation>>;
 };
-type ServerApp = {
-  handle(request: Request): Response | Promise<Response>;
-};
 
 describe("server OpenAPI contract", () => {
-  let directory: string;
-  let store: AtlasStoreClient;
-  let app: ServerApp;
+  let fixture: ServerTestFixture;
+  let app: ServerTestFixture["app"];
   let repoConfig: Record<string, unknown>;
 
   beforeEach(async () => {
-    directory = await mkdtemp(join(tmpdir(), "atlas-server-openapi-test-"));
-    const dbPath = join(directory, "atlas.db");
-    const configPath = join(directory, "atlas.config.json");
-    store = openStore({ path: dbPath, migrate: true });
-    const config = createResolvedConfig(dbPath, configPath);
-    repoConfig = config.config.repos[0] as Record<string, unknown>;
-    await writeFile(configPath, `${JSON.stringify(config.config, null, 2)}\n`);
-    app = createApp(createDependencies(store, config));
+    fixture = await createServerTestFixture();
+    app = createApp(
+      fixture.createDependencies(
+        { enableMcp: true, enableOpenApi: true },
+        createStubIndexer({
+          async syncRepo() {
+            return {} as never;
+          },
+          async syncAll() {
+            return {} as never;
+          },
+          async buildRepo() {
+            return {} as never;
+          },
+          async buildAll() {
+            return {} as never;
+          },
+        }),
+      ),
+    );
+    repoConfig = createResolvedConfig(fixture.dbPath).config.repos[0] as Record<
+      string,
+      unknown
+    >;
   });
 
   afterEach(async () => {
-    store.close();
-    await rm(directory, { recursive: true, force: true });
+    await fixture.destroy();
   });
 
   test("serves Scalar docs and redirects root to docs", async () => {
@@ -421,6 +425,49 @@ describe("server OpenAPI contract", () => {
     expect(html).toContain('id="api-reference"');
   });
 
+  test("allows only local browser origins for Scalar request execution", async () => {
+    const allowedLocalhost = await corsPreflight(app, "http://localhost:5173");
+    expect(allowedLocalhost.headers.get("access-control-allow-origin")).toBe(
+      "http://localhost:5173",
+    );
+    expect(
+      allowedLocalhost.headers.get("access-control-allow-headers"),
+    ).toContain("authorization");
+    expect(
+      allowedLocalhost.headers.get("access-control-allow-credentials"),
+    ).toBeNull();
+
+    const allowedIpv4 = await corsPreflight(app, "http://127.0.0.1:3000");
+    expect(allowedIpv4.headers.get("access-control-allow-origin")).toBe(
+      "http://127.0.0.1:3000",
+    );
+
+    const allowedIpv6 = await corsPreflight(app, "http://[::1]:3000");
+    expect(allowedIpv6.headers.get("access-control-allow-origin")).toBe(
+      "http://[::1]:3000",
+    );
+
+    const blockedHttps = await corsPreflight(app, "https://localhost:5173");
+    expect(blockedHttps.headers.get("access-control-allow-origin")).not.toBe(
+      "https://localhost:5173",
+    );
+
+    const blockedRemote = await corsPreflight(app, "http://evil.test");
+    expect(blockedRemote.headers.get("access-control-allow-origin")).not.toBe(
+      "http://evil.test",
+    );
+
+    const missingOrigin = await app.handle(
+      new Request("http://atlas.local/api/search/scopes", {
+        method: "OPTIONS",
+        headers: {
+          "access-control-request-method": "POST",
+          "access-control-request-headers": "authorization,content-type",
+        },
+      }),
+    );
+    expect(missingOrigin.headers.get("access-control-allow-origin")).toBeNull();
+  });
   test("serves an empty favicon response for local OpenAPI browsers", async () => {
     const response = await request(app, "/favicon.ico");
 
@@ -429,25 +476,17 @@ describe("server OpenAPI contract", () => {
   });
 });
 
-async function json(app: ServerApp, path: string): Promise<unknown> {
-  return request(app, path).then((response) => response.json());
-}
-
-async function openApiSpec(app: ServerApp): Promise<OpenApiSpec> {
+async function openApiSpec(
+  app: ServerTestFixture["app"],
+): Promise<OpenApiSpec> {
   return (await json(app, "/openapi/json")) as OpenApiSpec;
 }
 
-function request(
-  app: ServerApp,
+function post(
+  app: ServerTestFixture["app"],
   path: string,
-  init?: RequestInit,
+  body: unknown,
 ): Promise<Response> {
-  return Promise.resolve(
-    app.handle(new Request(`http://atlas.local${path}`, init)),
-  );
-}
-
-function post(app: ServerApp, path: string, body: unknown): Promise<Response> {
   return request(app, path, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -506,109 +545,4 @@ function pathParameter(operation: OpenApiOperation, name: string) {
   if (parameter === undefined)
     throw new Error(`OpenAPI path parameter is missing: ${name}`);
   return parameter;
-}
-
-function createDependencies(
-  store: AtlasStoreClient,
-  config: ResolvedAtlasConfig,
-): AtlasServerDependencies {
-  const env: ServerEnv = {
-    host: "127.0.0.1",
-    port: 3000,
-    enableUi: false,
-    enableOpenApi: true,
-    enableMcp: true,
-    enableTelemetry: false,
-    discoveryPolicy: "neutral",
-    logRequests: false,
-  };
-  const dependencies: AtlasServerDependencies = {
-    env,
-    config,
-    db: store,
-    store: new StoreReadService(store),
-    retrieval: new RetrievalHttpService(store),
-    operations: new BuildOperationsService(createIndexer()),
-    remoteSecurity: new RemoteSecurityService(env, () =>
-      new RepoRepository(store).list().map((repo) => repo.repoId),
-    ),
-    reloadConfig(nextConfig) {
-      dependencies.config = nextConfig;
-      dependencies.operations = new BuildOperationsService(createIndexer());
-    },
-  };
-  return dependencies;
-}
-
-function createIndexer(): IndexerService {
-  return {
-    async syncRepo() {
-      return {} as never;
-    },
-    async syncAll() {
-      return {} as never;
-    },
-    async buildRepo() {
-      return {} as never;
-    },
-    async buildAll() {
-      return {} as never;
-    },
-  };
-}
-
-function createResolvedConfig(
-  corpusDbPath: string,
-  configPath: string,
-): ResolvedAtlasConfig {
-  const config: ResolvedAtlasConfig["config"] = {
-    version: 1,
-    cacheDir: corpusDbPath.replace(/\/atlas\.db$/, ""),
-    corpusDbPath,
-    logLevel: "info",
-    server: { transport: "http", host: "127.0.0.1", port: 3000 },
-    hosts: [
-      {
-        name: "github.com",
-        webUrl: "https://github.com",
-        apiUrl: "https://api.github.com",
-        protocol: "ssh",
-        priority: 100,
-        default: true,
-      },
-    ],
-    docs: { metadata: { rules: [], profiles: {} } },
-    repos: [
-      {
-        repoId,
-        mode: "local-git",
-        git: {
-          remote: "file:///tmp/atlas",
-          localPath: "/tmp/atlas",
-          ref: "main",
-          refMode: "remote",
-        },
-        workspace: {
-          packageGlobs: ["packages/*"],
-          packageManifestFiles: ["package.json"],
-        },
-        topology: [
-          {
-            id: "docs",
-            kind: "module-doc",
-            match: { include: ["**/*.md"] },
-            ownership: { attachTo: "module" },
-            authority: "preferred",
-            priority: 1,
-          },
-        ],
-      },
-    ],
-  };
-  return {
-    config,
-    runtimeRepos: resolveRuntimeRepoConfigs(config, configPath),
-    source: { configPath, loadedFrom: "explicit" },
-    env: {},
-  };
 }
