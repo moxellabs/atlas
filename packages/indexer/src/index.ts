@@ -1,4 +1,4 @@
-export * from "./artifact";
+export * from "./artifact/index";
 export { buildAll } from "./build/build-all";
 export { buildRepo } from "./build/build-repo";
 export { persistBuildResults } from "./build/persist-build-results";
