@@ -1,12 +1,15 @@
 import {
-	type AtlasDocAudience,
-	type AtlasDocPurpose,
-	type AtlasDocVisibility,
+	ATLAS_DOC_AUDIENCES,
+	ATLAS_DOC_PURPOSES,
+	ATLAS_DOC_VISIBILITIES,
+	BUILT_IN_DOC_METADATA_RULES,
 	type CanonicalDocument,
 	type CanonicalSection,
 	createDocId,
 	type DocMetadataRule,
 	type DocumentMetadata,
+	matchesAnyRepoPath,
+	UNCLASSIFIED_FRONTMATTER_METADATA_RULE,
 } from "@atlas/core";
 
 import { compilerDiagnostic } from "../diagnostics";
@@ -21,25 +24,6 @@ import type {
 } from "../types";
 import { buildSections } from "./build-sections";
 
-const VISIBILITIES = new Set<AtlasDocVisibility>(["public", "internal"]);
-const AUDIENCES = new Set<AtlasDocAudience>([
-	"consumer",
-	"contributor",
-	"maintainer",
-	"internal",
-]);
-const PURPOSES = new Set<AtlasDocPurpose>([
-	"guide",
-	"reference",
-	"api",
-	"architecture",
-	"operations",
-	"workflow",
-	"planning",
-	"implementation",
-	"archive",
-	"troubleshooting",
-]);
 
 /** Builds a canonical document from topology classification and normalized markdown. */
 export function buildCanonicalDocument(
@@ -167,37 +151,30 @@ function resolveDocumentMetadata(
 	rules: readonly DocMetadataRule[],
 ): DocumentMetadata & { diagnostics: string[]; title?: string | undefined } {
 	const data = frontmatter.data;
-	const base = defaultMetadataFor(path, frontmatter);
-	const rule = [...rules]
+	const builtInRules =
+		frontmatter.present && !hasAtlasMetadata(data)
+			? [UNCLASSIFIED_FRONTMATTER_METADATA_RULE]
+			: BUILT_IN_DOC_METADATA_RULES;
+	const rule = [...builtInRules, ...rules]
 		.filter(
 			(candidate) =>
-				matchesAny(path, candidate.match.include) &&
-				!matchesAny(path, candidate.match.exclude ?? []),
+				matchesAnyRepoPath(path, candidate.match.include) &&
+				!matchesAnyRepoPath(path, candidate.match.exclude ?? []),
 		)
 		.sort(
 			(left, right) =>
 				right.priority - left.priority || left.id.localeCompare(right.id),
 		)[0];
+	const metadata = rule?.metadata ?? {};
 	const merged: DocumentMetadata & { title?: string | undefined } = {
-		...base,
-		...(rule?.metadata.title === undefined
+		tags: [],
+		...metadata,
+		...(metadata.audience === undefined
 			? {}
-			: { title: rule.metadata.title }),
-		...(rule?.metadata.description === undefined
+			: { audience: [...metadata.audience] }),
+		...(metadata.purpose === undefined
 			? {}
-			: { description: rule.metadata.description }),
-		...(rule?.metadata.order === undefined
-			? {}
-			: { order: rule.metadata.order }),
-		...(rule?.metadata.audience === undefined
-			? {}
-			: { audience: [...rule.metadata.audience] }),
-		...(rule?.metadata.purpose === undefined
-			? {}
-			: { purpose: [...rule.metadata.purpose] }),
-		...(rule?.metadata.visibility === undefined
-			? {}
-			: { visibility: rule.metadata.visibility }),
+			: { purpose: [...metadata.purpose] }),
 	};
 	const diagnostics: string[] = [];
 	const title = stringField(data, "title");
@@ -209,116 +186,31 @@ function resolveDocumentMetadata(
 	const visibility = enumField(
 		data,
 		"visibility",
-		VISIBILITIES,
+		ATLAS_DOC_VISIBILITIES,
 		diagnostics,
 	);
 	if (visibility !== undefined) merged.visibility = visibility;
 	const audience = enumArrayField(
 		data,
 		"audience",
-		AUDIENCES,
+		ATLAS_DOC_AUDIENCES,
 		diagnostics,
 	);
 	if (audience !== undefined) merged.audience = audience;
-	const purpose = enumArrayField(data, "purpose", PURPOSES, diagnostics);
+	const purpose = enumArrayField(
+		data,
+		"purpose",
+		ATLAS_DOC_PURPOSES,
+		diagnostics,
+	);
 	if (purpose !== undefined) merged.purpose = purpose;
 	return { ...merged, diagnostics };
-}
-
-function defaultMetadataFor(
-	path: string,
-	frontmatter: { present: boolean; data: FrontmatterData },
-): DocumentMetadata {
-	if (frontmatter.present && !hasAtlasMetadata(frontmatter.data))
-		return {
-			visibility: "internal",
-			audience: ["contributor"],
-			purpose: ["implementation"],
-			tags: [],
-		};
-	if (matchesGlob(path, "docs/prd/**"))
-		return {
-			visibility: "internal",
-			audience: ["internal"],
-			purpose: ["planning"],
-			tags: [],
-		};
-	if (matchesGlob(path, "docs/archive/**"))
-		return {
-			visibility: "internal",
-			audience: ["internal"],
-			purpose: ["archive"],
-			tags: [],
-		};
-	if (matchesGlob(path, ".planning/**"))
-		return {
-			visibility: "internal",
-			audience: ["internal"],
-			purpose: ["planning", "implementation"],
-			tags: [],
-		};
-	if (path === "README.md")
-		return {
-			visibility: "public",
-			audience: ["consumer"],
-			purpose: ["guide"],
-			tags: [],
-		};
-	if (path.endsWith("/README.md"))
-		return {
-			visibility: "public",
-			audience: ["contributor"],
-			purpose: ["implementation", "reference"],
-			tags: [],
-		};
-	if (matchesGlob(path, "docs/**"))
-		return {
-			visibility: "public",
-			audience: ["consumer"],
-			purpose: ["guide", "reference"],
-			tags: [],
-		};
-	if (matchesGlob(path, "skills/**"))
-		return {
-			visibility: "public",
-			audience: ["contributor", "maintainer"],
-			purpose: ["workflow"],
-			tags: [],
-		};
-	return {
-		visibility: "internal",
-		audience: ["contributor"],
-		purpose: ["implementation"],
-		tags: [],
-	};
 }
 
 function hasAtlasMetadata(frontmatter: FrontmatterData): boolean {
 	return ["audience", "purpose", "visibility"].some(
 		(field) => frontmatter[field] !== undefined,
 	);
-}
-
-function matchesAny(path: string, patterns: readonly string[]): boolean {
-	return patterns.some((pattern) => matchesGlob(path, pattern));
-}
-
-function matchesGlob(path: string, pattern: string): boolean {
-	if (pattern.endsWith("/**"))
-		return (
-			path === pattern.slice(0, -3) || path.startsWith(pattern.slice(0, -2))
-		);
-	if (pattern.includes("*")) {
-		const regex = new RegExp(
-			`^${pattern.split("*").map(escapeRegExp).join(".*")}$`,
-		);
-		return regex.test(path);
-	}
-	return path === pattern;
-}
-
-function escapeRegExp(value: string): string {
-	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function assertCanonicalInput(input: BuildCanonicalDocumentInput): void {
@@ -366,12 +258,13 @@ function numberField(data: FrontmatterData, field: string): number | undefined {
 function enumField<T extends string>(
 	data: FrontmatterData,
 	field: string,
-	allowed: ReadonlySet<T>,
+	allowed: readonly T[],
 	diagnostics: string[],
 ): T | undefined {
 	const value = data[field];
 	if (value === undefined) return undefined;
-	if (typeof value === "string" && allowed.has(value as T)) return value as T;
+	if (typeof value === "string" && allowed.includes(value as T))
+		return value as T;
 	diagnostics.push(`Invalid frontmatter ${field}: ${String(value)}.`);
 	return undefined;
 }
@@ -379,7 +272,7 @@ function enumField<T extends string>(
 function enumArrayField<T extends string>(
 	data: FrontmatterData,
 	field: string,
-	allowed: ReadonlySet<T>,
+	allowed: readonly T[],
 	diagnostics: string[],
 ): T[] | undefined {
 	const value = data[field];
@@ -388,7 +281,7 @@ function enumArrayField<T extends string>(
 	if (
 		values.every(
 			(entry): entry is T =>
-				typeof entry === "string" && allowed.has(entry as T),
+				typeof entry === "string" && allowed.includes(entry as T),
 		)
 	) {
 		return [...new Set(values)].sort();
