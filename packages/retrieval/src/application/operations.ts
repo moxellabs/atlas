@@ -28,13 +28,14 @@ import type {
   PlannedContext,
   QueryClassification,
   RankedHit,
+  RetrievalStore,
   RetrievalDiagnostic,
   ScopeCandidate,
 } from "../types";
 
 /** Input shared by document and scope search operations. */
 export interface SearchApplicationInput {
-  db: StoreDatabase;
+  store: RetrievalStore;
   query: string;
   repoId?: string | undefined;
   limit?: number | undefined;
@@ -53,7 +54,7 @@ export interface FindScopesResult {
 export function findScopes(input: SearchApplicationInput): FindScopesResult {
   const classification = classifyQuery(input.query);
   const result = inferScopes({
-    db: input.db,
+    store: input.store,
     query: input.query,
     classification,
     ...(input.repoId === undefined ? {} : { repoId: input.repoId }),
@@ -87,7 +88,7 @@ export interface FindDocsResult {
 /** Finds ranked document, section, chunk, and skill hits through one application path. */
 export function findDocs(input: FindDocsInput): FindDocsResult {
   const plan = planContext({
-    db: input.db,
+    store: input.store,
     query: input.query,
     budgetTokens: 8_000,
     ...(input.repoId === undefined ? {} : { repoId: input.repoId }),

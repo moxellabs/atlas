@@ -53,6 +53,7 @@ export { rankCandidates } from "./ranking/rank-candidates";
 export { redundancyPenalty } from "./ranking/redundancy-penalty";
 export { inferScopes } from "./scopes/infer-scopes";
 export type { InferScopesInput } from "./scopes/infer-scopes";
+export { createRetrievalStore } from "./store/retrieval-store";
 export type {
   AmbiguityResult,
   PlannedContext,
@@ -65,7 +66,6 @@ export type {
   RetrievalCandidate,
   RetrievalDiagnostic,
   RetrievalScopeLevel,
-  RetrievalRepositories,
   RetrievalStore,
   RetrievalTargetType,
   ScopeCandidate,

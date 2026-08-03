@@ -7,19 +7,19 @@ import {
   findDocsInputSchema,
   jsonOutputSchema,
 } from "../schemas/tool-schemas";
-import type { AtlasMcpDependencies, McpJsonObject } from "../types";
+import type { AtlasRetrievalMcpDependencies, McpJsonObject } from "../types";
 
 export const FIND_DOCS_TOOL = "find_docs";
 
 /** Executes document-oriented ranked retrieval for an MCP caller. */
 export function executeFindDocs(
   input: FindDocsInput,
-  dependencies: AtlasMcpDependencies,
+  dependencies: AtlasRetrievalMcpDependencies,
 ): McpJsonObject {
   const parsed = findDocsInputSchema.parse(input);
   return {
     ...findDocs({
-      db: dependencies.db,
+      store: dependencies.retrievalStore,
       query: parsed.query,
       ...(parsed.repoId === undefined ? {} : { repoId: parsed.repoId }),
       ...(parsed.scopeIds === undefined ? {} : { scopeIds: parsed.scopeIds }),
@@ -40,7 +40,7 @@ export function executeFindDocs(
 /** Registers the find_docs MCP tool. */
 export function registerFindDocsTool(
   server: McpServer,
-  dependencies: AtlasMcpDependencies,
+  dependencies: AtlasRetrievalMcpDependencies,
 ): void {
   server.registerTool(
     FIND_DOCS_TOOL,

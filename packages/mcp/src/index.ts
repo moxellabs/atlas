@@ -154,6 +154,7 @@ export type {
   AtlasMcpDiagnostic,
   AtlasMcpExposurePolicy,
   AtlasMcpIdentity,
+  AtlasRetrievalMcpDependencies,
   AtlasMcpServer,
   AtlasSourceDiffProvider,
   AtlasSourceDiffRequest,

@@ -1,11 +1,20 @@
 import type { DocumentMetadataFilters } from "@atlas/core";
-import { findDocs, findScopes, planContext } from "@atlas/retrieval";
+import {
+  createRetrievalStore,
+  findDocs,
+  findScopes,
+  planContext,
+  type RetrievalStore,
+} from "@atlas/retrieval";
 import type { AtlasStoreClient, DocumentRecord } from "@atlas/store";
-import { DocRepository } from "@atlas/store";
 
 /** HTTP-facing retrieval facade that keeps routes thin. */
 export class RetrievalHttpService {
-  constructor(private readonly db: AtlasStoreClient) {}
+  private readonly store: RetrievalStore;
+
+  constructor(db: AtlasStoreClient) {
+    this.store = createRetrievalStore(db);
+  }
 
   /** Finds likely scopes for a query. */
   findScopes(input: {
@@ -15,7 +24,7 @@ export class RetrievalHttpService {
     filters?: DocumentMetadataFilters;
   }) {
     return findScopes({
-      db: this.db,
+      store: this.store,
       ...input,
     });
   }
@@ -30,7 +39,7 @@ export class RetrievalHttpService {
     filters?: DocumentMetadataFilters;
   }) {
     return findDocs({
-      db: this.db,
+      store: this.store,
       ...input,
     });
   }
@@ -46,7 +55,7 @@ export class RetrievalHttpService {
     filters?: DocumentMetadataFilters;
   }) {
     return planContext({
-      db: this.db,
+      store: this.store,
       ...input,
     });
   }
@@ -65,7 +74,7 @@ export class RetrievalHttpService {
       indexedDocuments:
         input.repoId === undefined
           ? []
-          : new DocRepository(this.db).listByRepo(input.repoId),
+          : this.store.listDocumentsByRepo(input.repoId),
     };
   }
 }

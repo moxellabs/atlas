@@ -25,6 +25,7 @@ import type {
   SyncReport,
 } from "@atlas/indexer";
 import { executeFindScopes } from "@atlas/mcp";
+import { createRetrievalStore } from "@atlas/retrieval";
 import {
   type AtlasStoreClient,
   ChunkRepository,
@@ -480,7 +481,10 @@ describe("server app", () => {
       repoId,
       visibility: ["internal" as const],
     };
-    const mcpScopes = executeFindScopes(filteredScopesInput, { db: store });
+    const mcpScopes = executeFindScopes(filteredScopesInput, {
+      db: store,
+      retrievalStore: createRetrievalStore(store),
+    });
     expect(
       await postJson(app, "/api/search/scopes", filteredScopesInput),
     ).toMatchObject({ data: mcpScopes });
