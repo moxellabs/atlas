@@ -38,4 +38,4 @@ Unknown commands, invalid selectors, and unsupported flag combinations should fa
 
 ## Tests
 
-`apps/cli/src/cli.test.ts` is the primary integration surface. Command tests should cover human output, JSON output when supported, exit codes, invalid input, and the package-service delegation path for any command that mutates source, config, or corpus state.
+`apps/cli/src/cli.*.test.ts` is the primary integration surface, split by workflow domain. Command tests should cover human output, JSON output when supported, exit codes, invalid input, and the package-service delegation path for any command that mutates source, config, or corpus state.
