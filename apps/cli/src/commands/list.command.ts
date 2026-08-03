@@ -1,10 +1,10 @@
 import { canonicalizeRepoId, loadConfig } from "@atlas/config";
+import { readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import {
 	inspectArtifacts,
 	loadDependenciesFromGlobal,
-	readArgvString,
 	renderRows,
 	renderSuccess,
 } from "./shared";
@@ -13,14 +13,14 @@ import {
 export async function runListCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const subcommand = resolveListSubcommand(context.argv);
+	const subcommand = resolveListSubcommand(context.positionals);
 	if (subcommand === "repos") {
 		return listConfiguredRepos(context);
 	}
 
 	const deps = await loadDependenciesFromGlobal(
 		context,
-		readArgvString(context.argv, "--config"),
+		readStringOption(context, "config"),
 	);
 	try {
 		const artifacts = inspectArtifacts(deps.db);
@@ -54,16 +54,13 @@ type ConfiguredRepo = Awaited<
 >["config"]["repos"][number];
 
 function resolveListSubcommand(argv: readonly string[]): string {
-	const firstArg = argv[0];
-	return firstArg === undefined || firstArg.startsWith("--")
-		? "repos"
-		: firstArg;
+	return argv[0] ?? "repos";
 }
 
 async function listConfiguredRepos(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const configPath = readArgvString(context.argv, "--config");
+	const configPath = readStringOption(context, "config");
 	const resolved = await loadConfig({
 		cwd: context.cwd,
 		env: context.env,
@@ -77,25 +74,13 @@ async function listConfiguredRepos(
 	return renderSuccess(context, "list", rows, [renderRows(rows)]);
 }
 
-function requiredListOption(
-	argv: readonly string[],
-	flag: string,
-	message: string,
-	code: string,
-): string {
-	const value = readArgvString(argv, flag);
-	if (value === undefined || value.length === 0) {
-		throw new CliError(message, { code, exitCode: EXIT_INPUT_ERROR });
-	}
-	return value;
-}
 
 function resolveListRepoId(
 	context: CliCommandContext,
 	artifacts: ListArtifacts,
 	entity: string,
 ): string {
-	const explicit = readArgvString(context.argv, "--repo");
+	const explicit = readStringOption(context, "repo");
 	if (explicit !== undefined && explicit.length > 0) {
 		return canonicalizeListRepoId(explicit);
 	}
@@ -159,9 +144,9 @@ function listDocs(
 	artifacts: ListArtifacts,
 ): Promise<CliCommandResult> {
 	const repoId = resolveListRepoId(context, artifacts, "docs");
-	const packageId = readArgvString(context.argv, "--package");
-	const moduleId = readArgvString(context.argv, "--module");
-	const kind = readArgvString(context.argv, "--kind");
+	const packageId = readStringOption(context, "package");
+	const moduleId = readStringOption(context, "module");
+	const kind = readStringOption(context, "kind");
 	const rows = artifacts.docs
 		.listByRepo(repoId)
 		.filter((doc) => packageId === undefined || doc.packageId === packageId)
@@ -183,12 +168,13 @@ function listSections(
 	context: CliCommandContext,
 	artifacts: ListArtifacts,
 ): Promise<CliCommandResult> {
-	const docId = requiredListOption(
-		context.argv,
-		"--doc",
-		"list sections requires --doc.",
-		"CLI_DOC_REQUIRED",
-	);
+	const docId = readStringOption(context, "doc");
+	if (docId === undefined || docId.length === 0) {
+		throw new CliError("list sections requires --doc.", {
+			code: "CLI_DOC_REQUIRED",
+			exitCode: EXIT_INPUT_ERROR,
+		});
+	}
 	if (artifacts.docs.get(docId) === undefined) {
 		throw new CliError(`Unknown document: ${docId}.`, {
 			code: "CLI_DOC_NOT_FOUND",
@@ -208,7 +194,7 @@ function listFreshness(
 	context: CliCommandContext,
 	artifacts: ListArtifacts,
 ): Promise<CliCommandResult> {
-	const rawRepoId = readArgvString(context.argv, "--repo");
+	const rawRepoId = readStringOption(context, "repo");
 	const repoId =
 		rawRepoId === undefined ? undefined : canonicalizeListRepoId(rawRepoId);
 	const repos =
@@ -238,11 +224,11 @@ function listSkills(
 	artifacts: ListArtifacts,
 	repos: readonly ConfiguredRepo[],
 ): Promise<CliCommandResult> {
-	const rawRepoId = readArgvString(context.argv, "--repo");
+	const rawRepoId = readStringOption(context, "repo");
 	const repoId =
 		rawRepoId === undefined ? undefined : canonicalizeListRepoId(rawRepoId);
-	const packageId = readArgvString(context.argv, "--package");
-	const moduleId = readArgvString(context.argv, "--module");
+	const packageId = readStringOption(context, "package");
+	const moduleId = readStringOption(context, "module");
 	if (packageId !== undefined && moduleId !== undefined) {
 		throw new CliError(
 			"list skills accepts only one of --package or --module.",

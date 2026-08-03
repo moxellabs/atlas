@@ -13,13 +13,13 @@ import { indexLocalOnlyRepo } from "@atlas/indexer";
 import { RepoCacheService } from "@atlas/source-git";
 import { canUseInteractiveUi, createPrompts } from "../io/prompts";
 import { buildCliDependencies } from "../runtime/dependencies";
+import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { topologyTemplate } from "../utils/topology-templates";
 import { resolveRepoInput } from "./repo-resolver";
 import {
 	appendRepoConfig,
-	readArgvString,
 	renderSuccess,
 	writeRepoArtifactMetadata,
 } from "./shared";
@@ -30,14 +30,14 @@ const WEAK_DOCS_HINT =
 export async function runIndexCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const repoInput = context.argv[0];
-	if (!repoInput || repoInput.startsWith("--")) {
+	const repoInput = context.positionals[0];
+	if (!repoInput) {
 		throw new CliError("Repo input required.", {
 			code: "CLI_REPO_INPUT_REQUIRED",
 			exitCode: EXIT_INPUT_ERROR,
 		});
 	}
-	const explicitConfigPath = readArgvString(context.argv, "--config");
+	const explicitConfigPath = readStringOption(context, "config");
 	const identityProfile = resolveIdentityProfile({
 		cliIdentityRoot: context.identityRoot,
 		envIdentityRoot: context.env.ATLAS_IDENTITY_ROOT,
@@ -73,16 +73,16 @@ export async function runIndexCommand(
 		};
 	}
 	const cacheDir =
-		readArgvString(context.argv, "--cache-dir") ?? loaded.config.cacheDir;
+		readStringOption(context, "cacheDir") ?? loaded.config.cacheDir;
 	const configPath = loaded.source.configPath;
-	const hostFlag = readArgvString(context.argv, "--host");
+	const hostFlag = readStringOption(context, "host");
 	const resolved = await resolveRepoInput(context, loaded.config, {
 		input: repoInput,
 		...(hostFlag === undefined ? {} : { host: hostFlag }),
-		nonInteractive: context.argv.includes("--non-interactive"),
+		nonInteractive: readBooleanOption(context, "nonInteractive"),
 	});
   const rawRepoId =
-    readArgvString(context.argv, "--repo-id") ?? resolved.repoId;
+    readStringOption(context, "repoId") ?? resolved.repoId;
 	let repoId: string;
 	try {
 		repoId = canonicalizeRepoId(rawRepoId);
@@ -97,7 +97,7 @@ export async function runIndexCommand(
 			},
 		);
 	}
-	const ref = readArgvString(context.argv, "--ref") ?? "main";
+	const ref = readStringOption(context, "ref") ?? "main";
 	const [host, owner, name] = repoId.split("/") as [string, string, string];
 	const checkoutPath = join(
 		cacheDir,
@@ -123,7 +123,7 @@ export async function runIndexCommand(
 		},
 		topology: topologyTemplate("mixed-monorepo"),
 	};
-	const force = context.argv.includes("--force");
+	const force = readBooleanOption(context, "force");
 	const result = await indexLocalOnlyRepo({
 		repo: repo as never,
 		repoId,
@@ -156,7 +156,7 @@ export async function runIndexCommand(
 		if (
 			!canUseInteractiveUi(context, {
 				interactive: true,
-				nonInteractive: context.argv.includes("--non-interactive"),
+				nonInteractive: readBooleanOption(context, "nonInteractive"),
 			})
 		) {
 			throw new CliError(lines.join("\n"), {
@@ -174,7 +174,10 @@ export async function runIndexCommand(
 				exitCode: EXIT_INPUT_ERROR,
 			});
 		}
-		return runIndexCommand({ ...context, argv: [...context.argv, "--force"] });
+		return runIndexCommand({
+			...context,
+			options: { ...context.options, force: true },
+		});
 	}
 	await writeRepoArtifactMetadata(cacheDir, repoId, {
 		artifactPath: null,

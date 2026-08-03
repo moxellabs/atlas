@@ -5,11 +5,12 @@ import {
 	parseCanonicalRepoId,
 } from "@atlas/config";
 import { canPrompt, createPrompts } from "../io/prompts";
+import { readStringOption } from "../runtime/args";
 import type { CliCommandContext } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { runProcess } from "../utils/node-runtime";
 import { repoIdFromGitRemote } from "./git-remote";
-import { readArgvString, readRepoLocalArtifactMetadata } from "./shared";
+import { readRepoLocalArtifactMetadata } from "./shared";
 
 export type RepoTargetSource =
 	| "explicit"
@@ -45,14 +46,12 @@ interface Candidate {
 }
 
 export function readRepoTargetArg(
-	argv: readonly string[],
+	context: CliCommandContext,
 	position = 0,
 ): { explicit?: string | undefined; positional?: string | undefined } {
 	const explicit =
-		readArgvString(argv, "--repo") ?? readArgvString(argv, "--repo-id");
-	const positional = argv[position]?.startsWith("--")
-		? undefined
-		: argv[position];
+		readStringOption(context, "repo") ?? readStringOption(context, "repoId");
+	const positional = context.positionals[position];
 	return { explicit, positional };
 }
 

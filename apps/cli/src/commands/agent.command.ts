@@ -28,7 +28,7 @@ import { renderRows, renderSuccess } from "./shared";
 export async function runAgentCommand(
   context: CliCommandContext,
 ): Promise<CliCommandResult> {
-  const [subcommand = "list"] = context.argv;
+  const [subcommand = "list"] = context.positionals;
   switch (subcommand) {
     case "list":
       return listClients(context);
@@ -236,7 +236,7 @@ async function doctorClients(
 async function printClientConfig(
   context: CliCommandContext,
 ): Promise<CliCommandResult> {
-  const clientId = requiredClientId(context.argv[1]);
+  const clientId = requiredClientId(context.positionals[1]);
   const scope = readScope(context);
   const mode = readMode(context);
   const server = readServerLaunch(context, mode);
@@ -277,7 +277,7 @@ async function resolveTargetClients(
 }
 
 function requiredClientId(value: string | undefined): AgentClientId {
-  if (value === undefined || value.startsWith("--") || !isAgentClientId(value))
+  if (value === undefined || !isAgentClientId(value))
     throw new CliError(
       `Agent client is required. Expected one of: ${listAgentIntegrations()
         .map((descriptor) => descriptor.id)
@@ -392,8 +392,7 @@ function resolveExplicitOrAllClients(
 }
 
 function positionalClient(context: CliCommandContext): string | undefined {
-  const value = context.argv[1];
-  return value?.startsWith("--") === true ? undefined : value;
+  return context.positionals[1];
 }
 
 function conflictingSelectorError(left: string, right: string): CliError {

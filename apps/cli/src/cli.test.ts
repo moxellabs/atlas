@@ -227,6 +227,40 @@ describe("atlas cli", () => {
     ]);
   });
 
+  test("Commander preserves equals syntax repeated options and nested positionals", () => {
+    const program = createAtlasCommand({ namespace: "knowledge" });
+    const search = program.commands.find((command) => command.name() === "search");
+    if (search === undefined) throw new Error("search command not registered");
+    const searchArgs = search.parseOptions([
+      "wallet",
+      "--audience=consumer",
+      "--audience",
+      "maintainer",
+      "--profile=internal",
+      "--json",
+    ]);
+    expect(searchArgs.operands).toEqual(["wallet"]);
+    expect(search.opts()).toMatchObject({
+      audience: ["consumer", "maintainer"],
+      profile: "internal",
+      json: true,
+    });
+
+    const repo = program.commands.find((command) => command.name() === "repo");
+    const show = repo?.commands.find((command) => command.name() === "show");
+    if (show === undefined) throw new Error("repo show command not registered");
+    const showArgs = show.parseOptions([
+      "docs",
+      "--cwd=/tmp/worktree",
+      "--verbose",
+    ]);
+    expect(showArgs.operands).toEqual(["docs"]);
+    expect(show.opts()).toMatchObject({
+      cwd: "/tmp/worktree",
+      verbose: true,
+    });
+  });
+
   test("unsupported mount fields are rejected by AtlasMountConfig typing", () => {
     // @ts-expect-error logo is not supported
     const invalid = { namespace: "acme", logo: "x" } satisfies AtlasMountConfig;
@@ -250,6 +284,20 @@ describe("atlas cli", () => {
 
   afterEach(async () => {
     await rm(rootDir, { recursive: true, force: true });
+  });
+
+  test("global options work before nested subcommands", async () => {
+    const result = await runWithCapture([
+      "--json",
+      "list",
+      "repos",
+      `--config=${join(rootDir, "missing.yaml")}`,
+    ]);
+    expect(result.exitCode).toBe(2);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      command: "list",
+      error: { code: "ATLAS_CONFIG_NOT_FOUND" },
+    });
   });
 
   test("setup bootstraps identity-derived runtime config", async () => {
@@ -2541,16 +2589,10 @@ repos:
       env: { HOME: home },
     });
     try {
-      const context = createCommandContext([
-        "serve",
-        "--cwd",
-        rootDir,
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "48765",
-        "--json",
-      ]);
+      const context = createCommandContext([], {
+        host: "127.0.0.1",
+        port: "48765",
+      });
       context.env = { HOME: home };
       context.cwd = rootDir;
       const result = await runServeCommandWithDependencies(
@@ -2591,14 +2633,11 @@ repos:
   });
 
   test("serve reports startup metadata, open result, and closes CLI dependencies", async () => {
-    const context = createCommandContext([
-      "serve",
-      "--host",
-      "0.0.0.0",
-      "--port",
-      "40789",
-      "--open",
-    ]);
+    const context = createCommandContext([], {
+      host: "0.0.0.0",
+      port: "40789",
+      open: true,
+    });
     const startedWith: Array<{
       host?: string | undefined;
       port?: number | undefined;
@@ -2715,7 +2754,8 @@ repos:
       stderrText += chunk.toString("utf8");
     });
     const context: CliCommandContext = {
-      argv: ["mcp"],
+      positionals: [],
+      options: {},
       cwd: process.cwd(),
       output: { json: false, verbose: false, quiet: false },
       stdin: new PassThrough() as unknown as NodeJS.ReadStream,
@@ -2790,7 +2830,8 @@ repos:
     let receivedDiscoveryPolicy: unknown;
     const transport: { onclose?: () => void } = {};
     const context: CliCommandContext = {
-      argv: ["mcp", "--discovery-policy", "prefer-local"],
+      positionals: [],
+      options: { discoveryPolicy: "prefer-local" },
       cwd: process.cwd(),
       output: { json: false, verbose: false, quiet: false },
       mcpName: "acme-knowledge",
@@ -2846,7 +2887,8 @@ repos:
     let receivedIdentity: unknown;
     const transport: { onclose?: () => void } = {};
     const context: CliCommandContext = {
-      argv: ["mcp"],
+      positionals: [],
+      options: {},
       cwd: process.cwd(),
       output: { json: false, verbose: false, quiet: false },
       stdin: new PassThrough() as unknown as NodeJS.ReadStream,
