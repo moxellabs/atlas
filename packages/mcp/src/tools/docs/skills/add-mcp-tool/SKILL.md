@@ -31,7 +31,7 @@ Use this skill for changes in `packages/mcp/src/tools`. MCP tools expose local A
    - Source diff behavior must go through the configured diff provider.
 
 5. Test the tool.
-   - Add schema and executor coverage in `packages/mcp/src/mcp.test.ts`.
+   - Add schema and executor coverage in `packages/mcp/src/mcp.tools.test.ts`.
    - Cover valid input, invalid input, missing dependency/not-found behavior, and stable result shape.
    - Run `bun test packages/mcp`, then repo gates.
 

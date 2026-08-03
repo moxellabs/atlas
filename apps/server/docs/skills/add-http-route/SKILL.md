@@ -31,7 +31,7 @@ Use this skill for changes under `apps/server`. Server routes adapt local packag
    - Errors must not leak tokens, auth headers, private paths beyond useful diagnostics, or source contents unexpectedly.
 
 4. Test the route.
-   - Add coverage in `apps/server/src/server.test.ts`.
+   - Add coverage in the matching `apps/server/src/server.*.test.ts` domain suite.
    - Cover validation failure, success envelope, not-found/error mapping, OpenAPI docs where relevant, and local mutation boundaries if applicable.
    - Run `bun test apps/server`, then repo gates for public route changes.
 
