@@ -1,8 +1,8 @@
-import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
 	type ArtifactDiagnostic,
 	inspectMoxelAtlasArtifact,
+  readArtifactManifest,
 	verifyMoxelAtlasArtifact,
 } from "@atlas/indexer";
 import { readBooleanOption, readStringOption } from "../runtime/args";
@@ -28,9 +28,7 @@ export async function runArtifactCommand(
 	return renderSuccess(context, "artifact", helpText(), helpText().split("\n"));
 }
 
-async function resolveArtifactCommandPath(
-	context: CliCommandContext,
-): Promise<{
+async function resolveArtifactCommandPath(context: CliCommandContext): Promise<{
 	artifactDir: string;
 	artifactLabel: string;
 	artifactRoot?: string | undefined;
@@ -170,7 +168,6 @@ async function runInspect(
 	]);
 }
 
-
 async function resolveCurrentHead(
 	artifactDir: string,
 	cwd: string,
@@ -210,9 +207,9 @@ async function readArtifactIndexedRevision(
 	artifactDir: string,
 ): Promise<string | undefined> {
 	try {
-		const manifest = JSON.parse(
-			await readFile(join(artifactDir, "manifest.json"), "utf8"),
-		) as { indexedRevision?: unknown };
+    const manifest = await readArtifactManifest(
+      join(artifactDir, "manifest.json"),
+    );
 		return typeof manifest.indexedRevision === "string"
 			? manifest.indexedRevision
 			: undefined;

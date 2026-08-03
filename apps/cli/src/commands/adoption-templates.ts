@@ -1,3 +1,5 @@
+import { MOXEL_ATLAS_ARTIFACT_FILES } from "@atlas/indexer";
+
 export interface AdoptionTemplateInput {
 	repoId: string;
 	repoInput: string;
@@ -16,13 +18,6 @@ export interface AdoptionTemplateOutput {
 	commands: string[];
 }
 
-const artifactFiles = [
-	"manifest.json",
-	"corpus.db",
-	"checksums.json",
-	"docs.index.json",
-];
-
 const boundarySentences = [
 	"This is a request from a user of this repository, not an automated Atlas action.",
 	"Maintainers keep full control over whether to publish Atlas docs, what branch to use, how to review the diff, and when to merge.",
@@ -35,7 +30,7 @@ export function buildAdoptionTemplates(
 	const artifactPath = input.artifactPath ?? ".moxel/atlas";
 	const repoLabel = input.repoId || input.repoInput;
 	const commands = ["atlas init", "atlas build", `git add ${artifactPath}`];
-	const fileList = artifactFiles.join(", ");
+  const fileList = MOXEL_ATLAS_ARTIFACT_FILES.join(", ");
 	const benefits =
 		"This helps people who already use this project load its documentation into Atlas without cloning the full repository. The published docs bundle is reproducible, reviewable, and checksum-validated.";
 	const boundaryText = boundarySentences.join("\n");

@@ -8,6 +8,7 @@ import {
 	openStore,
 	RepoRepository,
 } from "@atlas/store";
+import { readArtifactManifest } from "@atlas/indexer";
 import { readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError } from "../utils/errors";
@@ -20,10 +21,7 @@ import {
 } from "./next-recommendation";
 import { resolveCliArtifactRoot } from "./artifact-root";
 import { gitOutput, readGitOrigin, readGitRoot } from "./git";
-import {
-	readRepoTargetArg,
-	resolveRepoIdentity,
-} from "./repo-identity";
+import { readRepoTargetArg, resolveRepoIdentity } from "./repo-identity";
 import { listRepoMetadata } from "./repo-metadata";
 import { renderSuccess } from "./render";
 
@@ -37,7 +35,6 @@ async function pathExists(path: string): Promise<boolean> {
 		return false;
 	}
 }
-
 
 /** Probes local state only. It never creates or migrates the runtime corpus. */
 export async function probeNextStepState(
@@ -91,7 +88,10 @@ export async function probeNextStepState(
 		issues.push({
 			scope: targetRepoId === undefined ? "runtime" : "target",
 			code: "NEXT_REGISTRY_UNAVAILABLE",
-			message: errorMessage(error, "Atlas could not read the repository registry."),
+      message: errorMessage(
+        error,
+        "Atlas could not read the repository registry.",
+      ),
 		});
 	}
 	const targetRegistry = targetRepoId
@@ -164,12 +164,16 @@ async function resolveNextTarget(
 ) {
 	const args = readRepoTargetArg(context, 0);
 	try {
-		return await resolveRepoIdentity(context, { intent: "target", config,
+    return await resolveRepoIdentity(context, {
+      intent: "target",
+      config,
 			...args,
 			command: "next",
-			nonInteractive: true, });
+      nonInteractive: true,
+    });
 	} catch (error) {
-		if (args.explicit !== undefined || args.positional !== undefined) throw error;
+    if (args.explicit !== undefined || args.positional !== undefined)
+      throw error;
 		if (
 			error instanceof CliError &&
 			(error.code === "CLI_REPO_TARGET_REQUIRED" ||
@@ -179,7 +183,10 @@ async function resolveNextTarget(
 		issues.push({
 			scope: "runtime",
 			code: "NEXT_TARGET_RESOLUTION_FAILED",
-			message: errorMessage(error, "Atlas could not resolve a repository target."),
+      message: errorMessage(
+        error,
+        "Atlas could not resolve a repository target.",
+      ),
 		});
 		return undefined;
 	}
@@ -256,7 +263,8 @@ async function probeCheckout(
 			const metadata = JSON.parse(await readFile(metadataPath, "utf8")) as {
 				repoId?: unknown;
 			};
-			if (typeof metadata.repoId !== "string") throw new Error("repoId is missing");
+      if (typeof metadata.repoId !== "string")
+        throw new Error("repoId is missing");
 			repoId = metadata.repoId;
 		} catch (error) {
 			issues.push({
@@ -269,16 +277,15 @@ async function probeCheckout(
 	let artifactFresh: boolean | undefined;
 	if (artifactFound) {
 		try {
-			const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
-				indexedRevision?: unknown;
-			};
+      const manifest = await readArtifactManifest(manifestPath);
 			if (typeof manifest.indexedRevision !== "string") {
 				throw new Error("indexedRevision is missing");
 			}
 			const head = gitRoot
 				? await gitOutput(gitRoot, ["rev-parse", "HEAD"])
 				: undefined;
-			artifactFresh = head === undefined ? undefined : head === manifest.indexedRevision;
+      artifactFresh =
+        head === undefined ? undefined : head === manifest.indexedRevision;
 		} catch (error) {
 			issues.push({
 				scope: "checkout",
