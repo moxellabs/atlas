@@ -1,9 +1,33 @@
+export {
+  findDocs,
+  findScopes,
+  freshnessFromRecords,
+  listSkills,
+  provenanceFromDocument,
+  readDocumentOutline,
+  readDocumentSection,
+  readFreshness,
+  readSkill,
+} from "./application/operations";
+export type {
+  DocumentOutlineResult,
+  DocumentSectionResult,
+  FindDocsInput,
+  FindDocsResult,
+  FindScopesResult,
+  FreshnessResult,
+  SearchApplicationInput,
+  SkillDetailResult,
+  SkillListItem,
+} from "./application/operations";
+
 export { classifyQuery } from "./classify/classify-query";
 export {
   RetrievalConfigurationError,
   RetrievalDependencyError,
+  RetrievalEntityNotFoundError,
   RetrievalError,
-  RetrievalPlanningError
+  RetrievalPlanningError,
 } from "./errors";
 export type { RetrievalErrorContext } from "./errors";
 export { expandSections } from "./planner/expand-sections";
@@ -11,10 +35,17 @@ export type { ExpandSectionsInput } from "./planner/expand-sections";
 export { finalizeContext } from "./planner/finalize-context";
 export type { FinalizeContextInput } from "./planner/finalize-context";
 export { planContext } from "./planner/plan-context";
-export { appendIfBudgetAllows, selectSummaries, toPlannedItem } from "./planner/select-summaries";
+export {
+  appendIfBudgetAllows,
+  selectSummaries,
+  toPlannedItem,
+} from "./planner/select-summaries";
 export type { SelectSummariesInput } from "./planner/select-summaries";
 export { buildAmbiguityResult } from "./presenters/ambiguity-result";
-export { buildHitRationale, summarizeHitRationale } from "./presenters/hit-rationale";
+export {
+  buildHitRationale,
+  summarizeHitRationale,
+} from "./presenters/hit-rationale";
 export { authorityWeight } from "./ranking/authority-weight";
 export type { AuthorityWeightInput } from "./ranking/authority-weight";
 export { localityWeight } from "./ranking/locality-weight";
@@ -38,5 +69,5 @@ export type {
   RetrievalStore,
   RetrievalTargetType,
   ScopeCandidate,
-  ScopeInferenceResult
+  ScopeInferenceResult,
 } from "./types";

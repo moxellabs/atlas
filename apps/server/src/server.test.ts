@@ -21,6 +21,7 @@ import type {
   SyncBatchReport,
   SyncReport,
 } from "@atlas/indexer";
+import { executeFindScopes } from "@atlas/mcp";
 import {
   type AtlasStoreClient,
   ChunkRepository,
@@ -471,6 +472,15 @@ describe("server app", () => {
         ]),
       },
     });
+    const filteredScopesInput = {
+      query: "session rotation",
+      repoId,
+      visibility: ["internal" as const],
+    };
+    const mcpScopes = executeFindScopes(filteredScopesInput, { db: store });
+    expect(
+      await postJson(app, "/api/search/scopes", filteredScopesInput),
+    ).toMatchObject({ data: mcpScopes });
     expect(
       await postJson(app, "/api/search/docs", {
         query: "session rotation",

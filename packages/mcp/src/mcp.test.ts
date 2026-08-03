@@ -51,7 +51,10 @@ import { repoResource } from "./resources/repo.resource";
 import { skillResource } from "./resources/skill.resource";
 import { skillArtifactResource } from "./resources/skill-artifact.resource";
 import { summaryResource } from "./resources/summary.resource";
-import { readSectionInputSchema } from "./schemas/tool-schemas";
+import {
+  findScopesInputSchema,
+  readSectionInputSchema,
+} from "./schemas/tool-schemas";
 import { createAtlasMcpServer } from "./server/create-mcp-server";
 import {
   createAtlasTransport,
@@ -131,6 +134,15 @@ describe("mcp package", () => {
     expect(readSectionInputSchema.parse({ docId, sectionId })).toMatchObject({
       docId,
       sectionId,
+    });
+    expect(
+      findScopesInputSchema.parse({
+        query: "session rotation",
+        visibility: ["internal"],
+      }),
+    ).toMatchObject({
+      query: "session rotation",
+      visibility: ["internal"],
     });
   });
 

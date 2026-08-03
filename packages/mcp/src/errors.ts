@@ -1,3 +1,5 @@
+import { RetrievalEntityNotFoundError } from "@atlas/retrieval";
+
 /** Structured context attached to MCP adapter errors. */
 export interface McpErrorContext {
   /** Operation that failed. */
@@ -33,3 +35,15 @@ export class McpResourceNotFoundError extends AtlasMcpError {}
 
 /** Raised when a transport cannot be created or attached. */
 export class McpTransportError extends AtlasMcpError {}
+
+/** Maps transport-neutral corpus read failures to the MCP adapter error contract. */
+export function executeMcpRead<T>(operation: () => T): T {
+  try {
+    return operation();
+  } catch (error) {
+    if (error instanceof RetrievalEntityNotFoundError) {
+      throw new McpResourceNotFoundError(error.message, error.context);
+    }
+    throw error;
+  }
+}
