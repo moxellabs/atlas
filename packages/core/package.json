@@ -6,6 +6,9 @@
 	"scripts": {
 		"typecheck": "bunx tsc --noEmit"
 	},
+	"dependencies": {
+		"micromatch": "4.0.8"
+	},
 	"devDependencies": {
 		"bun-types": "1.3.13"
 	},
