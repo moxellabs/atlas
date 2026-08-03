@@ -34,7 +34,7 @@ Retrieval reads persisted local artifacts through the `RetrievalStore` port. Pla
 
 ## Tests
 
-Primary coverage lives in `packages/retrieval/src/retrieval.test.ts`.
+Focused coverage lives beside retrieval domains under `packages/retrieval/src/{classify,scopes,ranking,query,planner}/*.test.ts`, with the package dependency boundary in `packages/retrieval/src/dependencies.test.ts`.
 
 ```bash
 bun --cwd packages/retrieval run typecheck
@@ -61,5 +61,5 @@ Behavior should remain deterministic for the same inputs, preserve local-first b
 ## Validation Pointer
 
 ```bash
-bun test packages/retrieval/src/retrieval.test.ts
+bun test packages/retrieval/src/{classify,scopes,ranking,query,planner}/*.test.ts packages/retrieval/src/dependencies.test.ts
 ```

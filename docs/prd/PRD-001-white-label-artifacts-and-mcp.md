@@ -342,7 +342,7 @@ Then they find flag/env/config examples, precedence, invalid path examples, and 
 - `docs/ingestion-build-flow.md` — Update maintainer artifact workflow.
 - `docs/runtime-surfaces.md` — Update MCP identity behavior.
 - `docs/security.md` — Reconfirm no secrets/path leaks.
-- `apps/cli/src/cli.*.test.ts`, `packages/mcp/src/mcp.*.test.ts`, `apps/server/src/server.*.test.ts`, `packages/config/src/loaders/load-config.test.ts` — Test coverage.
+- `apps/cli/src/cli.*.test.ts`, `packages/mcp/src/mcp.*.test.ts`, `apps/server/src/server.*.test.ts`, `packages/config/src/loaders/load-config.*.test.ts` — Test coverage.
 
 ---
 
@@ -481,7 +481,7 @@ Then they find flag/env/config examples, precedence, invalid path examples, and 
 | `apps/server/src/services/dependencies.ts` | Modify | FR-7 | Wire config/env profile into MCP bridge. |
 | `apps/server/src/routes/mcp.route.ts` | Modify | FR-7 | Preserve HTTP MCP behavior with branded server identity. |
 | `apps/cli/src/cli.*.test.ts` | Modify | FR-1, FR-2, FR-4, FR-5, FR-6, FR-9 | CLI end-to-end coverage. |
-| `packages/config/src/loaders/load-config.test.ts` | Modify | FR-3, FR-4, FR-9 | Config/env precedence coverage. |
+| `packages/config/src/loaders/load-config.*.test.ts` | Modify | FR-3, FR-4, FR-9 | Config/env precedence coverage. |
 | `packages/mcp/src/mcp.*.test.ts` | Modify | FR-7, FR-8 | MCP server/resource/skill alias coverage. |
 | `apps/server/src/server.*.test.ts` | Modify | FR-7 | HTTP MCP branded initialize coverage. |
 | `README.md` | Modify | FR-10 | White-label quickstart. |
