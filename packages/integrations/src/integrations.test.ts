@@ -12,6 +12,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ATLAS_VERSION } from "@atlas/core";
 
 import { AGENT_INTEGRATIONS } from "./catalog";
 import {
@@ -38,6 +39,7 @@ import {
 } from "./runtime";
 
 const roots: string[] = [];
+const ATLAS_NPX_PACKAGE = `@mrmendez/atlas@${ATLAS_VERSION}`;
 
 afterEach(async () => {
   await Promise.all(
@@ -105,7 +107,7 @@ describe("agent integration manager", () => {
         atlas: {
           type: "stdio",
           command: "npx",
-          args: expect.arrayContaining(["@mrmendez/atlas@0.2.3", "mcp"]),
+          args: expect.arrayContaining([ATLAS_NPX_PACKAGE, "mcp"]),
         },
       },
     });
@@ -334,7 +336,7 @@ describe("agent integration manager", () => {
     expect(configured).toContain("[mcp_servers.atlas]");
     expect(configured).toContain('command = "npx"');
     expect(configured).toContain(
-      'args = ["--yes","@mrmendez/atlas@0.2.3","mcp"]',
+      `args = ["--yes","${ATLAS_NPX_PACKAGE}","mcp"]`,
     );
     expect(configured).toContain("required = true");
     expect(configured).toContain('default_tools_approval_mode = "writes"');
@@ -546,7 +548,7 @@ describe("agent integration manager", () => {
   test("verifies native integrations with the adapter check command", async () => {
     const commands: string[][] = [];
     let configPath: string | undefined;
-    const checkOutput = "atlas npx --yes @mrmendez/atlas@0.2.3 mcp connected\n";
+    const checkOutput = `atlas npx --yes ${ATLAS_NPX_PACKAGE} mcp connected\n`;
     const runCommand: IntegrationCommandRunner = async (command) => {
       commands.push([...command]);
       if (command.includes("--version"))
@@ -915,7 +917,7 @@ describe("agent integration manager", () => {
     );
     expect(plan.server.args).toEqual([
       "--yes",
-      "@mrmendez/atlas@0.2.3",
+      ATLAS_NPX_PACKAGE,
       "mcp",
       "--discovery-policy",
       "prefer-local",
@@ -932,7 +934,7 @@ async function writeClaudeConfig(path: string): Promise<void> {
         mcpServers: {
           atlas: {
             command: "npx",
-            args: ["--yes", "@mrmendez/atlas@0.2.3", "mcp"],
+            args: ["--yes", ATLAS_NPX_PACKAGE, "mcp"],
           },
         },
       },

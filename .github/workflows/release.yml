@@ -56,18 +56,8 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "npm-dist-tag=$NPM_DIST_TAG" >> "$GITHUB_OUTPUT"
           echo "github-prerelease=$GITHUB_PRERELEASE" >> "$GITHUB_OUTPUT"
-      - name: Typecheck
-        run: bun run typecheck
-      - name: Lint
-        run: bun run lint
-      - name: Tests
-        run: bun test
-      - name: Distribution smoke
-        run: bun run smoke:distribution
-      - name: Release readiness dry run
-        run: bun tooling/scripts/verify.ts
-      - name: Public artifact verification
-        run: bun apps/cli/src/index.ts artifact verify
+      - name: Release readiness gate
+        run: bun tooling/scripts/verify.ts --release-ready
 
   publish:
     runs-on: ubuntu-latest
