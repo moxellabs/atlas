@@ -88,7 +88,8 @@ export function registerWhatChangedTool(server: McpServer, dependencies: AtlasMc
       title: "Inspect ATLAS source changes",
       description: "Return source-backed changed paths and indexed document state for a repository.",
       inputSchema: whatChangedInputSchema,
-      outputSchema: jsonOutputSchema
+      outputSchema: jsonOutputSchema,
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
     async (input) => toolResult(await executeWhatChanged(input, dependencies))
   );

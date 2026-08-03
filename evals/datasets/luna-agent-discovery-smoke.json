@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "name": "local-documentation-discovery-smoke",
+  "description": "A concrete Diffract/WaveBridge question whose answer is present in the globally indexed corpus; the prompt does not name Atlas, MCP, or a retrieval tool.",
+  "repoId": "github.com/justmrmendez/diffract",
+  "runner": {
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "high",
+    "trialsPerTask": 3,
+    "agentTimeoutMs": 480000,
+    "judgeTimeoutMs": 180000
+  },
+  "tasks": [
+    {
+      "id": "diffract-scene-session-recovery",
+      "sourceCaseId": "diffract-streaming-scene-session-documentation",
+      "title": "Explain scene-session recovery",
+      "category": "local-documentation-discovery",
+      "prompt": "In Diffract/WaveBridge, which files make up a .wb.scene-session container, and exactly what repairs may recovery perform after an interrupted append?",
+      "criteria": [
+        {
+          "id": "completion",
+          "kind": "completion",
+          "description": "Names the three published container files and the bounded recovery repairs.",
+          "evidencePaths": ["docs/architecture/streaming-scene-session.md"]
+        },
+        {
+          "id": "grounding",
+          "kind": "grounding",
+          "description": "Does not invent additional files, rewriting, or unbounded recovery behavior.",
+          "evidencePaths": ["docs/architecture/streaming-scene-session.md"]
+        },
+        {
+          "id": "citations",
+          "kind": "citation",
+          "description": "Cites the source-relative Diffract architecture document supporting the answer.",
+          "evidencePaths": ["docs/architecture/streaming-scene-session.md"]
+        }
+      ]
+    }
+  ]
+}

@@ -172,6 +172,7 @@ export const planContextInputSchema = z
 		audience: z.array(docAudienceSchema).optional(),
 		purpose: z.array(docPurposeSchema).optional(),
 		visibility: z.array(docVisibilitySchema).optional(),
+		detail: z.enum(["agent", "debug"]).default("agent"),
 	})
 	.strict();
 
@@ -197,5 +198,7 @@ export type UseSkillInput = z.infer<typeof useSkillInputSchema>;
 export type ExpandRelatedInput = z.infer<typeof expandRelatedInputSchema>;
 export type ExplainModuleInput = z.infer<typeof explainModuleInputSchema>;
 export type GetFreshnessInput = z.infer<typeof getFreshnessInputSchema>;
-export type PlanContextToolInput = z.infer<typeof planContextInputSchema>;
+export type PlanContextToolInput = Omit<z.input<typeof planContextInputSchema>, "detail"> & {
+	detail?: "agent" | "debug";
+};
 export type WhatChangedInput = z.infer<typeof whatChangedInputSchema>;

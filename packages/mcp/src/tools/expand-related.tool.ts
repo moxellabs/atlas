@@ -75,7 +75,8 @@ export function registerExpandRelatedTool(server: McpServer, dependencies: Atlas
       title: "Expand related ATLAS context",
       description: "Expand from a stored hit to nearby documents, sections, summaries, and skills by locality.",
       inputSchema: expandRelatedInputSchema,
-      outputSchema: jsonOutputSchema
+      outputSchema: jsonOutputSchema,
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
     (input) => toolResult(executeExpandRelated(input, dependencies))
   );

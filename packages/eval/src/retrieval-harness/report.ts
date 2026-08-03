@@ -53,7 +53,7 @@ export function buildReport(
 	},
 	cases: CaseResult[],
 	runtime: RuntimeInfo,
-	judge: { provider?: string; model?: string },
+	_legacyJudge: { provider?: string; model?: string },
 	thresholds: ReportThresholdInput = {},
 	baseline?: BaselineSummary,
 ): Report {
@@ -131,17 +131,6 @@ export function buildReport(
 		generatedAt: new Date().toISOString(),
 		...(dataset.repoId === undefined ? {} : { repoId: dataset.repoId }),
 		runtime,
-		modelJudge: {
-			enabled: judge.provider !== undefined && judge.model !== undefined,
-			...(judge.provider === undefined ? {} : { provider: judge.provider }),
-			...(judge.model === undefined ? {} : { model: judge.model }),
-			note: "Optional placeholder for later answer-quality grading with a cheap model such as grok-code-fast-1 via OpenRouter/xAI. Retrieval metrics run without API keys.",
-		},
-		researchNotes: [
-			"MCPBench is the closest open-source MCP-specific benchmark, but it targets web search/database/GAIA task completion rather than local documentation retrieval, so Atlas reuses the MCP adoption idea rather than vendoring it.",
-			"Promptfoo is a strong option for model/provider comparison and hosted-looking reports; this harness keeps deterministic retrieval metrics local and can export JSON for promptfoo later.",
-			"Ragas and DeepEval provide RAG metrics, but add Python dependencies and LLM judges; Atlas starts with cheap deterministic path/term/latency metrics and leaves judge-model wiring optional.",
-		],
 		totalCases: cases.length,
 		passedCases,
 		failedCases: cases.length - passedCases,

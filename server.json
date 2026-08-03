@@ -1,0 +1,28 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.moxellabs/atlas",
+  "title": "Atlas Local Knowledge",
+  "description": "Search indexed repository documentation with fresh, source-relative evidence.",
+  "version": "0.3.0",
+  "websiteUrl": "https://github.com/moxellabs/atlas",
+  "repository": {
+    "url": "https://github.com/moxellabs/atlas",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@mrmendez/atlas",
+      "version": "0.3.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ]
+    }
+  ]
+}

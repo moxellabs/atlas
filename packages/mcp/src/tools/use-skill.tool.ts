@@ -142,6 +142,7 @@ export function registerUseSkillTool(
 			description: `Resolve a portable ${title} skill alias such as $${prefix}-add-cli-command and return agent-ready instructions, provenance, and read-only artifacts. Call this when a user asks to use a ${title} skill.`,
 			inputSchema: useSkillInputSchema,
 			outputSchema: jsonOutputSchema,
+			annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
 		},
 		(input) => toolResult(executeUseSkill(input, dependencies)),
 	);
