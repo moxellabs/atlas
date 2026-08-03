@@ -1,5 +1,3 @@
-/** JavaScript port of the moxel.ai banded-field canvas background. */
-export const moxelBandedFieldScript = `
 (() => {
   const canvas = document.getElementById("banded-field");
   const pointer = { x: 0.5, y: 0.5, active: false };
@@ -9,7 +7,9 @@ export const moxelBandedFieldScript = `
   let stageHeight = 0;
   let deviceRatio = Math.min(window.devicePixelRatio || 1, 1.8);
   let lastTime = performance.now();
-  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const reduceMotionQuery = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  );
 
   function wrap01(value) {
     return ((value % 1) + 1) % 1;
@@ -22,7 +22,7 @@ export const moxelBandedFieldScript = `
         position: Math.random(),
         offset: Math.random(),
         intensity: 0.45 + Math.random() * 0.55,
-        speed: 0.00004 + Math.random() * 0.00008
+        speed: 0.00004 + Math.random() * 0.00008,
       });
     }
   }
@@ -92,8 +92,13 @@ export const moxelBandedFieldScript = `
         const normalized = diag - Math.round(diag);
         const wave = 0.45 + 0.55 * Math.sin(time * 0.0011 + u * 14 + v * 12);
         const gaussian = Math.exp(-(normalized * normalized) / 0.0085);
-        const pointerInfluence = pointer.active ? Math.max(0, 0.20 - Math.hypot(u - pointer.x, v - pointer.y)) * 1.6 : 0;
-        const value = Math.min(1, wave * gaussian + pointerInfluence + pulsePhase * 0.4);
+        const pointerInfluence = pointer.active
+          ? Math.max(0, 0.2 - Math.hypot(u - pointer.x, v - pointer.y)) * 1.6
+          : 0;
+        const value = Math.min(
+          1,
+          wave * gaussian + pointerInfluence + pulsePhase * 0.4,
+        );
 
         if (value > 0.08) {
           ctx.fillStyle = "rgba(53, 240, 255, " + (0.06 + value * 0.22) + ")";
@@ -111,11 +116,13 @@ export const moxelBandedFieldScript = `
         const x = u * stageWidth;
         const y = v * stageHeight;
         const radius = 1.6 + pulse.intensity * 3.6;
-        ctx.fillStyle = "rgba(109, 242, 214, " + (0.18 + pulse.intensity * 0.35) + ")";
+        ctx.fillStyle =
+          "rgba(109, 242, 214, " + (0.18 + pulse.intensity * 0.35) + ")";
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "rgba(53, 240, 255, " + (0.12 + pulse.intensity * 0.22) + ")";
+        ctx.strokeStyle =
+          "rgba(53, 240, 255, " + (0.12 + pulse.intensity * 0.22) + ")";
         ctx.lineWidth = 0.6 + pulse.intensity * 0.6;
         ctx.beginPath();
         ctx.moveTo(x - cellW * 0.4, y - cellH * 0.12);
@@ -159,5 +166,3 @@ export const moxelBandedFieldScript = `
     pointer.active = false;
   });
 })();
-`;
-

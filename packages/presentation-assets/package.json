@@ -1,0 +1,14 @@
+{
+  "name": "@atlas/presentation-assets",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./banded-field": "./src/banded-field.ts",
+    "./openapi": "./src/openapi.ts",
+    "./eval-report": "./src/eval-report.ts"
+  },
+  "files": [
+    "src"
+  ]
+}

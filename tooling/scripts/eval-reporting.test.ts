@@ -4,6 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { AgentEffectSnapshot } from "../../packages/eval/src/agent-effect";
+import { moxelBandedFieldScript } from "@atlas/presentation-assets/banded-field";
+import {
+  moxelEvalExplorerScript,
+  moxelEvalReportCss,
+} from "@atlas/presentation-assets/eval-report";
 
 import {
   type BaselineSummary,
@@ -358,6 +363,9 @@ describe("eval reporting", () => {
     expect(html).toContain("moxel-atlas-eval-report-theme");
     expect(html).toContain("MOXEL ATLAS EVALS");
     expect(html).toContain('id="banded-field"');
+    expect(html).toContain(`<style>${moxelEvalReportCss}</style>`);
+    expect(html).toContain(`<script>${moxelBandedFieldScript}</script>`);
+    expect(html).toContain(`<script>${moxelEvalExplorerScript}</script>`);
     expect(html).toContain('id="case-explorer"');
     expect(html).toContain('id="case-search"');
     expect(html).toContain(
