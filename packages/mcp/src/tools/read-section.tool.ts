@@ -1,54 +1,65 @@
+import { readDocumentSection } from "@atlas/retrieval";
+
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { McpResourceNotFoundError } from "../errors";
+import { executeMcpRead } from "../errors";
 import { toolResult } from "../mcp-result";
-import { readSectionInputSchema, jsonOutputSchema, type ReadSectionInput } from "../schemas/tool-schemas";
-import { getDocument, getSection, provenanceFromDocument } from "../store-mappers";
+import {
+  readSectionInputSchema,
+  jsonOutputSchema,
+  type ReadSectionInput,
+} from "../schemas/tool-schemas";
 import type { AtlasMcpDependencies, McpJsonObject } from "../types";
 
 export const READ_SECTION_TOOL = "read_section";
 
 /** Reads exactly one canonical section by section ID or heading path. */
-export function executeReadSection(input: ReadSectionInput, dependencies: AtlasMcpDependencies): McpJsonObject {
+export function executeReadSection(
+  input: ReadSectionInput,
+  dependencies: AtlasMcpDependencies,
+): McpJsonObject {
   const parsed = readSectionInputSchema.parse(input);
-  const document = getDocument(dependencies.db, parsed.docId);
-  if (document === undefined) {
-    throw new McpResourceNotFoundError("Document was not found.", { operation: "readSection", entity: parsed.docId });
-  }
-  const section = getSection(dependencies.db, parsed.docId, {
-    ...(parsed.sectionId === undefined ? {} : { sectionId: parsed.sectionId }),
-    ...(parsed.heading === undefined ? {} : { heading: parsed.heading })
-  });
-  if (section === undefined) {
-    throw new McpResourceNotFoundError("Section was not found.", {
-      operation: "readSection",
-      entity: parsed.sectionId ?? parsed.heading?.join(" > ")
-    });
-  }
+  const result = executeMcpRead(() =>
+    readDocumentSection(dependencies.db, parsed.docId, {
+      ...(parsed.sectionId === undefined
+        ? {}
+        : { sectionId: parsed.sectionId }),
+      ...(parsed.heading === undefined ? {} : { heading: parsed.heading }),
+    }),
+  );
   return {
     section: {
-      sectionId: section.sectionId,
-      docId: section.docId,
-      headingPath: section.headingPath,
-      ordinal: section.ordinal,
-      text: section.text,
-      codeBlocks: section.codeBlocks,
-      provenance: provenanceFromDocument(document, section.headingPath)
-    }
+      sectionId: result.section.sectionId,
+      docId: result.section.docId,
+      headingPath: result.section.headingPath,
+      ordinal: result.section.ordinal,
+      text: result.section.text,
+      codeBlocks: result.section.codeBlocks,
+      provenance: result.provenance,
+    },
   };
 }
 
 /** Registers the read_section MCP tool. */
-export function registerReadSectionTool(server: McpServer, dependencies: AtlasMcpDependencies): void {
+export function registerReadSectionTool(
+  server: McpServer,
+  dependencies: AtlasMcpDependencies,
+): void {
   server.registerTool(
     READ_SECTION_TOOL,
     {
       title: "Read ATLAS section",
-      description: "Read exact text and provenance for one stored canonical section.",
+      description:
+        "Read exact text and provenance for one stored canonical section.",
       inputSchema: readSectionInputSchema,
       outputSchema: jsonOutputSchema,
-      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
-    (input) => toolResult(executeReadSection(input, dependencies))
+    (input) => toolResult(executeReadSection(input, dependencies)),
   );
 }

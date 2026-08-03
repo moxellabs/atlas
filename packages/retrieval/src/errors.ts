@@ -30,3 +30,6 @@ export class RetrievalDependencyError extends RetrievalError {}
 
 /** Raised when context planning reaches an impossible state after validation. */
 export class RetrievalPlanningError extends RetrievalError {}
+
+/** Raised when a corpus read targets a document, section, skill, or repository that does not exist. */
+export class RetrievalEntityNotFoundError extends RetrievalError {}
