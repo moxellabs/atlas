@@ -450,6 +450,43 @@ describe("document metadata classification", () => {
     });
   });
 
+  test("uses shared glob semantics and priority for built-in and config rules", () => {
+    const sharedGlobRule: DocMetadataRule = {
+      id: "shared-glob",
+      match: {
+        include: ["docs/{guides,reference}/**"],
+        exclude: ["**/draft-*"],
+      },
+      metadata: { audience: ["maintainer"], purpose: ["operations"] },
+      priority: 10,
+    };
+    expect(
+      compilePath("docs/reference/api.md", "# API\n", [sharedGlobRule]).document
+        .metadata,
+    ).toMatchObject({
+      audience: ["maintainer"],
+      purpose: ["operations"],
+    });
+    expect(
+      compilePath("docs/reference/draft-api.md", "# Draft\n", [sharedGlobRule])
+        .document.metadata,
+    ).toMatchObject({
+      audience: ["consumer"],
+      purpose: ["guide", "reference"],
+    });
+
+    const lowerPriorityRule: DocMetadataRule = {
+      id: "lower-priority",
+      match: { include: ["docs/**"] },
+      metadata: { visibility: "internal" },
+      priority: -500,
+    };
+    expect(
+      compilePath("docs/guide.md", "# Guide\n", [lowerPriorityRule]).document
+        .metadata.visibility,
+    ).toBe("public");
+  });
+
   test("merges config rules and frontmatter overrides with diagnostics", () => {
     const rule: DocMetadataRule = {
       id: "maintainers",

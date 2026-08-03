@@ -1,5 +1,9 @@
-import type { Authority, DocKind, TopologyRule } from "@atlas/core";
-import micromatch from "micromatch";
+import {
+  type Authority,
+  type DocKind,
+  matchesRepoPath,
+  type TopologyRule,
+} from "@atlas/core";
 
 import { normalizeRepoPath } from "../path-utils";
 
@@ -64,10 +68,7 @@ export function evaluateTopologyRules(options: EvaluateTopologyRulesOptions): Ru
 
 /** Returns true when a normalized path matches a topology glob. */
 export function isMatch(path: string, pattern: string): boolean {
-  return micromatch.isMatch(normalizeRepoPath(path), normalizeRepoPath(pattern), {
-    dot: true,
-    nocase: false
-  });
+  return matchesRepoPath(path, pattern);
 }
 
 function validateTopologyRule(rule: TopologyRule): void {

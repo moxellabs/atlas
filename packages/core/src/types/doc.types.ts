@@ -2,23 +2,30 @@ import type { Authority } from "../enums/authority.enum";
 import type { DocKind } from "../enums/doc-kind.enum";
 import type { DocScope } from "./topology.types";
 
-export type AtlasDocVisibility = "public" | "internal";
-export type AtlasDocAudience =
-	| "consumer"
-	| "contributor"
-	| "maintainer"
-	| "internal";
-export type AtlasDocPurpose =
-	| "guide"
-	| "reference"
-	| "api"
-	| "architecture"
-	| "operations"
-	| "workflow"
-	| "planning"
-	| "implementation"
-	| "archive"
-	| "troubleshooting";
+export const ATLAS_DOC_VISIBILITIES = ["public", "internal"] as const;
+export type AtlasDocVisibility = (typeof ATLAS_DOC_VISIBILITIES)[number];
+
+export const ATLAS_DOC_AUDIENCES = [
+	"consumer",
+	"contributor",
+	"maintainer",
+	"internal",
+] as const;
+export type AtlasDocAudience = (typeof ATLAS_DOC_AUDIENCES)[number];
+
+export const ATLAS_DOC_PURPOSES = [
+	"guide",
+	"reference",
+	"api",
+	"architecture",
+	"operations",
+	"workflow",
+	"planning",
+	"implementation",
+	"archive",
+	"troubleshooting",
+] as const;
+export type AtlasDocPurpose = (typeof ATLAS_DOC_PURPOSES)[number];
 
 export interface AtlasDocMetadataProfile {
 	description?: string | undefined;
