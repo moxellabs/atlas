@@ -1,5 +1,5 @@
 import { cors } from "@elysiajs/cors";
-import { Elysia } from "elysia";
+import { Elysia, type ElysiaAdapter } from "elysia";
 
 import { createLoggingHook } from "./hooks/logging.hook";
 import { docs } from "./openapi/route-docs";
@@ -22,8 +22,11 @@ import { createSyncRoutes } from "./routes/sync.route";
 import type { AtlasServerDependencies } from "./services/types";
 
 /** Builds the fully composed ATLAS Elysia app from explicit dependencies. */
-export function createApp(dependencies: AtlasServerDependencies) {
-  return new Elysia()
+export function createApp(
+  dependencies: AtlasServerDependencies,
+  adapter?: ElysiaAdapter,
+) {
+  return new Elysia(adapter === undefined ? {} : { adapter })
     .use(
       cors({
         origin: isAllowedLocalOrigin,
