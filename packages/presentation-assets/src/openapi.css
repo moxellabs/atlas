@@ -1,99 +1,4 @@
-/** Stable marker used by tests to prove the Moxel-branded OpenAPI shell is served. */
-export const MOXEL_SCALAR_THEME_MARKER = "moxel-atlas-openapi-theme";
-
-/** CDN used by the custom Moxel OpenAPI shell to mount Scalar inside our page chrome. */
-export const SCALAR_CDN_URL =
-	"https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.52.5/dist/browser/standalone.min.js";
-
-/**
- * Scalar runtime overrides for components that are mounted after the page shell.
- *
- * These rules intentionally avoid changing global Scalar background tokens. The
- * search dialog reuses `--scalar-background-1`, which the page theme keeps
- * translucent for the banded Moxel background, so the modal needs its own
- * opaque surface scoped to Scalar's verified search modal classes.
- */
-export const moxelScalarCustomCss = `
-body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal-layout {
-  left: var(--moxel-openapi-sidebar-width, 288px) !important;
-  width: calc(100dvw - var(--moxel-openapi-sidebar-width, 288px)) !important;
-  background: transparent !important;
-  backdrop-filter: none !important;
-  animation-duration: 0.15s !important;
-}
-
-body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal-layout::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-color: rgba(0, 3, 10, 0.2);
-  pointer-events: none;
-}
-
-body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal.scalar-modal-search {
-  --scalar-background-1: rgba(3, 7, 17, 0.92);
-  --scalar-background-2: rgba(6, 15, 28, 0.9);
-  --scalar-background-3: rgba(12, 24, 38, 0.94);
-  position: relative;
-  z-index: 1;
-  border: 1px solid rgba(70, 215, 255, 0.34) !important;
-  background-color: rgba(3, 7, 17, 0.92) !important;
-  box-shadow: 0 28px 82px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(109, 242, 214, 0.08) !important;
-  backdrop-filter: blur(12px) saturate(112%);
-  animation-duration: 0.15s !important;
-  animation-delay: 0.05s !important;
-}
-
-body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal.scalar-modal-search .scalar-modal-body {
-  background: rgba(3, 7, 17, 0.92) !important;
-}
-
-body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal.scalar-modal-search label {
-  border-bottom: 1px solid rgba(70, 215, 255, 0.2) !important;
-  background: rgba(6, 15, 28, 0.9) !important;
-  color: var(--fg-100) !important;
-}
-
-body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal.scalar-modal-search input[role="combobox"] {
-  background: transparent !important;
-  color: var(--fg-100) !important;
-}
-
-body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal.scalar-modal-search input[role="combobox"]::placeholder {
-  color: rgba(195, 210, 240, 0.62) !important;
-}
-
-body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal.scalar-modal-search [role="listbox"] {
-  background: rgba(3, 7, 17, 0.92) !important;
-}
-
-body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal.scalar-modal-search [role="option"] {
-  color: var(--fg-100) !important;
-}
-
-body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal.scalar-modal-search [role="option"]:hover,
-body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal.scalar-modal-search [role="option"][aria-selected="true"] {
-  background: rgba(53, 240, 255, 0.11) !important;
-  color: var(--fg-100) !important;
-}
-
-body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal.scalar-modal-search .ref-search-meta {
-  border-top: 1px solid rgba(70, 215, 255, 0.18) !important;
-  background: rgba(3, 7, 17, 0.94) !important;
-  color: rgba(195, 210, 240, 0.72) !important;
-}
-
-@media (max-width: 1000px) {
-  body.moxel-openapi-body #headlessui-portal-root.scalar-app .scalar-modal-layout {
-    left: 0 !important;
-    width: 100dvw !important;
-  }
-}
-`;
-
-/** CSS for the custom Moxel OpenAPI shell and embedded Scalar reference. */
-export const moxelOpenApiCss = `
-/* ${MOXEL_SCALAR_THEME_MARKER} */
+/* moxel-atlas-openapi-theme */
 :root {
   color-scheme: dark;
   font-family: "Space Grotesk", Inter, system-ui, sans-serif;
@@ -110,12 +15,13 @@ export const moxelOpenApiCss = `
   --accent-soft: rgba(55, 200, 255, 0.15);
   --border-strong: rgba(70, 215, 255, 0.5);
   --border-soft: rgba(70, 215, 255, 0.2);
-  --moxel-panel: rgba(4, 9, 18, 0.30);
+  --moxel-panel: rgba(4, 9, 18, 0.3);
   --moxel-panel-strong: rgba(3, 7, 17, 0.37);
   --moxel-panel-border: rgba(70, 215, 255, 0.24);
   --shadow: 0 22px 44px rgba(2, 8, 26, 0.65);
   --scalar-font: "Space Grotesk", Inter, system-ui, sans-serif;
-  --scalar-font-code: "SFMono-Regular", "Cascadia Code", "Roboto Mono", ui-monospace, monospace;
+  --scalar-font-code:
+    "SFMono-Regular", "Cascadia Code", "Roboto Mono", ui-monospace, monospace;
 }
 
 *,
@@ -171,8 +77,17 @@ canvas#banded-field {
   position: relative;
   z-index: 2;
   min-height: 100vh;
-  background: radial-gradient(circle at 18% 12%, rgba(90, 204, 255, 0.1), transparent 55%),
-    radial-gradient(circle at 74% 78%, rgba(115, 244, 214, 0.08), transparent 62%);
+  background:
+    radial-gradient(
+      circle at 18% 12%,
+      rgba(90, 204, 255, 0.1),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 74% 78%,
+      rgba(115, 244, 214, 0.08),
+      transparent 62%
+    );
 }
 
 .moxel-topbar {
@@ -339,7 +254,7 @@ canvas#banded-field {
   --scalar-color-2: var(--fg-300);
   --scalar-color-3: var(--fg-muted);
   --scalar-color-accent: var(--accent-400);
-  --scalar-background-1: rgba(3, 7, 17, 0.40);
+  --scalar-background-1: rgba(3, 7, 17, 0.4);
   --scalar-background-2: var(--moxel-panel);
   --scalar-background-3: rgba(9, 17, 29, 0.72);
   --scalar-background-accent: rgba(53, 240, 255, 0.1);
@@ -391,7 +306,8 @@ canvas#banded-field {
 }
 
 @media (min-width: 1001px) {
-  body.moxel-openapi-body.moxel-search-open .references-layout.references-sidebar {
+  body.moxel-openapi-body.moxel-search-open
+    .references-layout.references-sidebar {
     grid-template-columns: var(--moxel-openapi-sidebar-width) 1fr !important;
   }
 
@@ -520,9 +436,15 @@ canvas#banded-field {
   border-radius: 1.35rem;
   padding: clamp(1.25rem, 3vw, 2.25rem);
   background:
-    radial-gradient(circle at 18% 18%, rgba(53, 240, 255, 0.16), transparent 34%),
+    radial-gradient(
+      circle at 18% 18%,
+      rgba(53, 240, 255, 0.16),
+      transparent 34%
+    ),
     linear-gradient(135deg, rgba(3, 7, 17, 0.72), rgba(6, 18, 28, 0.42));
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(109, 242, 214, 0.08);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(109, 242, 214, 0.08);
 }
 
 .moxel-introduction-section .atlas-docs-hero::after {
@@ -534,7 +456,11 @@ canvas#banded-field {
   aspect-ratio: 1;
   border-radius: 50%;
   border: 1px solid rgba(53, 240, 255, 0.22);
-  background: radial-gradient(circle, rgba(53, 240, 255, 0.13), transparent 62%);
+  background: radial-gradient(
+    circle,
+    rgba(53, 240, 255, 0.13),
+    transparent 62%
+  );
 }
 
 .moxel-introduction-section .atlas-docs-eyebrow {
@@ -786,230 +712,3 @@ canvas#banded-field {
     justify-self: start;
   }
 }
-`;
-
-/** Removes optional Scalar promotional controls and marks request buttons for branded contrast. */
-export const moxelOpenApiPolishScript = `
-(() => {
-  const root = document.querySelector(".moxel-reference");
-  if (!root) {
-    return;
-  }
-
-  const hiddenLabels = new Set(["Ask AI Agent", "Open API Client", "Powered by Scalar", "Generate MCP"]);
-
-  function closestInteractive(element) {
-    return element.closest("button, a, [role='button'], [class*='footer'], [class*='Footer']") || element;
-  }
-
-  function normalizeText(value) {
-    return value.replace(/\\s+/g, " ").trim();
-  }
-
-  function markIntroduction() {
-    const hero = root.querySelector(".atlas-docs-hero");
-    const section = hero?.closest("section, article, [class*='Section'], [class*='section']") || hero?.parentElement;
-    section?.classList.add("moxel-introduction-section");
-  }
-
-  function polish() {
-    markIntroduction();
-    const candidates = root.querySelectorAll("button, a, [role='button'], [class*='footer'], [class*='Footer']");
-    for (const candidate of candidates) {
-      const text = normalizeText(candidate.textContent || "");
-
-      if (text.includes("Test Request")) {
-        const button = closestInteractive(candidate);
-        button.classList.add("moxel-test-request-button");
-        candidate.classList.add("moxel-test-request-button");
-        continue;
-      }
-
-      if (hiddenLabels.has(text)) {
-        closestInteractive(candidate).classList.add("moxel-hidden-scalar-branding");
-      }
-    }
-  }
-
-  function syncSearchState() {
-    const portalRoot = document.getElementById("headlessui-portal-root");
-    const searchModal = portalRoot?.querySelector(".scalar-modal.scalar-modal-search");
-    document.body.classList.toggle("moxel-search-open", Boolean(searchModal));
-  }
-
-  polish();
-  syncSearchState();
-
-  const observer = new MutationObserver(() => {
-    polish();
-    syncSearchState();
-  });
-  observer.observe(root, { childList: true, subtree: true });
-
-  const bodyObserver = new MutationObserver(syncSearchState);
-  bodyObserver.observe(document.body, { childList: true, subtree: true });
-})();
-`;
-
-/** JavaScript port of the moxel.ai banded-field canvas background. */
-export const moxelBandedFieldScript = `
-(() => {
-  const canvas = document.getElementById("banded-field");
-  const pointer = { x: 0.5, y: 0.5, active: false };
-  const pulses = [];
-  let frameHandle = null;
-  let stageWidth = 0;
-  let stageHeight = 0;
-  let deviceRatio = Math.min(window.devicePixelRatio || 1, 1.8);
-  let lastTime = performance.now();
-  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-  function wrap01(value) {
-    return ((value % 1) + 1) % 1;
-  }
-
-  function seedPulses() {
-    pulses.length = 0;
-    for (let idx = 0; idx < 42; idx += 1) {
-      pulses.push({
-        position: Math.random(),
-        offset: Math.random(),
-        intensity: 0.45 + Math.random() * 0.55,
-        speed: 0.00004 + Math.random() * 0.00008
-      });
-    }
-  }
-
-  if (!(canvas instanceof HTMLCanvasElement)) return;
-  const ctx = canvas.getContext("2d", { alpha: false });
-  if (ctx === null) return;
-
-  function resize() {
-    deviceRatio = Math.min(window.devicePixelRatio || 1, 1.8);
-    stageWidth = window.innerWidth;
-    stageHeight = window.innerHeight;
-    canvas.width = Math.round(stageWidth * deviceRatio);
-    canvas.height = Math.round(stageHeight * deviceRatio);
-    canvas.style.width = stageWidth + "px";
-    canvas.style.height = stageHeight + "px";
-    ctx.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
-  }
-
-  function drawFrame(time, staticFrame = false) {
-    const dt = Math.max(16, time - lastTime);
-    lastTime = time;
-
-    ctx.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
-    const gradient = ctx.createLinearGradient(0, 0, stageWidth, stageHeight);
-    gradient.addColorStop(0, "#030711");
-    gradient.addColorStop(1, "#081224");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, stageWidth, stageHeight);
-
-    const columns = 28;
-    const rows = 18;
-    const cellW = stageWidth / columns;
-    const cellH = stageHeight / rows;
-    const slope = 0.72 + Math.sin(time * 0.00028) * 0.12;
-    const shift = Math.sin(time * 0.00021) * 0.22;
-    const pulsePhase = Math.sin(time * 0.0006) * 0.15;
-
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.65;
-    for (let c = 0; c <= columns; c += 1) {
-      const x = c * cellW;
-      const alpha = 0.08 + 0.12 * Math.sin(time * 0.0004 + c * 0.45);
-      ctx.strokeStyle = "rgba(52, 132, 208, " + alpha + ")";
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, stageHeight);
-      ctx.stroke();
-    }
-
-    for (let r = 0; r <= rows; r += 1) {
-      const y = r * cellH;
-      const alpha = 0.05 + 0.14 * Math.cos(time * 0.00033 + r * 0.4);
-      ctx.strokeStyle = "rgba(36, 92, 164, " + alpha + ")";
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(stageWidth, y);
-      ctx.stroke();
-    }
-
-    ctx.globalAlpha = 1;
-    for (let c = 0; c < columns; c += 1) {
-      const u = (c + 0.5) / columns;
-      for (let r = 0; r < rows; r += 1) {
-        const v = (r + 0.5) / rows;
-        const diag = v - (u * slope + shift + 0.25);
-        const normalized = diag - Math.round(diag);
-        const wave = 0.45 + 0.55 * Math.sin(time * 0.0011 + u * 14 + v * 12);
-        const gaussian = Math.exp(-(normalized * normalized) / 0.0085);
-        const pointerInfluence = pointer.active ? Math.max(0, 0.20 - Math.hypot(u - pointer.x, v - pointer.y)) * 1.6 : 0;
-        const value = Math.min(1, wave * gaussian + pointerInfluence + pulsePhase * 0.4);
-
-        if (value > 0.08) {
-          ctx.fillStyle = "rgba(53, 240, 255, " + (0.06 + value * 0.22) + ")";
-          ctx.fillRect(c * cellW, r * cellH, cellW + 1, cellH + 1);
-        }
-      }
-    }
-
-    if (!staticFrame) {
-      ctx.globalCompositeOperation = "lighter";
-      for (const pulse of pulses) {
-        pulse.position = wrap01(pulse.position + pulse.speed * dt);
-        const u = pulse.position;
-        const v = wrap01(u * slope + shift + pulse.offset * 0.6 + 0.25);
-        const x = u * stageWidth;
-        const y = v * stageHeight;
-        const radius = 1.6 + pulse.intensity * 3.6;
-        ctx.fillStyle = "rgba(109, 242, 214, " + (0.18 + pulse.intensity * 0.35) + ")";
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "rgba(53, 240, 255, " + (0.12 + pulse.intensity * 0.22) + ")";
-        ctx.lineWidth = 0.6 + pulse.intensity * 0.6;
-        ctx.beginPath();
-        ctx.moveTo(x - cellW * 0.4, y - cellH * 0.12);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-      }
-      ctx.globalCompositeOperation = "source-over";
-    }
-  }
-
-  function loop(time) {
-    drawFrame(time);
-    frameHandle = requestAnimationFrame(loop);
-  }
-
-  function startAnimation() {
-    cancelAnimationFrame(frameHandle ?? 0);
-    frameHandle = null;
-    if (reduceMotionQuery.matches) {
-      drawFrame(performance.now(), true);
-    } else {
-      seedPulses();
-      lastTime = performance.now();
-      frameHandle = requestAnimationFrame(loop);
-    }
-  }
-
-  resize();
-  startAnimation();
-  window.addEventListener("resize", () => {
-    resize();
-    startAnimation();
-  });
-  reduceMotionQuery.addEventListener("change", startAnimation);
-  window.addEventListener("pointermove", (event) => {
-    pointer.x = event.clientX / window.innerWidth;
-    pointer.y = event.clientY / window.innerHeight;
-    pointer.active = true;
-  });
-  window.addEventListener("pointerleave", () => {
-    pointer.active = false;
-  });
-})();
-`;

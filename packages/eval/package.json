@@ -9,6 +9,7 @@
   "types": "./src/index.ts",
   "dependencies": {
     "@atlas/core": "workspace:*",
+    "@atlas/presentation-assets": "workspace:*",
     "@atlas/store": "workspace:*"
   },
   "devDependencies": {

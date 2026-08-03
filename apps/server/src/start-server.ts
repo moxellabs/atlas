@@ -1,3 +1,4 @@
+import { node } from "@elysia/node";
 import { createApp } from "./app";
 import type { ServerEnv } from "./env";
 import { loadServerEnv } from "./env";
@@ -50,23 +51,63 @@ export async function startAtlasServer(
     await closeServerDependencies(dependencies);
     throw error;
   }
-  const app = createApp(dependencies).listen({
-    hostname: dependencies.env.host,
-    port: dependencies.env.port,
-    maxRequestBodySize: MAX_HTTP_REQUEST_BODY_BYTES,
-  });
 
+  const app = createApp(
+    dependencies,
+    typeof Bun === "undefined" ? node() : undefined,
+  );
+  let listeningServer:
+    | {
+        readonly hostname?: string | undefined;
+        readonly port?: number | undefined;
+        readonly raw?: { ready(): Promise<unknown> } | undefined;
+        stop(closeActiveConnections?: boolean): unknown;
+      }
+    | undefined;
+  try {
+    app.listen(
+      {
+        hostname: dependencies.env.host,
+        port: dependencies.env.port,
+        maxRequestBodySize: MAX_HTTP_REQUEST_BODY_BYTES,
+      },
+      (server) => {
+        listeningServer = server;
+      },
+    );
+    if (listeningServer === undefined) {
+      throw new Error(
+        "ATLAS server adapter did not return a listening server.",
+      );
+    }
+    await listeningServer.raw?.ready();
+  } catch (error) {
+    try {
+      await listeningServer?.stop(true);
+    } finally {
+      await closeServerDependencies(dependencies);
+    }
+    throw error;
+  }
+  const boundServer = listeningServer;
+
+  let stopped = false;
   return {
-    host: app.server?.hostname ?? dependencies.env.host,
-    port: app.server?.port ?? dependencies.env.port,
+    host: boundServer.hostname ?? dependencies.env.host,
+    port: boundServer.port ?? dependencies.env.port,
     dbPath: dependencies.config.config.corpusDbPath,
     repoCount: dependencies.config.config.repos.length,
     openApiEnabled: dependencies.env.enableOpenApi,
     mcpEnabled: dependencies.env.enableMcp,
     uiEnabled: dependencies.env.enableUi,
-    stop() {
-      app.stop();
-      return closeServerDependencies(dependencies);
+    async stop() {
+      if (stopped) return;
+      stopped = true;
+      try {
+        await boundServer.stop();
+      } finally {
+        await closeServerDependencies(dependencies);
+      }
     },
   };
 }

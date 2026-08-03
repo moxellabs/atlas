@@ -1,13 +1,13 @@
 import { Elysia } from "elysia";
 
 import { VERSION } from "../constants";
+import { moxelBandedFieldScript } from "@atlas/presentation-assets/banded-field";
 import {
-	moxelBandedFieldScript,
 	moxelOpenApiCss,
 	moxelOpenApiPolishScript,
 	moxelScalarCustomCss,
 	SCALAR_CDN_URL,
-} from "../openapi/moxel-theme";
+} from "@atlas/presentation-assets/openapi";
 
 const scalarConfiguration = {
 	url: "/openapi.json",

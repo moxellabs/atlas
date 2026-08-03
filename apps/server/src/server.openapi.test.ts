@@ -6,12 +6,12 @@ import {
   type ResolvedAtlasConfig,
   resolveRuntimeRepoConfigs,
 } from "@atlas/config";
+import { SCALAR_CDN_URL } from "@atlas/presentation-assets/openapi";
 import type { IndexerService } from "@atlas/indexer";
 import { type AtlasStoreClient, openStore, RepoRepository } from "@atlas/store";
 
 import { createApp } from "./app";
 import type { ServerEnv } from "./env";
-import { SCALAR_CDN_URL } from "./openapi/moxel-theme";
 import { BuildOperationsService } from "./services/build-operations.service";
 import { RetrievalHttpService } from "./services/retrieval-http.service";
 import { RemoteSecurityService } from "./services/remote-security.service";

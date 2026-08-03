@@ -1,3 +1,8 @@
+import { moxelBandedFieldScript } from "@atlas/presentation-assets/banded-field";
+import {
+  moxelEvalExplorerScript,
+  moxelEvalReportCss,
+} from "@atlas/presentation-assets/eval-report";
 import type { AgentEffectFreshness } from "../../agent-effect";
 import {
 	classifyHealth,
@@ -14,10 +19,7 @@ import type {
 	ReportThresholdResult,
 	WeakCaseSummary,
 } from "../types";
-import { renderReportCss } from "./css";
 import { renderDetailPanels } from "./detail-panels";
-import { renderExplorerScript } from "./explorer-script";
-import { moxelBandedFieldScript } from "./moxel-theme";
 
 export interface DashboardRenderOptions {
 	readonly agentEffect?: AgentEffectFreshness;
@@ -56,14 +58,14 @@ export function renderHtml(
 	const effect = options.agentEffect ?? ({ status: "absent" } as const);
 	return `<!doctype html>
 <html lang="en" data-severity="${escapeHtml(report.narrative.severity)}">
-<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" /><title>MOXEL ATLAS EVALS — ${escapeHtml(report.dataset)}</title><style>${renderReportCss()}</style></head>
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" /><title>MOXEL ATLAS EVALS — ${escapeHtml(report.dataset)}</title><style>${moxelEvalReportCss}</style></head>
 <body class="moxel-eval-body" data-severity="${escapeHtml(report.narrative.severity)}"><canvas id="banded-field" aria-hidden="true"></canvas><div class="noise" aria-hidden="true"></div><div class="report-app" data-report-shell="moxel-atlas-eval-report-theme">${renderSidebar()}<main class="report-main">
 <section class="tab-panel" id="overview" data-report-tab="overview">${renderOverview(report, effect)}${renderQualityGates(report, "overview-quality-gates")}${renderCrossLayerSummary(effect, "overview-cross-layer-summary")}${renderFailureOverview(report, effect)}${renderRetrievalPerformance(report, "overview-retrieval")}</section>
 <section class="tab-panel" id="quality-gates" data-report-tab="quality-gates" hidden>${renderStandaloneHeader("Quality Gates", "Actual deterministic CI thresholds and their observed values.")}${renderQualityGates(report, "quality-gates-detail")}</section>
 <section class="tab-panel" id="cross-layer-summary" data-report-tab="cross-layer-summary" hidden>${renderStandaloneHeader("Cross-Layer Summary", "Measured treatment-answer completion and canonical grounding.")}${renderCrossLayerSummary(effect, "cross-layer-detail")}</section>
 <section class="tab-panel" id="retrieval" data-report-tab="retrieval" hidden>${renderStandaloneHeader("Retrieval", "Rank quality, latency, safety boundaries, and deterministic coverage.")}${renderRetrievalPerformance(report, "retrieval-detail")}</section>
 ${renderDetailPanels(report, effect)}${renderExplorer(report)}${renderCoverageAnalysis(report)}
-</main></div><div id="info-popover" class="info-popover" role="dialog" aria-modal="false" aria-live="polite" hidden></div><script id="atlas-eval-report-data" type="application/json">${safeJson(reportClientData(report))}</script><script>${moxelBandedFieldScript}</script><script>${renderExplorerScript()}</script></body></html>`;
+</main></div><div id="info-popover" class="info-popover" role="dialog" aria-modal="false" aria-live="polite" hidden></div><script id="atlas-eval-report-data" type="application/json">${safeJson(reportClientData(report))}</script><script>${moxelBandedFieldScript}</script><script>${moxelEvalExplorerScript}</script></body></html>`;
 }
 
 function renderSidebar(): string {
