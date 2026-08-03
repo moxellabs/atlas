@@ -10,7 +10,8 @@
   "dependencies": {
     "@atlas/core": "workspace:*",
     "@atlas/presentation-assets": "workspace:*",
-    "@atlas/store": "workspace:*"
+    "@atlas/store": "workspace:*",
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "bun-types": "1.3.13"
