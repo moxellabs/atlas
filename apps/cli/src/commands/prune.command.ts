@@ -7,7 +7,8 @@ import {
 } from "../runtime/dependencies";
 import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
-import { parseDuration, renderSuccess } from "./shared";
+import { parseDuration } from "./duration";
+import { renderSuccess } from "./render";
 
 /** Safely prunes orphaned managed repo caches under the CLI cache root. */
 export async function runPruneCommand(

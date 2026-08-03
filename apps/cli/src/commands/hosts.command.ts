@@ -3,7 +3,7 @@ import { mutateAtlasConfig } from "../runtime/dependencies";
 import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
-import { renderSuccess } from "./shared";
+import { renderSuccess } from "./render";
 
 function positional(
 	argv: readonly string[],

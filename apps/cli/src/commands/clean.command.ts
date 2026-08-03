@@ -3,7 +3,7 @@ import { rm, stat } from "node:fs/promises";
 
 import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
-import { renderSuccess } from "./shared";
+import { renderSuccess } from "./render";
 
 interface CleanArtifact {
   path: string;

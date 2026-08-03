@@ -6,13 +6,13 @@ import {
 	inspectLiveTopology,
 	renderLiveTopologyLines,
 } from "../utils/live-topology";
-import { readRepoTargetArg, resolveRepoTarget } from "./repo-target";
+import { loadDependenciesFromGlobal } from "./dependencies";
+import { inspectArtifacts, inspectRetrievalPlan } from "./inspection";
 import {
-	inspectArtifacts,
-	inspectRetrievalPlan,
-	loadDependenciesFromGlobal,
-	renderSuccess,
-} from "./shared";
+	readRepoTargetArg,
+	resolveRepoIdentity,
+} from "./repo-identity";
+import { renderSuccess } from "./render";
 
 /** Inspects local ATLAS store and retrieval state without mutating it. */
 export async function runInspectCommand(
@@ -180,12 +180,10 @@ function resolveInspectRepoTarget(
 	config: InspectConfig,
 	command: string,
 ) {
-	return resolveRepoTarget(context, {
-		config,
+	return resolveRepoIdentity(context, { intent: "target", config,
 		...readRepoTargetArg(context, 1),
 		command,
-		nonInteractive: readBooleanOption(context, "nonInteractive"),
-	});
+		nonInteractive: readBooleanOption(context, "nonInteractive"), });
 }
 
 function inspectRetrieval(

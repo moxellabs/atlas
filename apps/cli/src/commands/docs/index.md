@@ -10,6 +10,14 @@ The commands module owns concrete CLI workflows. Each command receives Commander
 - Runtime and quality workflows: `serve`, `mcp`, and `eval`.
 - Agent/editor workflow: `install-skill`.
 
+## Helper ownership
+
+Focused command helpers stay separate from workflow modules:
+
+- `render.ts`, `reports.ts`, and `duration.ts` own output and report formatting.
+- `artifact-root.ts`, `dependencies.ts`, `inspection.ts`, `repo-config.ts`, and `repo-metadata.ts` own their named service boundaries.
+- `repo-identity.ts` is the only repository identity resolver. Callers select the `configure` or `target` intent. `git.ts` owns Git root and origin reads plus remote URL parsing.
+
 ## Command Contract
 
 Each command module should:

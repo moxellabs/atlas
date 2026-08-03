@@ -12,16 +12,18 @@ import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { resolveCliPath } from "../utils/paths";
-import { readRepoTargetArg, resolveRepoTarget } from "./repo-target";
+import {
+	readRepoTargetArg,
+	resolveRepoIdentity,
+} from "./repo-identity";
 import {
 	listRepoMetadata,
 	readRepoMetadata,
 	removeRepoFolder,
-	renderRows,
-	renderSuccess,
 	repoFolderPath,
 	repoMetadataPath,
-} from "./shared";
+} from "./repo-metadata";
+import { renderRows, renderSuccess } from "./render";
 
 /** Manages host-aware repo folder registry metadata. */
 export async function runRepoCommand(
@@ -72,12 +74,10 @@ async function runRepoDoctor(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
 	const { resolved, atlasHome } = await loadRegistryContext(context);
-	const target = await resolveRepoTarget(context, {
-		config: resolved.config,
+	const target = await resolveRepoIdentity(context, { intent: "target", config: resolved.config,
 		...readRepoTargetArg(context, 1),
 		command: "repo doctor",
-		nonInteractive: readBooleanOption(context, "nonInteractive"),
-	});
+		nonInteractive: readBooleanOption(context, "nonInteractive"), });
 	const repoId = target.repoId;
 	const checks: Array<{
 		name: string;
@@ -198,12 +198,10 @@ async function runRepoShow(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
 	const { resolved, atlasHome } = await loadRegistryContext(context);
-	const target = await resolveRepoTarget(context, {
-		config: resolved.config,
+	const target = await resolveRepoIdentity(context, { intent: "target", config: resolved.config,
 		...readRepoTargetArg(context, 1),
 		command: "repo show",
-		nonInteractive: readBooleanOption(context, "nonInteractive"),
-	});
+		nonInteractive: readBooleanOption(context, "nonInteractive"), });
 	const repoId = target.repoId;
 	const configEntry = resolved.config.repos.find(
 		(repo) => repo.repoId === repoId,
@@ -238,7 +236,7 @@ type RepoShowConfig = Awaited<
 	ReturnType<typeof loadConfig>
 >["config"]["repos"][number];
 type RepoShowMetadata = Awaited<ReturnType<typeof readRepoMetadata>>;
-type RepoShowTarget = Awaited<ReturnType<typeof resolveRepoTarget>>;
+type RepoShowTarget = Awaited<ReturnType<typeof resolveRepoIdentity>>;
 
 interface RepoShowData {
 	repoId: string;
@@ -362,13 +360,11 @@ async function runRepoRemove(
 		});
 	const { resolved, atlasHome, configPath } =
 		await loadRegistryContext(context);
-	const target = await resolveRepoTarget(context, {
-		config: resolved.config,
+	const target = await resolveRepoIdentity(context, { intent: "target", config: resolved.config,
 		...readRepoTargetArg(context, 1),
 		command: "repo remove",
 		nonInteractive: true,
-		allowSingleConfigured: false,
-	});
+		allowSingleConfigured: false, });
 	const repoId = target.repoId;
 	const folder = repoFolderPath(atlasHome, repoId);
 	let removedFolder = false;

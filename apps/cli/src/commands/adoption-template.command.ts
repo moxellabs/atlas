@@ -5,7 +5,7 @@ import {
 	buildAdoptionTemplates,
 	renderAdoptionTemplateHumanLines,
 } from "./adoption-templates";
-import { renderSuccess } from "./shared";
+import { renderSuccess } from "./render";
 
 
 function partsFromRepoId(repoId: string): {

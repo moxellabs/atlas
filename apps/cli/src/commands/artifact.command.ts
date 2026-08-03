@@ -11,9 +11,9 @@ import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { runProcess } from "../utils/node-runtime";
 import {
 	maybeRenderArtifactRootMigrationHint,
-	renderSuccess,
 	resolveCliArtifactRoot,
-} from "./shared";
+} from "./artifact-root";
+import { renderSuccess } from "./render";
 
 export const CLI_ARTIFACT_VERIFY_FAILED = "CLI_ARTIFACT_VERIFY_FAILED";
 export const CLI_ARTIFACT_FRESH_REF_UNAVAILABLE =

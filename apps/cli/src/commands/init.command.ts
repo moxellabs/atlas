@@ -18,17 +18,20 @@ import {
 import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
-import { fileExists, runProcess } from "../utils/node-runtime";
+import { fileExists } from "../utils/node-runtime";
 import { displayPath, parentDir, resolveCliPath } from "../utils/paths";
-import { resolveRepoTarget } from "./repo-target";
+import {
+	maybeRenderArtifactRootMigrationHint,
+	resolveCliArtifactRoot,
+} from "./artifact-root";
+import { gitOutput, readGitRoot } from "./git";
+import { resolveRepoIdentity } from "./repo-identity";
 import {
 	appendRepoConfig,
 	defaultCliConfig,
-	maybeRenderArtifactRootMigrationHint,
-	renderSuccess,
-	resolveCliArtifactRoot,
 	resolveRepoConfigInput,
-} from "./shared";
+} from "./repo-config";
+import { renderSuccess } from "./render";
 
 const REPO_METADATA_FILE = "atlas.repo.json";
 
@@ -47,13 +50,11 @@ async function runRepoArtifactInitCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
 	const force = readBooleanOption(context, "force");
-	const gitRoot =
-		(await gitOutput(context.cwd, ["rev-parse", "--show-toplevel"])) ??
-		context.cwd;
+	const gitRoot = (await readGitRoot(context.cwd)) ?? context.cwd;
 	let targetConfig = await loadTargetConfig(context);
 	const explicitRepoId =
 		readStringOption(context, "repoId") ?? repoIdFromParts(context);
-	let target = await resolveRepoTargetForInit(context, targetConfig.config, {
+	let target = await resolveInitRepoIdentity(context, targetConfig.config, {
 		...(explicitRepoId === undefined ? {} : { explicit: explicitRepoId }),
 		command: "init",
 		nonInteractive: readBooleanOption(context, "nonInteractive"),
@@ -192,7 +193,7 @@ async function loadTargetConfig(context: CliCommandContext): Promise<{
 	}
 }
 
-async function resolveRepoTargetForInit(
+async function resolveInitRepoIdentity(
 	context: CliCommandContext,
 	config: AtlasConfig,
 	options: {
@@ -202,7 +203,7 @@ async function resolveRepoTargetForInit(
 	},
 ) {
 	try {
-		return await resolveRepoTarget(context, { config, ...options });
+		return await resolveRepoIdentity(context, { intent: "target", config, ...options });
 	} catch (error) {
 		if (
 			!(error instanceof CliError) ||
@@ -406,16 +407,3 @@ async function runSetupCommand(
 	return result;
 }
 
-async function gitOutput(
-	cwd: string,
-	args: readonly string[],
-): Promise<string | undefined> {
-	try {
-		const { exitCode, stdout } = await runProcess(["git", ...args], { cwd });
-		if (exitCode !== 0) return undefined;
-		const output = stdout.trim();
-		return output.length > 0 ? output : undefined;
-	} catch {
-		return undefined;
-	}
-}

@@ -9,12 +9,9 @@ import {
 	type SkillInstallScope,
 	type SkillInstallTarget,
 } from "../utils/skill-install";
-import {
-	inspectArtifacts,
-	loadDependenciesFromGlobal,
-	renderRows,
-	renderSuccess,
-} from "./shared";
+import { loadDependenciesFromGlobal } from "./dependencies";
+import { inspectArtifacts } from "./inspection";
+import { renderRows, renderSuccess } from "./render";
 
 /** Installs discovered ATLAS skills into supported agent and editor instruction locations. */
 export async function runInstallSkillCommand(
