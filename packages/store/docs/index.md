@@ -37,7 +37,7 @@ Store should not fetch sources, compile Markdown, classify docs, or rank retriev
 
 ## Tests
 
-Store integration tests live in `packages/store/src/store.test.ts`.
+Store integration coverage is organized in the focused suites matching `packages/store/src/store.*.test.ts`.
 
 ```bash
 bun --cwd packages/store run typecheck
