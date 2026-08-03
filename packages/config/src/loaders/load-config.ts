@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, normalize, resolve } from "node:path";
 
 import { parse as parseYaml } from "yaml";
 import type { ZodError } from "zod";
+import { BUILT_IN_DOC_METADATA_PROFILES, type RepoConfig } from "@atlas/core";
 
 import { type AtlasConfig, atlasConfigSchema } from "../atlas-config.schema";
 import {
@@ -14,6 +15,7 @@ import {
 } from "../defaults/default-config";
 import type { AtlasEnv } from "../env.schema";
 import { resolveIdentityProfile } from "../white-label/profile";
+import { resolveRuntimeRepoConfigs } from "../runtime-repos";
 import {
 	type GhesCommandRunner,
 	ghesHostname,
@@ -32,6 +34,7 @@ export type LoadConfigOptions = {
 
 export type ResolvedAtlasConfig = {
 	config: AtlasConfig;
+  runtimeRepos: readonly RepoConfig[];
 	source: {
 		configPath: string;
 		loadedFrom: "env" | "explicit" | "discovered";
@@ -429,22 +432,12 @@ const formatConfigIssues = (error: ZodError): string[] =>
 		return path.length > 0 ? `${path}: ${issue.message}` : issue.message;
 	});
 
-export const resolveAtlasConfig = (
+/** Validates file-shaped config without applying defaults, overrides, or path resolution. */
+export function validateAtlasConfig(
 	rawConfig: unknown,
 	configPath: string,
-	env: AtlasEnv,
-	rawEnv: NodeJS.ProcessEnv = process.env,
-	options: { requireGhesAuth?: boolean | undefined } = {},
-): AtlasConfig => {
-	void rawEnv;
-	void options;
-	const configDir = dirname(configPath);
-	const mergedConfig = applyEnvOverrides(
-		mergeWithDefaults(rawConfig, env),
-		env,
-	);
-	const parsedConfig = atlasConfigSchema.safeParse(mergedConfig);
-
+): AtlasConfig {
+  const parsedConfig = atlasConfigSchema.safeParse(rawConfig);
 	if (!parsedConfig.success) {
 		throw new AtlasConfigValidationError(
 			configPath,
@@ -452,13 +445,43 @@ export const resolveAtlasConfig = (
 			parsedConfig.error,
 		);
 	}
+  return parsedConfig.data;
+}
 
-	const normalizedConfig = normalizeResolvedPaths(
-		parsedConfig.data,
-		configDir,
-		env,
-	);
-	return normalizedConfig;
+/** Applies file defaults and validates without environment overrides or path resolution. */
+export function validateAtlasFileConfig(
+  rawConfig: unknown,
+  configPath: string,
+): AtlasConfig {
+  return validateAtlasConfig(mergeWithDefaults(rawConfig, {}), configPath);
+}
+
+function composeBuiltInDocProfiles(config: AtlasConfig): AtlasConfig {
+  return {
+    ...config,
+    docs: {
+      metadata: {
+        ...config.docs.metadata,
+        profiles: {
+          ...BUILT_IN_DOC_METADATA_PROFILES,
+          ...config.docs.metadata.profiles,
+        },
+      },
+    },
+  };
+}
+
+export const resolveAtlasConfig = (
+  rawConfig: unknown,
+  configPath: string,
+  env: AtlasEnv,
+): AtlasConfig => {
+  const configDir = dirname(configPath);
+  const withDefaultsAndIdentity = mergeWithDefaults(rawConfig, env);
+  const withEnvOverrides = applyEnvOverrides(withDefaultsAndIdentity, env);
+  const validated = validateAtlasConfig(withEnvOverrides, configPath);
+  const withBuiltInProfiles = composeBuiltInDocProfiles(validated);
+  return normalizeResolvedPaths(withBuiltInProfiles, configDir, env);
 };
 
 const missingGhesAuthIssues = (
@@ -493,9 +516,7 @@ export const loadConfig = async (
 	const rawConfig = await readRawConfigFile(source.configPath);
 	const configDir = dirname(source.configPath);
 
-	const config = resolveAtlasConfig(rawConfig, source.configPath, env, rawEnv, {
-		requireGhesAuth: options.requireGhesAuth,
-	});
+  const config = resolveAtlasConfig(rawConfig, source.configPath, env);
 	const ghesAuth = await resolveGhesAuth(config, {
 		env: rawEnv,
 		...(options.runCommand === undefined
@@ -516,6 +537,7 @@ export const loadConfig = async (
 	return {
 		config,
 		source,
+    runtimeRepos: resolveRuntimeRepoConfigs(config, source.configPath),
 		env: normalizeResolvedEnv(env, cwd, configDir),
 		...(ghesAuth === undefined ? {} : { ghesAuth }),
 	};

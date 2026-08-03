@@ -1,5 +1,4 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { dirname } from "node:path";
 import { ATLAS_COMPILER_VERSION } from "@atlas/compiler";
 import type { ResolvedAtlasConfig } from "@atlas/config";
 import type {
@@ -111,9 +110,7 @@ export function createIndexerServices(options: CreateIndexerServicesOptions): {
 	service: IndexerService;
 } {
 	const repoById = new Map(
-		options.config.config.repos.map(
-			(repo) => [repo.repoId, toCoreRepoConfig(repo, options.config)] as const,
-		),
+    options.config.runtimeRepos.map((repo) => [repo.repoId, repo] as const),
 	);
 	const diagnostics = new AsyncLocalStorage<IndexerSourceDiagnostic[]>();
 	const localGitCache = new RepoCacheService({
@@ -246,7 +243,10 @@ export function createIndexerServices(options: CreateIndexerServicesOptions): {
 				const result = await diagnostics.run(events, operation);
 				return { result, diagnostics: events };
 			} catch (error) {
-				if (error !== null && (typeof error === "object" || typeof error === "function")) {
+        if (
+          error !== null &&
+          (typeof error === "object" || typeof error === "function")
+        ) {
 					Object.defineProperty(error, "__indexerDiagnostics", {
 						value: events,
 						configurable: true,
@@ -281,54 +281,4 @@ function buildGhesAuthByRepoId(
 			} satisfies GhesAuthConfig,
 		]),
 	);
-}
-
-function toCoreRepoConfig(
-	repo: ResolvedAtlasConfig["config"]["repos"][number],
-	config: ResolvedAtlasConfig,
-): RepoConfig {
-	const topology = repo.topology.map((rule) => ({
-		id: rule.id,
-		kind: rule.kind,
-		match: {
-			include: [...rule.match.include],
-			...(rule.match.exclude === undefined
-				? {}
-				: { exclude: [...rule.match.exclude] }),
-		},
-		ownership: {
-			attachTo: rule.ownership.attachTo,
-			...(rule.ownership.deriveFromPath === undefined
-				? {}
-				: { deriveFromPath: rule.ownership.deriveFromPath }),
-			...(rule.ownership.packageRootPattern === undefined
-				? {}
-				: { packageRootPattern: rule.ownership.packageRootPattern }),
-			...(rule.ownership.moduleRootPattern === undefined
-				? {}
-				: { moduleRootPattern: rule.ownership.moduleRootPattern }),
-			...(rule.ownership.skillPattern === undefined
-				? {}
-				: { skillPattern: rule.ownership.skillPattern }),
-		},
-		authority: rule.authority,
-		priority: rule.priority,
-	}));
-	return {
-		repoId: repo.repoId,
-		mode: repo.mode,
-		...(repo.priority === undefined ? {} : { priority: repo.priority }),
-		...(repo.git === undefined ? {} : { git: repo.git }),
-		...(repo.github === undefined ? {} : { github: repo.github }),
-		workspace: {
-			rootPath:
-				repo.mode === "local-git"
-					? (repo.git?.localPath ?? dirname(config.source.configPath))
-					: dirname(config.source.configPath),
-			packageGlobs: repo.workspace.packageGlobs,
-			packageManifestFiles: repo.workspace.packageManifestFiles,
-		},
-		topology,
-		docs: config.config.docs,
-	};
 }
