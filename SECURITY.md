@@ -24,3 +24,15 @@ Do not include real credentials, tokens, private keys, private hostnames, propri
 ## Local-first security expectations
 
 Atlas retrieval, search, MCP, and HTTP read surfaces operate on local compiled corpus data. Remote reads happen only during explicit sync/build/repo add workflows. Security reports that identify credential leakage, remote query-time fetches, unsafe artifact contents, or public artifact boundary failures are high priority.
+
+## Production dependency audit policy
+
+Every release must pass `bun run audit:production` with zero known production dependency advisories. Any low, moderate, high, or critical advisory blocks release publication.
+
+Atlas does not ship advisory suppressions by default. A future exception must be narrowly scoped to an exact advisory and documented here before an exact `--ignore` is added. The exception record must include:
+
+- Advisory ID.
+- Affected dependency path.
+- Rationale and compensating controls.
+- Named owner responsible for remediation.
+- Expiry date after which the exception is removed or renewed explicitly.

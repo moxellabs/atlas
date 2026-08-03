@@ -61,7 +61,8 @@ export function registerExplainModuleTool(server: McpServer, dependencies: Atlas
       title: "Explain ATLAS module",
       description: "Produce a deterministic module explanation from summaries, docs, sections, skills, and provenance.",
       inputSchema: explainModuleInputSchema,
-      outputSchema: jsonOutputSchema
+      outputSchema: jsonOutputSchema,
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
     (input) => toolResult(executeExplainModule(input, dependencies))
   );

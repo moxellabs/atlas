@@ -65,10 +65,13 @@ Validate workspace with the same checks used by public CI:
 
 ```bash
 bun install --frozen-lockfile
+bun run audit:production
 bun run typecheck
 bun run lint
 bun test
+bun run eval:ci
 bun run smoke:distribution
+bun run uat:production
 bun run release:check
 bun apps/cli/src/index.ts artifact verify --fresh
 ```
@@ -162,6 +165,18 @@ atlas mcp
 From a source checkout, use `bun run cli mcp`.
 
 MCP and server reads operate over local corpus data.
+
+Configure supported agents and IDEs without hand-editing MCP files:
+
+```bash
+atlas agent list
+atlas agent detect
+atlas agent install codex --mode discoverable
+atlas agent install --detected --mode discoverable
+atlas agent doctor --all
+```
+
+Use `--scope workspace` for project-owned configuration and `atlas agent remove <client>` for receipt-verified cleanup. See [Runtime surfaces](https://github.com/moxellabs/atlas/blob/main/docs/runtime-surfaces.md#agent-and-ide-integration) for the support matrix, discovery modes, and authenticated remote Atlas setup.
 
 ## Docs map
 

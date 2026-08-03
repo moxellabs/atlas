@@ -28,12 +28,14 @@ export interface DiffPathsOptions {
 /**
  * Computes changed paths with `git diff --name-status -z --find-renames`.
  */
-export async function diffPaths(options: DiffPathsOptions): Promise<SourceChange[]> {
+export async function diffPaths(
+  options: DiffPathsOptions,
+): Promise<SourceChange[]> {
   const args = buildDiffCommand(options.fromRevision, options.toRevision);
   const result = await spawnGit({
     cwd: options.localPath,
     args,
-    timeoutMs: options.timeoutMs
+    timeoutMs: options.timeoutMs,
   });
 
   if (result.exitCode !== 0) {
@@ -43,7 +45,7 @@ export async function diffPaths(options: DiffPathsOptions): Promise<SourceChange
       command: result.command,
       exitCode: result.exitCode,
       stderr: result.stderr,
-      stdout: result.stdout
+      stdout: result.stdout,
     });
   }
 
@@ -56,8 +58,8 @@ export async function diffPaths(options: DiffPathsOptions): Promise<SourceChange
       details: {
         fromRevision: options.fromRevision,
         toRevision: options.toRevision,
-        changedPathCount: paths.length
-      }
+        changedPathCount: paths.length,
+      },
     });
     return paths;
   } catch (cause) {
@@ -67,7 +69,7 @@ export async function diffPaths(options: DiffPathsOptions): Promise<SourceChange
       command: result.command,
       stderr: result.stderr,
       stdout: result.stdout,
-      cause
+      cause,
     });
   }
 }
@@ -75,8 +77,20 @@ export async function diffPaths(options: DiffPathsOptions): Promise<SourceChange
 /**
  * Builds the Git diff command used for changed-path detection.
  */
-export function buildDiffCommand(fromRevision: string, toRevision: string): string[] {
-  return ["diff", "--name-status", "-z", "--find-renames", "--find-copies-harder", `${fromRevision}..${toRevision}`];
+export function buildDiffCommand(
+  fromRevision: string,
+  toRevision: string,
+): string[] {
+  return [
+    "diff",
+    "--name-status",
+    "-z",
+    "--find-renames",
+    "--find-copies-harder",
+    "--end-of-options",
+    `${fromRevision}..${toRevision}`,
+    "--",
+  ];
 }
 
 function toSourceChange(entry: GitNameStatusEntry): SourceChange {
@@ -86,12 +100,12 @@ function toSourceChange(entry: GitNameStatusEntry): SourceChange {
     D: { rawKind: "deleted", normalizedKind: "deleted" },
     R: { rawKind: "renamed", normalizedKind: "renamed" },
     C: { rawKind: "copied", normalizedKind: "modified" },
-    T: { rawKind: "type-changed", normalizedKind: "modified" }
+    T: { rawKind: "type-changed", normalizedKind: "modified" },
   } as const;
 
   const change: SourceChange = {
     path: normalizeRepoPath(entry.path),
-    ...statusMap[entry.status]
+    ...statusMap[entry.status],
   };
   if (entry.oldPath) {
     change.oldPath = normalizeRepoPath(entry.oldPath);

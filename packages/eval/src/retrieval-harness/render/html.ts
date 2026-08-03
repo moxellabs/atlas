@@ -1,765 +1,573 @@
+import type { AgentEffectFreshness } from "../../agent-effect";
 import {
-  classifyHealth,
-  HEALTH_THRESHOLDS,
-  type HealthLevel,
-  type HealthMetric,
+	classifyHealth,
+	HEALTH_THRESHOLDS,
+	type HealthLevel,
+	type HealthMetric,
 } from "../health";
 import { METRIC_GLOSSARY } from "../metric-glossary";
 import type {
-  CaseResult,
-  MetricDeltaEntry,
-  QualityGroupSummary,
-  Report,
-  ReportThresholdResult,
-  WeakCaseSummary,
+	CaseResult,
+	MetricDeltaEntry,
+	QualityGroupSummary,
+	Report,
+	ReportThresholdResult,
+	WeakCaseSummary,
 } from "../types";
 import { renderReportCss } from "./css";
-import { REPORT_DEMO_DATA } from "./demo-data";
 import { renderDetailPanels } from "./detail-panels";
 import { renderExplorerScript } from "./explorer-script";
 import { moxelBandedFieldScript } from "./moxel-theme";
 
-interface QualityGateRow {
-  readonly status: HealthLevel;
-  readonly passed: boolean;
-  readonly layer: string;
-  readonly metric: string;
-  readonly actual: string;
-  readonly required: string;
-  readonly delta: string;
-  readonly type: string;
-  readonly demo?: boolean;
+export interface DashboardRenderOptions {
+	readonly agentEffect?: AgentEffectFreshness;
 }
 
-interface FailureMode {
-  readonly label: string;
-  readonly count: number;
-  readonly rate: number;
+interface QualityGateRow {
+	readonly status: HealthLevel;
+	readonly passed: boolean;
+	readonly layer: string;
+	readonly metric: string;
+	readonly actual: string;
+	readonly required: string;
+	readonly delta: string;
+	readonly type: string;
 }
 
 const NAV_ITEMS = [
-  ["overview", "Overview"],
-  ["quality-gates", "Quality Gates"],
-  ["cross-layer-summary", "Cross-Layer Summary"],
-  ["retrieval", "Retrieval"],
-  ["answer-quality", "Answer Quality"],
-  ["mcp-agent", "MCP Agent"],
-  ["failure-analysis", "Failure Analysis"],
-  ["case-explorer", "Case Explorer"],
-  ["coverage-analysis", "Coverage Analysis"],
-  ["trends-baselines", "Trends & Baselines"],
-  ["methodology", "Methodology"],
-  ["reproducibility", "Reproducibility"],
+	["overview", "Overview"],
+	["quality-gates", "Quality Gates"],
+	["cross-layer-summary", "Cross-Layer Summary"],
+	["retrieval", "Retrieval"],
+	["answer-quality", "Answer Quality"],
+	["mcp-agent", "Luna + Atlas MCP"],
+	["failure-analysis", "Failure Analysis"],
+	["case-explorer", "Case Explorer"],
+	["coverage-analysis", "Coverage Analysis"],
+	["trends-baselines", "Trends & Baselines"],
+	["methodology", "Methodology"],
+	["reproducibility", "Reproducibility"],
 ] as const;
 
-export function renderHtml(report: Report): string {
-  return `<!doctype html>
+export function renderHtml(
+	report: Report,
+	options: DashboardRenderOptions = {},
+): string {
+	const effect = options.agentEffect ?? ({ status: "absent" } as const);
+	return `<!doctype html>
 <html lang="en" data-severity="${escapeHtml(report.narrative.severity)}">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>MOXEL ATLAS EVALS — ${escapeHtml(report.dataset)}</title>
-<style>${renderReportCss()}</style>
-</head>
-<body class="moxel-eval-body" data-severity="${escapeHtml(report.narrative.severity)}">
-<canvas id="banded-field" aria-hidden="true"></canvas>
-<div class="noise" aria-hidden="true"></div>
-<div class="report-app" data-report-shell="moxel-atlas-eval-report-theme">
-${renderSidebar()}
-<main class="report-main">
-<section class="tab-panel" id="overview" data-report-tab="overview">
-${renderOverview(report)}
-${renderQualityGates(report, "overview-quality-gates")}
-${renderCrossLayerSummary("overview-cross-layer-summary")}
-${renderFailureAnalysis(report, "overview-failure-analysis")}
-${renderRetrievalPerformance(report, "overview-retrieval")}
-${renderAnswerQuality("overview-answer-quality")}
-</section>
-<section class="tab-panel" id="quality-gates" data-report-tab="quality-gates" hidden>
-${renderStandaloneHeader("Quality Gates", "All required and advisory thresholds, baseline deltas, and gate provenance.")}
-${renderQualityGates(report, "quality-gates-detail")}
-</section>
-<section class="tab-panel" id="cross-layer-summary" data-report-tab="cross-layer-summary" hidden>
-${renderStandaloneHeader("Cross-Layer Summary", "How retrieval quality and answer faithfulness combine across the complete evaluation pipeline.", true)}
-${renderCrossLayerSummary("cross-layer-detail")}
-</section>
-<section class="tab-panel" id="retrieval" data-report-tab="retrieval" hidden>
-${renderStandaloneHeader("Retrieval", "Rank quality, recall, latency, safety boundaries, and retrieval coverage.")}
-${renderRetrievalPerformance(report, "retrieval-detail")}
-</section>
-${renderDetailPanels(report)}
-${renderExplorer(report)}
-${renderCoverageAnalysis(report)}
-</main>
-</div>
-<div id="info-popover" class="info-popover" role="dialog" aria-modal="false" aria-live="polite" hidden></div>
-<script id="atlas-eval-report-data" type="application/json">${safeJson(reportClientData(report))}</script>
-<script>${moxelBandedFieldScript}</script>
-<script>${renderExplorerScript()}</script>
-</body>
-</html>`;
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" /><title>MOXEL ATLAS EVALS — ${escapeHtml(report.dataset)}</title><style>${renderReportCss()}</style></head>
+<body class="moxel-eval-body" data-severity="${escapeHtml(report.narrative.severity)}"><canvas id="banded-field" aria-hidden="true"></canvas><div class="noise" aria-hidden="true"></div><div class="report-app" data-report-shell="moxel-atlas-eval-report-theme">${renderSidebar()}<main class="report-main">
+<section class="tab-panel" id="overview" data-report-tab="overview">${renderOverview(report, effect)}${renderQualityGates(report, "overview-quality-gates")}${renderCrossLayerSummary(effect, "overview-cross-layer-summary")}${renderFailureOverview(report, effect)}${renderRetrievalPerformance(report, "overview-retrieval")}</section>
+<section class="tab-panel" id="quality-gates" data-report-tab="quality-gates" hidden>${renderStandaloneHeader("Quality Gates", "Actual deterministic CI thresholds and their observed values.")}${renderQualityGates(report, "quality-gates-detail")}</section>
+<section class="tab-panel" id="cross-layer-summary" data-report-tab="cross-layer-summary" hidden>${renderStandaloneHeader("Cross-Layer Summary", "Measured treatment-answer completion and canonical grounding.")}${renderCrossLayerSummary(effect, "cross-layer-detail")}</section>
+<section class="tab-panel" id="retrieval" data-report-tab="retrieval" hidden>${renderStandaloneHeader("Retrieval", "Rank quality, latency, safety boundaries, and deterministic coverage.")}${renderRetrievalPerformance(report, "retrieval-detail")}</section>
+${renderDetailPanels(report, effect)}${renderExplorer(report)}${renderCoverageAnalysis(report)}
+</main></div><div id="info-popover" class="info-popover" role="dialog" aria-modal="false" aria-live="polite" hidden></div><script id="atlas-eval-report-data" type="application/json">${safeJson(reportClientData(report))}</script><script>${moxelBandedFieldScript}</script><script>${renderExplorerScript()}</script></body></html>`;
 }
 
 function renderSidebar(): string {
-  return `<aside class="report-sidebar"><div class="sidebar-brand" aria-label="Moxel">moxel</div><div class="sidebar-label">Atlas evaluation report</div><nav class="report-nav" aria-label="Evaluation report sections">${NAV_ITEMS.map(
-    ([id, label], index) =>
-      `<a href="#${id}"${index === 0 ? ' aria-current="location"' : ""}><span class="nav-mark" aria-hidden="true"></span>${label}</a>`,
-  ).join(
-    "",
-  )}</nav><footer class="sidebar-footer">Generated with Atlas<br /><a href="https://moxel.dev/atlas">moxel.dev/atlas</a></footer></aside>`;
+	return `<aside class="report-sidebar"><div class="sidebar-brand" aria-label="Moxel">moxel</div><div class="sidebar-label">Atlas evaluation report</div><nav class="report-nav" aria-label="Evaluation report sections">${NAV_ITEMS.map(([id, label], index) => `<a href="#${id}"${index === 0 ? ' aria-current="location"' : ""}><span class="nav-mark" aria-hidden="true"></span>${label}</a>`).join("")}</nav><footer class="sidebar-footer">Generated with Atlas<br /><a href="https://moxel.dev/atlas">moxel.dev/atlas</a></footer></aside>`;
 }
 
-function renderOverview(report: Report): string {
-  const revision = report.runtime.repoRevision?.slice(0, 7);
-  const runId = revision ?? REPORT_DEMO_DATA.runId;
-  const runIdDemo = revision === undefined;
-  const severity = report.narrative.severity;
-  const gateLabel =
-    severity === "bad"
-      ? "GATED FAIL"
-      : severity === "warn"
-        ? "GATED WARN"
-        : "GATED PASS";
-  const statusLabel =
-    severity === "bad"
-      ? "Needs work"
-      : severity === "warn"
-        ? "Review advised"
-        : "Ready";
-  return `<div class="overview-header">
-<div class="report-heading"><div><div class="eyebrow">Atlas evaluation report</div><h1>${escapeHtml(report.dataset)} <span aria-hidden="true">·</span> Full Evaluation</h1><p class="report-subtitle">Comprehensive retrieval report with answer-quality and MCP previews clearly marked as demo data.</p></div><div class="gate-badge" data-health="${severity}"><strong>${gateLabel}</strong><span>${statusLabel}</span></div></div>
-<div class="metadata-row" aria-label="Run metadata">${renderMetadataChip("Run ID", runId, runIdDemo)}${renderMetadataChip("Dataset", report.dataset)}${renderMetadataChip("Cases", String(report.totalCases))}${renderMetadataChip("Generated", formatTimestamp(report.generatedAt))}${renderMetadataChip("Duration", REPORT_DEMO_DATA.duration, true)}</div>
-${renderPrimaryAlert(report)}
-${renderExecutiveSummary(report)}
-</div>`;
+function renderOverview(report: Report, effect: AgentEffectFreshness): string {
+	const revision = report.runtime.repoRevision?.slice(0, 12) ?? "not recorded";
+	const severity = report.narrative.severity;
+	return `<div class="overview-header"><div class="report-heading"><div><div class="eyebrow">Atlas evaluation report</div><h1>${escapeHtml(report.dataset)} <span aria-hidden="true">·</span> Evidence Report</h1><p class="report-subtitle">Deterministic retrieval evidence${effect.status === "absent" ? "; Luna agent evidence has not been collected." : ` plus ${effect.status} local Luna agent evidence.`}</p></div><div class="gate-badge" data-health="${severity}"><strong>${severity === "bad" ? "GATED FAIL" : severity === "warn" ? "GATED WARN" : "GATED PASS"}</strong><span>${severity === "bad" ? "Needs work" : severity === "warn" ? "Review advised" : "Ready"}</span></div></div><div class="metadata-row">${metadataChip("Revision", revision)}${metadataChip("Dataset", report.dataset)}${metadataChip("Retrieval cases", String(report.totalCases))}${metadataChip("Generated", formatTimestamp(report.generatedAt))}${metadataChip("Corpus", runtimeLabel(report))}</div>${renderPrimaryAlert(report)}${renderExecutiveSummary(report, effect)}</div>`;
 }
 
-function renderMetadataChip(
-  label: string,
-  value: string,
-  demo = false,
-): string {
-  return `<span class="metadata-chip"><span class="metadata-icon" aria-hidden="true"></span><span class="sr-only">${escapeHtml(label)}: </span>${escapeHtml(value)}${demo ? renderDemoBadge() : ""}</span>`;
+function metadataChip(label: string, value: string): string {
+	return `<span class="metadata-chip"><span class="metadata-icon" aria-hidden="true"></span><span class="sr-only">${escapeHtml(label)}: </span>${escapeHtml(value)}</span>`;
 }
 
 function renderPrimaryAlert(report: Report): string {
-  const severity = report.narrative.severity;
-  const primary =
-    report.narrative.keyFindings.find(
-      (finding) => finding.severity === severity,
-    ) ?? report.narrative.keyFindings[0];
-  const blockerLabel = primary?.label ?? "Deterministic pass rate";
-  const blockerValue =
-    primary?.value ?? `${report.passedCases}/${report.totalCases}`;
-  const threshold = primary
-    ? METRIC_GLOSSARY[primary.metric].targets
-    : "All deterministic expectations";
-  return `<article class="primary-alert" data-health="${severity}"><div class="alert-copy"><span class="alert-icon" aria-hidden="true">${statusGlyph(severity)}</span><div><h2>${escapeHtml(report.narrative.headline)}</h2><p>${escapeHtml(report.narrative.verdict)}</p></div></div><div class="primary-blocker"><span>Primary signal</span><strong>${escapeHtml(blockerLabel)}</strong><div><b>${escapeHtml(blockerValue)}</b><small>${escapeHtml(threshold)}</small></div></div></article>`;
+	const primary =
+		report.narrative.keyFindings.find(
+			(finding) => finding.severity === report.narrative.severity,
+		) ?? report.narrative.keyFindings[0];
+	const metric =
+		primary === undefined ? "Deterministic pass rate" : primary.label;
+	const value =
+		primary === undefined
+			? `${report.passedCases}/${report.totalCases}`
+			: primary.value;
+	return `<article class="primary-alert" data-health="${report.narrative.severity}"><div class="alert-copy"><span class="alert-icon" aria-hidden="true">${statusGlyph(report.narrative.severity)}</span><div><h2>${escapeHtml(report.narrative.headline)}</h2><p>${escapeHtml(report.narrative.verdict)}</p></div></div><div class="primary-blocker"><span>Primary signal</span><strong>${escapeHtml(metric)}</strong><div><b>${escapeHtml(value)}</b><small>Measured deterministic result</small></div></div></article>`;
 }
 
-function renderExecutiveSummary(report: Report): string {
-  const passDelta = deltaFor(report, "passRate");
-  const cards = [
-    {
-      label: "Overall Score",
-      value: REPORT_DEMO_DATA.overall.score.toFixed(1),
-      delta: `${signedNumber(REPORT_DEMO_DATA.overall.delta)} vs baseline`,
-      status: report.narrative.severity,
-      demo: true,
-    },
-    {
-      label: "Retrieval Pass Rate",
-      value: percent(report.metrics.passRate, 1),
-      delta: passDelta
-        ? `${formatDeltaMagnitude(passDelta)} vs baseline`
-        : "No baseline",
-      status: classifyHealth("passRate", report.metrics.passRate),
-    },
-    {
-      label: "Answer Faithfulness",
-      value: percent(REPORT_DEMO_DATA.answer.faithfulness, 1),
-      delta: `${signedPercentagePoints(REPORT_DEMO_DATA.answer.faithfulnessDelta)} vs baseline`,
-      status: "bad" as const,
-      demo: true,
-    },
-    {
-      label: "MCP Agent Pass Rate",
-      value: percent(REPORT_DEMO_DATA.mcp.passRate, 1),
-      delta: `${signedPercentagePoints(REPORT_DEMO_DATA.mcp.passRateDelta)} vs baseline`,
-      status: "warn" as const,
-      demo: true,
-    },
-    {
-      label: "Safety Score",
-      value: percent(REPORT_DEMO_DATA.safetyScore),
-      delta: "No change",
-      status: "good" as const,
-      demo: true,
-    },
-  ];
-  return `<div class="section-title compact"><div><h2>Executive Summary</h2></div></div><div class="summary-grid" aria-label="Executive summary">${cards
-    .map(
-      (card) =>
-        `<article class="summary-card" data-health="${card.status}"${card.demo ? ' data-source="demo"' : ""}><div class="summary-label"><span class="metric-icon" aria-hidden="true"></span>${card.label}${card.demo ? renderDemoBadge() : ""}</div><strong>${card.value}</strong><span class="summary-delta">${card.delta}</span><span class="status-tag" data-health="${card.status}">${healthLabel(card.status)}</span></article>`,
-    )
-    .join("")}</div>`;
+function renderExecutiveSummary(
+	report: Report,
+	effect: AgentEffectFreshness,
+): string {
+	const agentCards =
+		effect.status === "absent"
+			? [
+					summaryCard(
+						"Luna paired benchmark",
+						"Not collected",
+						"Run locally before a release",
+						"neutral",
+					),
+				]
+			: [
+					summaryCard(
+						"Treatment completion",
+						percent(effect.snapshot.metrics.treatment.completionRate, 1),
+						`${signedPoints(effect.snapshot.metrics.treatment.completionRate - effect.snapshot.metrics.baseline.completionRate)} vs baseline`,
+						health(effect.snapshot.metrics.treatment.completionRate),
+					),
+					summaryCard(
+						"Atlas MCP adoption",
+						percent(effect.snapshot.metrics.mcp.adoptionRate, 1),
+						effect.status === "fresh"
+							? "Fresh local evidence"
+							: `Stale · ${effect.snapshot.releaseId}`,
+						health(effect.snapshot.metrics.mcp.adoptionRate),
+					),
+				];
+	return `<div class="section-title compact"><div><h2>Executive Summary</h2></div></div><div class="summary-grid">${[
+		summaryCard(
+			"Retrieval pass rate",
+			percent(report.metrics.passRate, 1),
+			deltaText(report, "passRate"),
+			classifyHealth("passRate", report.metrics.passRate),
+		),
+		summaryCard(
+			"Recall@5",
+			percent(report.metrics.pathRecallAt5, 1),
+			deltaText(report, "pathRecallAt5"),
+			classifyHealth("pathRecallAt5", report.metrics.pathRecallAt5),
+		),
+		summaryCard(
+			"Retrieval p95",
+			`${Math.round(report.metrics.p95LatencyMs)}ms`,
+			deltaText(report, "p95LatencyMs"),
+			classifyHealth("p95LatencyMs", report.metrics.p95LatencyMs),
+		),
+		...agentCards,
+	].join("")}</div>`;
+}
+
+function summaryCard(
+	label: string,
+	value: string,
+	note: string,
+	state: HealthLevel | "neutral",
+): string {
+	return `<article class="summary-card" data-health="${state}"><div class="summary-label"><span class="metric-icon" aria-hidden="true"></span>${escapeHtml(label)}</div><strong>${escapeHtml(value)}</strong><span class="summary-delta">${escapeHtml(note)}</span><span class="status-tag" data-health="${state}">${healthLabel(state)}</span></article>`;
 }
 
 function renderQualityGates(report: Report, id: string): string {
-  const rows = qualityGateRows(report);
-  const passed = rows.filter((row) => row.passed).length;
-  const demoCount = rows.filter((row) => row.demo).length;
-  return `<section class="report-section" id="${id}">${renderSectionHeader("Quality Gates", "Required and advisory thresholds across evaluation layers.", `${passed} / ${rows.length} passed · ${demoCount} demo`)}<div class="data-card table-card"><div class="table-wrap"><table class="gates-table"><thead><tr><th scope="col">Status</th><th scope="col">Layer</th><th scope="col">Metric</th><th scope="col">Actual</th><th scope="col">Required</th><th scope="col">Delta vs Baseline</th><th scope="col">Type</th></tr></thead><tbody>${rows
-    .map(
-      (row) =>
-        `<tr${row.demo ? ' data-source="demo"' : ""}><td><span class="table-status" data-health="${row.status}" aria-label="${healthLabel(row.status)}">${statusGlyph(row.status)}</span></td><td>${escapeHtml(row.layer)}</td><td>${escapeHtml(row.metric)}${row.demo ? renderDemoBadge() : ""}</td><td class="numeric">${escapeHtml(row.actual)}</td><td class="numeric muted-cell">${escapeHtml(row.required)}</td><td class="numeric" data-health="${row.status}">${escapeHtml(row.delta)}</td><td>${escapeHtml(row.type)}</td></tr>`,
-    )
-    .join(
-      "",
-    )}</tbody></table></div><div class="card-footer">Live rows come from this report. Demo rows preserve the reference layout until those eval layers exist.</div></div></section>`;
+	const rows = qualityGateRows(report);
+	const passed = rows.filter((row) => row.passed).length;
+	return `<section class="report-section" id="${id}">${renderSectionHeader("Quality Gates", "Only deterministic thresholds gate CI. Local Luna measurements are reported separately.", `${passed} / ${rows.length || 0} passed`)}<div class="data-card table-card"><div class="table-wrap"><table class="gates-table"><thead><tr><th>Status</th><th>Layer</th><th>Metric</th><th>Actual</th><th>Required</th><th>Delta</th><th>Type</th></tr></thead><tbody>${rows.map((row) => `<tr><td><span class="table-status" data-health="${row.status}">${statusGlyph(row.status)}</span></td><td>${escapeHtml(row.layer)}</td><td>${escapeHtml(row.metric)}</td><td class="numeric">${escapeHtml(row.actual)}</td><td class="numeric muted-cell">${escapeHtml(row.required)}</td><td class="numeric" data-health="${row.status}">${escapeHtml(row.delta)}</td><td>${escapeHtml(row.type)}</td></tr>`).join("") || '<tr><td colspan="7">No thresholds configured for this local report.</td></tr>'}</tbody></table></div><div class="card-footer">Threshold values come from this report’s machine-readable deterministic result.</div></div></section>`;
 }
 
 function qualityGateRows(report: Report): QualityGateRow[] {
-  const actualRows = (
-    report.thresholds?.results ?? defaultQualityGates(report)
-  ).map((gate): QualityGateRow => {
-    const metric = gate.metric as HealthMetric;
-    const delta = deltaFor(report, metric);
-    return {
-      status: gate.passed ? classifyHealth(metric, gate.actual) : "bad",
-      passed: gate.passed,
-      layer: "Retrieval",
-      metric: gate.label,
-      actual: formatMetric(metric, gate.actual),
-      required: `${gate.direction === "higher" ? "≥" : "≤"} ${formatMetric(metric, gate.limit)}`,
-      delta: delta ? formatDeltaMagnitude(delta) : "—",
-      type: "Required",
-    };
-  });
-  return [
-    ...actualRows,
-    {
-      status: "bad",
-      passed: false,
-      layer: "Answer",
-      metric: "Faithfulness",
-      actual: percent(REPORT_DEMO_DATA.answer.faithfulness, 1),
-      required: "≥ 90.0%",
-      delta: signedPercentagePoints(REPORT_DEMO_DATA.answer.faithfulnessDelta),
-      type: "Demo",
-      demo: true,
-    },
-    {
-      status: "bad",
-      passed: false,
-      layer: "Answer",
-      metric: "Unsupported claim rate",
-      actual: percent(REPORT_DEMO_DATA.answer.unsupportedClaimRate, 1),
-      required: "≤ 5.0%",
-      delta: signedPercentagePoints(
-        REPORT_DEMO_DATA.answer.unsupportedClaimDelta,
-      ),
-      type: "Demo",
-      demo: true,
-    },
-    {
-      status: "good",
-      passed: true,
-      layer: "MCP Agent",
-      metric: "Protocol error rate",
-      actual: percent(REPORT_DEMO_DATA.mcp.protocolErrorRate, 1),
-      required: "= 0.0%",
-      delta: "—",
-      type: "Demo",
-      demo: true,
-    },
-    {
-      status: "warn",
-      passed: true,
-      layer: "Judge",
-      metric: "Inter-sample agreement",
-      actual: percent(REPORT_DEMO_DATA.judgeAgreement.value, 1),
-      required: "≥ 80.0%",
-      delta: signedPercentagePoints(REPORT_DEMO_DATA.judgeAgreement.delta),
-      type: "Demo soft",
-      demo: true,
-    },
-  ];
+	return (report.thresholds?.results ?? []).map((result) => ({
+		status: result.passed ? "good" : "bad",
+		passed: result.passed,
+		layer: "Retrieval",
+		metric: result.label,
+		actual: thresholdValue(result, result.actual),
+		required: `${result.direction === "higher" ? "≥" : "≤"} ${thresholdValue(result, result.limit)}`,
+		delta: isHealthMetric(result.metric)
+			? deltaText(report, result.metric)
+			: "No baseline",
+		type: "Required",
+	}));
 }
 
-function defaultQualityGates(report: Report): ReportThresholdResult[] {
-  return [
-    gateResult(
-      "passRate",
-      "Pass rate",
-      report.metrics.passRate,
-      HEALTH_THRESHOLDS.passRate.good,
-      "higher",
-    ),
-    gateResult(
-      "pathRecallAt5",
-      "Recall@5",
-      report.metrics.pathRecallAt5,
-      HEALTH_THRESHOLDS.pathRecallAt5.good,
-      "higher",
-    ),
-    gateResult(
-      "mrr",
-      "MRR",
-      report.metrics.mrr,
-      HEALTH_THRESHOLDS.mrr.good,
-      "higher",
-    ),
-    gateResult(
-      "forbiddenPathAccuracy",
-      "Forbidden path accuracy",
-      report.metrics.forbiddenPathAccuracy,
-      HEALTH_THRESHOLDS.forbiddenPathAccuracy.good,
-      "higher",
-    ),
-    gateResult(
-      "p95LatencyMs",
-      "p95 latency",
-      report.metrics.p95LatencyMs,
-      HEALTH_THRESHOLDS.p95LatencyMs.good,
-      "lower",
-    ),
-  ];
+function renderCrossLayerSummary(
+	effect: AgentEffectFreshness,
+	id: string,
+): string {
+	if (effect.status === "absent") {
+		return `<section class="report-section" id="${id}">${renderSectionHeader("Cross-Layer Summary", "Treatment answer completion and canonical grounding require a local Luna run.", "Not collected")}<article class="data-card detail-card"><p>No result is shown until a real local Luna snapshot is available.</p></article></section>`;
+	}
+	const pairs = effect.snapshot.pairs;
+	const counts = {
+		completeGrounded: pairs.filter(
+			(pair) => criterion(pair, "completion") && criterion(pair, "grounding"),
+		).length,
+		completeUngrounded: pairs.filter(
+			(pair) => criterion(pair, "completion") && !criterion(pair, "grounding"),
+		).length,
+		incompleteGrounded: pairs.filter(
+			(pair) => !criterion(pair, "completion") && criterion(pair, "grounding"),
+		).length,
+		incompleteUngrounded: pairs.filter(
+			(pair) => !criterion(pair, "completion") && !criterion(pair, "grounding"),
+		).length,
+	};
+	return `<section class="report-section" id="${id}">${renderSectionHeader("Cross-Layer Summary", "Treatment outcomes from the Luna judge; ${effect.status} evidence.", effect.status === "fresh" ? "Fresh" : "Stale")}<div class="cross-layer-grid"><article class="data-card"><span>Complete + grounded</span><strong>${counts.completeGrounded}</strong><small>paired treatment answers</small></article><article class="data-card"><span>Complete + ungrounded</span><strong>${counts.completeUngrounded}</strong><small>needs evidence review</small></article><article class="data-card"><span>Incomplete + grounded</span><strong>${counts.incompleteGrounded}</strong><small>partial answer</small></article><article class="data-card"><span>Incomplete + ungrounded</span><strong>${counts.incompleteUngrounded}</strong><small>needs work</small></article></div></section>`;
 }
 
-function gateResult(
-  metric: ReportThresholdResult["metric"],
-  label: string,
-  actual: number,
-  limit: number,
-  direction: "higher" | "lower",
-): ReportThresholdResult {
-  return {
-    metric,
-    label,
-    actual,
-    limit,
-    direction,
-    passed: direction === "higher" ? actual >= limit : actual <= limit,
-  };
-}
-
-function renderCrossLayerSummary(id: string): string {
-  const data = REPORT_DEMO_DATA.crossLayer;
-  const cells = [
-    ["good", data.retrievalPassedAnswerFaithful, "Correct pipeline"],
-    ["bad", data.retrievalPassedAnswerUnfaithful, "Retrieval but unfaithful"],
-    ["warn", data.retrievalFailedAnswerFaithful, "Faithful to wrong evidence"],
-    ["bad", data.retrievalFailedAnswerUnfaithful, "Full pipeline failure"],
-  ] as const;
-  const descriptions = [
-    [
-      "good",
-      data.retrievalPassedAnswerFaithful,
-      "Retrieval succeeded and answers were faithful.",
-    ],
-    [
-      "bad",
-      data.retrievalPassedAnswerUnfaithful,
-      "Retrieved expected evidence but answers contained unsupported claims.",
-    ],
-    [
-      "warn",
-      data.retrievalFailedAnswerFaithful,
-      "Answers were faithful but retrieval missed key evidence.",
-    ],
-    [
-      "bad",
-      data.retrievalFailedAnswerUnfaithful,
-      "Both retrieval and answer generation failed.",
-    ],
-  ] as const;
-  return `<section class="report-section" id="${id}" data-source="demo">${renderSectionHeader("Cross-Layer Pipeline Health", "How retrieval and generation performance interact.", renderDemoBadge())}<div class="cross-layer-layout"><div class="matrix-shell"><div class="matrix-column-labels"><span>Answer Faithful</span><span>Answer Unfaithful</span></div><div class="matrix-body"><div class="matrix-row-labels"><span>Retrieval Passed</span><span>Retrieval Failed</span></div><div class="pipeline-matrix">${cells.map(([health, count, label]) => `<div class="matrix-cell" data-health="${health}"><strong>${count}</strong><span>${label}</span></div>`).join("")}</div></div></div><div class="matrix-legend">${descriptions.map(([health, count, description]) => `<div class="legend-item" data-health="${health}"><span class="legend-dot" aria-hidden="true"></span><div><strong>${count} cases</strong><p>${description}</p></div></div>`).join("")}</div></div></section>`;
-}
-
-function renderFailureAnalysis(report: Report, id: string): string {
-  const modes = failureModes(report);
-  const maximum = Math.max(...modes.map((mode) => mode.count), 1);
-  return `<section class="report-section" id="${id}">${renderSectionHeader("Top Failure Modes", "Ranked by impact and frequency; passing cases can still surface rank headroom.")}<div class="failure-chart">${modes
-    .map(
-      (mode, index) =>
-        `<div class="failure-row"><span class="failure-label">${escapeHtml(mode.label)}</span><div class="failure-track"><span class="failure-bar tone-${(index % 5) + 1}" style="--bar-size:${Math.max(4, (mode.count / maximum) * 100).toFixed(2)}%"></span></div><span class="failure-count">${mode.count} ${mode.count === 1 ? "case" : "cases"}</span><span class="failure-rate">${percent(mode.rate, 1)}</span></div>`,
-    )
-    .join("")}</div></section>`;
-}
-
-function failureModes(report: Report): FailureMode[] {
-  const counts = new Map<string, number>();
-  for (const item of report.quality.weakestCases) {
-    counts.set(item.reason, (counts.get(item.reason) ?? 0) + 1);
-  }
-  const modes = [...counts.entries()]
-    .map(([label, count]) => ({
-      label,
-      count,
-      rate: report.totalCases === 0 ? 0 : count / report.totalCases,
-    }))
-    .sort(
-      (left, right) =>
-        right.count - left.count || left.label.localeCompare(right.label),
-    )
-    .slice(0, 5);
-  return modes.length > 0
-    ? modes
-    : [{ label: "No failure modes detected", count: 0, rate: 0 }];
+function renderFailureOverview(
+	report: Report,
+	effect: AgentEffectFreshness,
+): string {
+	const failures = report.quality.weakestCases
+		.filter((item) => !item.passed)
+		.slice(0, 5);
+	const description =
+		effect.status === "absent"
+			? "Observed deterministic failures; agent failures are not collected."
+			: "Observed deterministic failures and separately reported agent outcomes.";
+	const worklist =
+		failures.map(renderWorklistCard).join("") ||
+		'<article class="worklist-row" data-health="good"><p>No deterministic retrieval failures in this run.</p></article>';
+	return `<section class="report-section" id="overview-failure-analysis">${renderSectionHeader("Failure Analysis", description, `${report.failedCases} retrieval failures`)}<div class="worklist">${worklist}</div></section>`;
 }
 
 function renderRetrievalPerformance(report: Report, id: string): string {
-  const metrics: Array<[string, string, HealthMetric]> = [
-    ["Pass Rate", percent(report.metrics.passRate, 1), "passRate"],
-    ["Recall@5", report.metrics.pathRecallAt5.toFixed(2), "pathRecallAt5"],
-    ["MRR", report.metrics.mrr.toFixed(2), "mrr"],
-    [
-      "Forbidden Path Accuracy",
-      percent(report.metrics.forbiddenPathAccuracy, 1),
-      "forbiddenPathAccuracy",
-    ],
-    [
-      "p95 Latency",
-      `${Math.round(report.metrics.p95LatencyMs)}ms`,
-      "p95LatencyMs",
-    ],
-  ];
-  return `<section class="report-section" id="${id}">${renderSectionHeader("Retrieval Performance", "High-level retrieval effectiveness metrics.")}<div class="split-grid retrieval-grid"><article class="data-card metric-list">${metrics
-    .map(([label, value, metric]) => {
-      const delta = deltaFor(report, metric);
-      return `<div class="metric-row"><span>${label}${renderInfoButton(metric)}</span><strong>${value}</strong><small data-health="${delta?.severity ?? "good"}">${delta ? formatDeltaMagnitude(delta) : "—"}</small></div>`;
-    })
-    .join(
-      "",
-    )}</article><article class="data-card chart-card" data-eval-chart="recall-funnel"><h3>Recall@K</h3>${renderRecallChart(report)}</article></div></section>`;
+	const cards: ReadonlyArray<readonly [string, string, string, HealthLevel]> = [
+		[
+			"Recall@1",
+			percent(report.metrics.pathRecallAt1),
+			deltaText(report, "pathRecallAt1"),
+			classifyHealth("pathRecallAt1", report.metrics.pathRecallAt1),
+		],
+		[
+			"Recall@3",
+			percent(report.metrics.pathRecallAt3),
+			deltaText(report, "pathRecallAt3"),
+			classifyHealth("pathRecallAt3", report.metrics.pathRecallAt3),
+		],
+		[
+			"Recall@5",
+			percent(report.metrics.pathRecallAt5),
+			deltaText(report, "pathRecallAt5"),
+			classifyHealth("pathRecallAt5", report.metrics.pathRecallAt5),
+		],
+		[
+			"MRR",
+			report.metrics.mrr.toFixed(2),
+			deltaText(report, "mrr"),
+			classifyHealth("mrr", report.metrics.mrr),
+		],
+		[
+			"p95 latency",
+			`${Math.round(report.metrics.p95LatencyMs)}ms`,
+			deltaText(report, "p95LatencyMs"),
+			classifyHealth("p95LatencyMs", report.metrics.p95LatencyMs),
+		],
+		[
+			"Forbidden-path accuracy",
+			percent(report.metrics.forbiddenPathAccuracy),
+			"Safety check",
+			classifyHealth(
+				"forbiddenPathAccuracy",
+				report.metrics.forbiddenPathAccuracy,
+			),
+		],
+	];
+	return `<section class="report-section" id="${id}">${renderSectionHeader("Retrieval Performance", "Actual rank, latency, and safety measurements. Only evaluated ranks are plotted.", `${report.passedCases}/${report.totalCases} deterministic cases passed`)}<div class="kpi-grid">${cards.map(([label, value, note, state]) => `<article class="kpi-card" data-health="${state}"><span>${label}${metricInfo(label)}</span><strong>${value}</strong><small>${escapeHtml(note)}</small></article>`).join("")}</div><div class="detail-grid two-up"><article class="data-card detail-card"><div class="card-heading"><div><span class="card-eyebrow">Rank quality</span><h2>Recall at evaluated ranks</h2></div></div>${renderRecallChart(report)}</article><article class="data-card detail-card"><div class="card-heading"><div><span class="card-eyebrow">Latency</span><h2>Distribution</h2></div></div>${renderBuckets(report.quality.latencyBuckets)}</article></div></section>`;
 }
 
 function renderRecallChart(report: Report): string {
-  const current: ReadonlyArray<readonly [string, number, boolean]> = [
-    ["1", report.metrics.pathRecallAt1, false],
-    ["5", report.metrics.pathRecallAt5, false],
-    ["10", REPORT_DEMO_DATA.retrieval.recallAt10, true],
-    ["20", REPORT_DEMO_DATA.retrieval.recallAt20, true],
-    ["50", REPORT_DEMO_DATA.retrieval.recallAt50, true],
-  ];
-  const baseline: ReadonlyArray<readonly [string, number, boolean]> = [
-    [
-      "1",
-      deltaFor(report, "pathRecallAt1")?.baseline ??
-        report.metrics.pathRecallAt1,
-      false,
-    ],
-    [
-      "5",
-      deltaFor(report, "pathRecallAt5")?.baseline ??
-        report.metrics.pathRecallAt5,
-      false,
-    ],
-    ["10", REPORT_DEMO_DATA.retrieval.baselineAt10, true],
-    ["20", REPORT_DEMO_DATA.retrieval.baselineAt20, true],
-    ["50", REPORT_DEMO_DATA.retrieval.baselineAt50, true],
-  ];
-  const point = (index: number, value: number): [number, number] => [
-    64 + index * 102,
-    28 + (1 - Math.max(0, Math.min(1, value))) * 168,
-  ];
-  const pathFor = (
-    values: ReadonlyArray<readonly [string, number, boolean]>,
-  ): string =>
-    values
-      .map(
-        ([, value], index) =>
-          `${index === 0 ? "M" : "L"}${point(index, value).join(" ")}`,
-      )
-      .join(" ");
-  return `<div class="line-chart"><svg viewBox="0 0 540 240" role="img" aria-label="Recall at ranks one, five, ten, twenty, and fifty compared with baseline; ranks above five are demo projections"><g class="chart-gridlines">${[
-    0, 0.25, 0.5, 0.75, 1,
-  ]
-    .map((value) => {
-      const y = 28 + (1 - value) * 168;
-      return `<line x1="52" y1="${y}" x2="488" y2="${y}"/><text x="8" y="${y + 4}">${value.toFixed(2)}</text>`;
-    })
-    .join(
-      "",
-    )}</g><path class="baseline-line" d="${pathFor(baseline)}"/>${baseline
-    .map(([, value, demo], index) => {
-      const [x, y] = point(index, value);
-      return `<circle class="baseline-point" ${demo ? 'data-source="demo"' : ""} cx="${x}" cy="${y}" r="4"/>`;
-    })
-    .join("")}<path class="current-line" d="${pathFor(current)}"/>${current
-    .map(([label, value, demo], index) => {
-      const [x, y] = point(index, value);
-      return `<circle class="current-point" ${demo ? 'data-source="demo"' : ""} cx="${x}" cy="${y}" r="5"/><text class="axis-label" x="${x}" y="222">${label}</text>`;
-    })
-    .join(
-      "",
-    )}</svg><div class="chart-legend"><span><i class="legend-swatch current"></i>This run</span><span><i class="legend-swatch baseline"></i>Baseline</span><span>${renderDemoBadge()} after K=5</span></div></div>`;
+	const values: ReadonlyArray<readonly [string, number]> = [
+		["1", report.metrics.pathRecallAt1],
+		["3", report.metrics.pathRecallAt3],
+		["5", report.metrics.pathRecallAt5],
+	];
+	const baseline = values.map(
+		([rank, value], index) =>
+			[
+				rank,
+				["pathRecallAt1", "pathRecallAt3", "pathRecallAt5"].map(
+					(metric) => deltaFor(report, metric as HealthMetric)?.baseline,
+				)[index] ?? value,
+			] as const,
+	);
+	const point = (index: number, value: number): [number, number] => [
+		92 + index * 170,
+		28 + (1 - Math.max(0, Math.min(1, value))) * 168,
+	];
+	const path = (series: ReadonlyArray<readonly [string, number]>) =>
+		series
+			.map(
+				([, value], index) =>
+					`${index === 0 ? "M" : "L"}${point(index, value).join(" ")}`,
+			)
+			.join(" ");
+	return `<div class="line-chart"><svg viewBox="0 0 540 240" role="img" aria-label="Measured recall at ranks one, three, and five compared with the deterministic baseline"><g class="chart-gridlines">${[
+		0, 0.25, 0.5, 0.75, 1,
+	]
+		.map((value) => {
+			const y = 28 + (1 - value) * 168;
+			return `<line x1="52" y1="${y}" x2="488" y2="${y}"/><text x="8" y="${y + 4}">${value.toFixed(2)}</text>`;
+		})
+		.join("")}</g><path class="baseline-line" d="${path(baseline)}"/>${baseline
+		.map(([, value], index) => {
+			const [x, y] = point(index, value);
+			return `<circle class="baseline-point" cx="${x}" cy="${y}" r="4"/>`;
+		})
+		.join("")}<path class="current-line" d="${path(values)}"/>${values
+		.map(([label, value], index) => {
+			const [x, y] = point(index, value);
+			return `<circle class="current-point" cx="${x}" cy="${y}" r="5"/><text class="axis-label" x="${x}" y="222">${label}</text>`;
+		})
+		.join(
+			"",
+		)}</svg><div class="chart-legend"><span><i class="legend-swatch current"></i>This run</span><span><i class="legend-swatch baseline"></i>Baseline</span></div></div>`;
 }
 
-function renderAnswerQuality(id: string): string {
-  const answer = REPORT_DEMO_DATA.answer;
-  return `<section class="report-section" id="${id}" data-source="demo">${renderSectionHeader("Answer Quality", "Claim-level faithfulness and hallucination analysis.", renderDemoBadge())}<div class="split-grid answer-grid"><article class="data-card donut-card"><h3>Claim Disposition</h3><div class="donut-layout">${renderDispositionDonut()}<div class="donut-legend">${answer.claimDisposition.map((item) => `<div><span><i data-health="${item.health}"></i>${item.label}</span><strong>${percent(item.value, 1)}</strong></div>`).join("")}</div></div></article><article class="data-card taxonomy-card"><h3>Hallucination Taxonomy (Top)</h3>${answer.hallucinationTaxonomy.map((item) => `<div><span>${item.label}</span><strong>${item.count}</strong></div>`).join("")}</article></div></section>`;
-}
-
-function renderDispositionDonut(): string {
-  let offset = 0;
-  const segments = REPORT_DEMO_DATA.answer.claimDisposition
-    .map((item) => {
-      const amount = item.value * 100;
-      const segment = `<circle data-health="${item.health}" cx="60" cy="60" r="44" pathLength="100" stroke-dasharray="${amount} ${100 - amount}" stroke-dashoffset="${-offset}"/>`;
-      offset += amount;
-      return segment;
-    })
-    .join("");
-  return `<svg class="donut-chart" viewBox="0 0 120 120" role="img" aria-label="Demo claim disposition chart"><circle class="donut-track" cx="60" cy="60" r="44"/>${segments}<text x="60" y="57">DEMO</text><text class="donut-total" x="60" y="72">100%</text></svg>`;
+function renderBuckets(
+	buckets: readonly {
+		readonly label: string;
+		readonly count: number;
+		readonly rate: number;
+	}[],
+): string {
+	return `<div class="taxonomy-bars">${buckets.map((bucket) => `<div class="taxonomy-bar-row"><span>${escapeHtml(bucket.label)}</span><div class="micro-track"><i style="--micro-size:${bucket.rate * 100}%"></i></div><strong>${bucket.count}</strong><small>${percent(bucket.rate)}</small></div>`).join("")}</div>`;
 }
 
 function renderExplorer(report: Report): string {
-  const categories = optionList(
-    unique(report.cases.map((testCase) => testCase.category)),
-  );
-  const profiles = optionList(
-    unique(report.cases.map((testCase) => testCase.profile ?? "unknown")),
-  );
-  const risks = optionList(
-    unique(report.cases.map((testCase) => testCase.riskArea ?? "unknown")),
-  );
-  const selected = report.cases[0];
-  return `<section class="tab-panel" id="case-explorer" data-report-tab="case-explorer" hidden>${renderStandaloneHeader("Case Explorer", "Inspect individual queries, layer outcomes, retrieved evidence, and failure diagnosis.")}<div class="case-workspace"><aside class="data-card case-browser"><div class="case-browser-controls" role="search"><div class="control search-control"><label for="case-search">Search cases</label><input id="case-search" type="search" placeholder="Query, path, profile, or case ID" /></div><div class="case-filter-row"><div class="control"><label for="filter-category">Category</label><select id="filter-category"><option value="">All</option>${categories}</select></div><div class="control"><label for="filter-profile">Profile</label><select id="filter-profile"><option value="">All</option>${profiles}</select></div></div><div class="case-filter-row"><div class="control"><label for="filter-risk">Risk</label><select id="filter-risk"><option value="">All</option>${risks}</select></div><div class="control"><label for="case-sort">Sort</label><select id="case-sort"><option value="weakest">Weakest rank</option><option value="recallAt5">Recall@5</option><option value="mrr">MRR</option><option value="latency">Latency</option><option value="ranked">Ranked hits</option><option value="id">Case ID</option></select></div></div><button id="clear-filters" type="button">Clear filters</button></div><div class="case-browser-summary"><span><strong id="visible-count">${report.cases.length}</strong> / ${report.cases.length} cases</span><span>Page 1</span></div><div id="empty-state" class="empty">No cases match these filters. <button type="button" data-clear-filters>Clear filters</button></div><div id="case-list" class="case-list compact-list">${report.cases.map((testCase, index) => renderCaseCard(testCase, index === 0)).join("")}</div><div class="case-pagination"><button type="button" disabled>Previous</button><span>1 of 1</span><button type="button" disabled>Next</button></div></aside><article class="data-card case-inspector">${selected ? renderSelectedCase(selected) : `<div class="case-detail-empty"><strong>No cases in this dataset.</strong><p>Add a case to the dataset and regenerate the report.</p></div>`}</article></div></section>`;
+	const categories = optionList(
+		unique(report.cases.map((item) => item.category)),
+	);
+	const profiles = optionList(
+		unique(report.cases.map((item) => item.profile ?? "unknown")),
+	);
+	const risks = optionList(
+		unique(report.cases.map((item) => item.riskArea ?? "unknown")),
+	);
+	const selected = report.cases[0];
+	return `<section class="tab-panel" id="case-explorer" data-report-tab="case-explorer" hidden>${renderStandaloneHeader("Case Explorer", "Inspect individual deterministic retrieval queries, ranked evidence, and observed failures.")}<div class="case-workspace"><aside class="data-card case-browser"><div class="case-browser-controls" role="search"><div class="control search-control"><label for="case-search">Search cases</label><input id="case-search" type="search" placeholder="Query, path, profile, or case ID" /></div><div class="case-filter-row"><div class="control"><label for="filter-category">Category</label><select id="filter-category"><option value="">All</option>${categories}</select></div><div class="control"><label for="filter-profile">Profile</label><select id="filter-profile"><option value="">All</option>${profiles}</select></div></div><div class="case-filter-row"><div class="control"><label for="filter-risk">Risk</label><select id="filter-risk"><option value="">All</option>${risks}</select></div><div class="control"><label for="case-sort">Sort</label><select id="case-sort"><option value="weakest">Weakest rank</option><option value="recallAt5">Recall@5</option><option value="mrr">MRR</option><option value="latency">Latency</option><option value="ranked">Ranked hits</option><option value="id">Case ID</option></select></div></div><button id="clear-filters" type="button">Clear filters</button></div><div class="case-browser-summary"><span><strong id="visible-count">${report.cases.length}</strong> / ${report.cases.length} cases</span><span>Page 1</span></div><div id="empty-state" class="empty">No cases match these filters. <button type="button" data-clear-filters>Clear filters</button></div><div id="case-list" class="case-list compact-list">${report.cases.map((item, index) => renderCaseCard(item, index === 0)).join("")}</div><div class="case-pagination"><button type="button" disabled>Previous</button><span>1 of 1</span><button type="button" disabled>Next</button></div></aside><article class="data-card case-inspector">${selected === undefined ? '<div class="case-detail-empty"><strong>No cases in this dataset.</strong></div>' : renderSelectedCase(selected)}</article></div></section>`;
 }
 
-function optionList(values: string[]): string {
-  return values
-    .map(
-      (value) =>
-        `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`,
-    )
-    .join("");
+function renderCaseCard(item: CaseResult, selected: boolean): string {
+	const state = caseHealth(item);
+	const status = !item.passed
+		? "fail"
+		: item.retrieval.recallAt5 < 1
+			? "rank headroom"
+			: "pass";
+	return `<button type="button" class="case-card compact-case${selected ? " selected" : ""}" data-case-card data-case-select="${escapeHtml(item.id)}" data-health="${state}" data-id="${escapeHtml(item.id)}" data-category="${escapeHtml(item.category)}" data-profile="${escapeHtml(item.profile ?? "unknown")}" data-risk="${escapeHtml(item.riskArea ?? "unknown")}" data-recall="${item.retrieval.recallAt5}" data-mrr="${item.retrieval.reciprocalRank}" data-latency="${item.latencyMs}" data-ranked="${item.rankedCount}" data-search="${escapeHtml(caseSearchText(item))}"><span class="compact-case-head"><strong>${escapeHtml(item.id)}</strong><span class="table-pill ${state}">${escapeHtml(status)}</span></span><span class="compact-case-title">${escapeHtml(caseSummary(item))}</span><span class="compact-case-metrics"><span>R@5 ${percent(item.retrieval.recallAt5)}</span><span>MRR ${item.retrieval.reciprocalRank.toFixed(2)}</span><span>${item.latencyMs}ms</span></span></button>`;
 }
 
-function unique(values: string[]): string[] {
-  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+function renderSelectedCase(item: CaseResult): string {
+	const state = caseHealth(item);
+	const evidence = item.topPaths
+		.slice(0, 6)
+		.map(
+			(path, index) =>
+				`<tr><td>${index + 1}</td><td><code>${escapeHtml(path)}</code></td></tr>`,
+		)
+		.join("");
+	return `<div class="case-inspector-header"><div><span class="card-eyebrow">Selected case</span><h2 id="case-detail-id">${escapeHtml(item.id)}</h2><p id="case-detail-category">${escapeHtml(item.category)} · ${escapeHtml(item.profile ?? "unknown")}</p></div><span id="case-detail-status" class="table-pill ${state}">${item.passed ? "Pass" : "Fail"}</span></div><div class="case-detail-tabs" role="tablist"><button type="button" role="tab" aria-selected="true">Overview</button><button type="button" role="tab" aria-selected="false">Retrieval</button><button type="button" role="tab" aria-selected="false">Diagnostics</button><button type="button" role="tab" aria-selected="false">Metadata</button></div><div class="case-detail-body"><section class="case-copy-block"><span>Query</span><p id="case-detail-query">${escapeHtml(item.query)}</p></section><section class="case-copy-block"><span>Expected behavior</span><p id="case-detail-expected">${escapeHtml(item.expectedBehavior ?? "Required paths and terms present; forbidden paths absent; no-result behavior correct when expected.")}</p></section><section class="case-detail-section"><div class="case-section-heading"><span>Evaluation layers</span><h3>Deterministic result</h3></div><div class="case-layer-grid"><article><span>Pass</span><strong id="case-detail-pass">${item.passed ? "Passed" : "Failed"}</strong></article><article><span>Recall@5</span><strong id="case-detail-recall">${percent(item.retrieval.recallAt5)}</strong></article><article><span>MRR</span><strong id="case-detail-mrr">${item.retrieval.reciprocalRank.toFixed(2)}</strong></article><article><span>Latency</span><strong id="case-detail-latency">${item.latencyMs}ms</strong></article></div></section><section class="case-evidence-section"><div class="card-heading"><div><span class="card-eyebrow">Retrieval evidence</span><h3>Ranked Sources</h3></div><span>${item.topPaths.length} paths</span></div><div class="table-wrap"><table><thead><tr><th>Rank</th><th>Path</th></tr></thead><tbody id="case-detail-evidence">${evidence}</tbody></table></div></section><section class="case-detail-section"><div class="diagnosis-box"><strong>Observed result</strong><p id="case-detail-diagnosis">${escapeHtml(caseDiagnosis(item))}</p></div><dl class="case-metadata-grid"><div><dt>Risk area</dt><dd id="case-detail-risk">${escapeHtml(item.riskArea ?? "unknown")}</dd></div><div><dt>Feature</dt><dd id="case-detail-feature">${escapeHtml(item.feature ?? "unknown")}</dd></div><div><dt>Priority</dt><dd id="case-detail-priority">${escapeHtml(item.priority ?? "unknown")}</dd></div><div><dt>Ranked hits</dt><dd id="case-detail-ranked">${item.rankedCount}</dd></div></dl></section></div>`;
 }
 
-function renderCaseCard(testCase: CaseResult, selected: boolean): string {
-  const health = caseHealth(testCase);
-  const status = !testCase.passed
-    ? "fail"
-    : testCase.retrieval.recallAt5 < 1
-      ? "rank headroom"
-      : "pass";
-  return `<button type="button" class="case-card compact-case${selected ? " selected" : ""}" data-case-card data-case-select="${escapeHtml(testCase.id)}" data-health="${health}" data-id="${escapeHtml(testCase.id)}" data-category="${escapeHtml(testCase.category)}" data-profile="${escapeHtml(testCase.profile ?? "unknown")}" data-risk="${escapeHtml(testCase.riskArea ?? "unknown")}" data-recall="${testCase.retrieval.recallAt5}" data-mrr="${testCase.retrieval.reciprocalRank}" data-latency="${testCase.latencyMs}" data-ranked="${testCase.rankedCount}" data-search="${escapeHtml(caseSearchText(testCase))}"><span class="compact-case-head"><strong>${escapeHtml(testCase.id)}</strong><span class="table-pill ${health}">${escapeHtml(status)}</span></span><span class="compact-case-title">${escapeHtml(caseSummary(testCase))}</span><span class="compact-case-metrics"><span>R@5 ${percent(testCase.retrieval.recallAt5)}</span><span>MRR ${testCase.retrieval.reciprocalRank.toFixed(2)}</span><span>${testCase.latencyMs}ms</span></span></button>`;
-}
-
-function renderSelectedCase(testCase: CaseResult): string {
-  const health = caseHealth(testCase);
-  const diagnosis = testCase.passed
-    ? testCase.retrieval.recallAt5 < 1
-      ? "Deterministic expectations passed, but known-good evidence has ranking headroom."
-      : "The case passed deterministic retrieval expectations with strong evidence placement."
-    : "One or more deterministic expectations failed. Inspect missing fields and diagnostics in the machine-readable report.";
-  const evidenceRows = testCase.topPaths
-    .slice(0, 6)
-    .map((path, index) => {
-      const relevance = Math.max(18, 96 - index * 13);
-      return `<tr><td>${index + 1}</td><td><code>${escapeHtml(path)}</code></td><td><div class="relevance-meter"><i style="--relevance:${relevance}%"></i><span>${relevance}%</span></div></td></tr>`;
-    })
-    .join("");
-  return `<div class="case-inspector-header"><div><span class="card-eyebrow">Selected case</span><h2 id="case-detail-id">${escapeHtml(testCase.id)}</h2><p id="case-detail-category">${escapeHtml(testCase.category)} · ${escapeHtml(testCase.profile ?? "unknown")}</p></div><span id="case-detail-status" class="table-pill ${health}">${testCase.passed ? "Pass" : "Fail"}</span></div><div class="case-detail-tabs" role="tablist" aria-label="Case details"><button type="button" role="tab" aria-selected="true">Overview</button><button type="button" role="tab" aria-selected="false">Retrieval</button><button type="button" role="tab" aria-selected="false">Diagnostics</button><button type="button" role="tab" aria-selected="false">Metadata</button></div><div class="case-detail-body"><section class="case-copy-block"><span>Query</span><p id="case-detail-query">${escapeHtml(testCase.query)}</p></section><section class="case-copy-block"><span>Expected behavior</span><p id="case-detail-expected">${escapeHtml(testCase.expectedBehavior ?? "Required paths and terms present; forbidden paths absent; no-result behavior correct when expected.")}</p></section><section class="case-copy-block"><span>Claim</span><p id="case-detail-claim">${escapeHtml(testCase.claim ?? "No answer-level claim is attached to this retrieval case.")}</p></section><section class="case-detail-section"><div class="case-section-heading"><span>Evaluation layers</span><h3>Layer Results</h3></div><div class="case-layer-grid"><article><span>Deterministic</span><strong id="case-detail-pass">${testCase.passed ? "Passed" : "Failed"}</strong></article><article><span>Recall@5</span><strong id="case-detail-recall">${percent(testCase.retrieval.recallAt5)}</strong></article><article><span>MRR</span><strong id="case-detail-mrr">${testCase.retrieval.reciprocalRank.toFixed(2)}</strong></article><article><span>Latency</span><strong id="case-detail-latency">${testCase.latencyMs}ms</strong></article></div></section><section class="case-evidence-section"><div class="card-heading"><div><span class="card-eyebrow">Retrieval evidence</span><h3>Ranked Sources</h3></div><span>${testCase.topPaths.length} paths</span></div><div class="table-wrap"><table><thead><tr><th>Rank</th><th>Path</th><th>Relevance</th></tr></thead><tbody id="case-detail-evidence">${evidenceRows}</tbody></table></div></section><section class="case-detail-section"><div class="case-section-heading"><span>Case outcome</span><h3>Summary</h3></div><div class="diagnosis-box"><strong>Diagnosis</strong><p id="case-detail-diagnosis">${escapeHtml(diagnosis)}</p></div><dl class="case-metadata-grid"><div><dt>Risk area</dt><dd id="case-detail-risk">${escapeHtml(testCase.riskArea ?? "unknown")}</dd></div><div><dt>Feature</dt><dd id="case-detail-feature">${escapeHtml(testCase.feature ?? "unknown")}</dd></div><div><dt>Priority</dt><dd id="case-detail-priority">${escapeHtml(testCase.priority ?? "unknown")}</dd></div><div><dt>Ranked hits</dt><dd id="case-detail-ranked">${testCase.rankedCount}</dd></div></dl></section></div>`;
-}
 function renderCoverageAnalysis(report: Report): string {
-  return `<section class="tab-panel" id="coverage-analysis" data-report-tab="coverage-analysis" hidden>${renderStandaloneHeader("Coverage Analysis", "Capability distribution, risk coverage, and the cases with the most retrieval headroom.")}<div class="report-section coverage-detail"><div class="data-card coverage-card" data-eval-chart="coverage-heatmap"><div class="coverage-toolbar"><h2 id="quality-title">Quality by capability</h2><select id="quality-group" aria-label="Change coverage heatmap group"><option value="byCapability">Capability</option><option value="byRiskArea">Risk area</option><option value="byProfile">Profile</option><option value="byCategory">Category</option><option value="byPriority">Priority</option><option value="byCoverageType">Coverage type</option></select></div><div id="quality-heatmap" class="heatmap">${renderHeatmap(report.quality.byCapability)}</div></div><div class="data-card worklist-card"><h2>Ranking worklist</h2><p class="muted">Cases below passed deterministic gates but known-good evidence was missing from the top five, not ranked first, or slow.</p><div class="worklist">${report.quality.weakestCases.map(renderWorklistCard).join("")}</div></div></div></section>`;
+	return `<section class="tab-panel" id="coverage-analysis" data-report-tab="coverage-analysis" hidden>${renderStandaloneHeader("Coverage Analysis", "Capability distribution and cases with the most retrieval headroom.")}<div class="report-section coverage-detail"><div class="data-card coverage-card"><div class="coverage-toolbar"><h2 id="quality-title">Quality by capability</h2><select id="quality-group" aria-label="Change coverage heatmap group"><option value="byCapability">Capability</option><option value="byRiskArea">Risk area</option><option value="byProfile">Profile</option><option value="byCategory">Category</option><option value="byPriority">Priority</option><option value="byCoverageType">Coverage type</option></select></div><div id="quality-heatmap" class="heatmap">${renderHeatmap(report.quality.byCapability)}</div></div><div class="data-card worklist-card"><h2>Ranking worklist</h2><p class="muted">Cases with deterministic failures, missing top-five evidence, or slower retrieval.</p><div class="worklist">${report.quality.weakestCases.map(renderWorklistCard).join("")}</div></div></div></section>`;
 }
 
 function renderHeatmap(group: Record<string, QualityGroupSummary>): string {
-  return Object.entries(group)
-    .map(([name, value]) => {
-      const health = heatmapHealth(value);
-      return `<article class="heat" data-health="${health}"><strong>${escapeHtml(name)}</strong><span>${value.passed}/${value.total} pass</span><small>R@5 ${percent(value.recallAt5)} · MRR ${value.mrr.toFixed(2)} · p95 ${Math.round(value.p95LatencyMs)}ms</small><div class="pillrow">${value.weakestCases.map((id) => `<span class="pill">${escapeHtml(id)}</span>`).join("")}</div></article>`;
-    })
-    .join("");
+	return Object.entries(group)
+		.map(
+			([name, value]) =>
+				`<article class="heat" data-health="${heatmapHealth(value)}"><strong>${escapeHtml(name)}</strong><span>${value.passed}/${value.total} pass</span><small>R@5 ${percent(value.recallAt5)} · MRR ${value.mrr.toFixed(2)} · p95 ${Math.round(value.p95LatencyMs)}ms</small><div class="pillrow">${value.weakestCases.map((id) => `<span class="pill">${escapeHtml(id)}</span>`).join("")}</div></article>`,
+		)
+		.join("");
 }
-
-function heatmapHealth(value: QualityGroupSummary): HealthLevel {
-  const levels = [
-    classifyHealth("pathRecallAt5", value.recallAt5),
-    classifyHealth("mrr", value.mrr),
-    classifyHealth("passRate", value.passRate),
-  ];
-  return levels.includes("bad")
-    ? "bad"
-    : levels.includes("warn")
-      ? "warn"
-      : "good";
-}
-
 function renderWorklistCard(item: WeakCaseSummary): string {
-  const health: HealthLevel =
-    !item.passed ||
-    item.recallAt5 < 0.5 ||
-    item.bestExpectedPathRank === undefined
-      ? "bad"
-      : "warn";
-  return `<article class="worklist-row" data-health="${health}"><div><strong>${escapeHtml(item.id)}</strong><span>${escapeHtml(item.category)}</span></div><p>${escapeHtml(item.reason)}</p><span class="numeric">R@5 ${percent(item.recallAt5)} · MRR ${item.mrr.toFixed(2)} · ${item.latencyMs}ms</span></article>`;
+	const state: HealthLevel =
+		!item.passed ||
+		item.recallAt5 < 0.5 ||
+		item.bestExpectedPathRank === undefined
+			? "bad"
+			: "warn";
+	return `<article class="worklist-row" data-health="${state}"><div><strong>${escapeHtml(item.id)}</strong><span>${escapeHtml(item.category)}</span></div><p>${escapeHtml(item.reason)}</p><span class="numeric">R@5 ${percent(item.recallAt5)} · MRR ${item.mrr.toFixed(2)} · ${item.latencyMs}ms</span></article>`;
 }
-
-function renderStandaloneHeader(
-  title: string,
-  description: string,
-  demo = false,
-): string {
-  return `<header class="tab-page-header"><div><span class="eyebrow">Atlas evaluation report</span><h1>${title}</h1><p>${description}</p></div>${demo ? renderDemoBadge() : ""}</header>`;
+function renderStandaloneHeader(title: string, description: string): string {
+	return `<header class="tab-page-header"><div><span class="eyebrow">Atlas evaluation report</span><h1>${escapeHtml(title)}</h1><p>${escapeHtml(description)}</p></div></header>`;
 }
-
 function renderSectionHeader(
-  title: string,
-  description: string,
-  aside = "",
+	title: string,
+	description: string,
+	aside = "",
 ): string {
-  return `<div class="section-title"><div><h2>${title}</h2><p>${description}</p></div>${aside ? `<div class="section-aside">${aside}</div>` : ""}</div>`;
+	return `<div class="section-title"><div><h2>${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p></div>${aside ? `<div class="section-aside">${escapeHtml(aside)}</div>` : ""}</div>`;
 }
-
-function renderInfoButton(metric: HealthMetric): string {
-  return `<button type="button" class="info-btn" data-info-metric="${metric}" aria-label="What is ${escapeHtml(METRIC_GLOSSARY[metric].label)}?">i</button>`;
+function metricInfo(label: string): string {
+	const metric = Object.entries(METRIC_GLOSSARY).find(
+		([, value]) => value.label === label,
+	)?.[0] as HealthMetric | undefined;
+	return metric === undefined
+		? ""
+		: `<button type="button" class="info-btn" data-info-metric="${metric}" aria-label="What is ${escapeHtml(label)}?">i</button>`;
 }
-
-function renderDemoBadge(): string {
-  return `<span class="demo-badge">Demo data</span>`;
+function runtimeLabel(report: Report): string {
+	return report.runtime.source === "repo-local-artifact"
+		? "repo-local artifact"
+		: "local configured corpus";
 }
-
-function statusGlyph(level: HealthLevel): string {
-  if (level === "good") return "✓";
-  if (level === "warn") return "!";
-  return "×";
+function criterion(
+	pair: Exclude<
+		AgentEffectFreshness,
+		{ status: "absent" }
+	>["snapshot"]["pairs"][number],
+	id: string,
+): boolean {
+	return (
+		pair.judge.treatment.criteria.find((item) => item.id === id)?.passed ===
+		true
+	);
 }
-
-function healthLabel(level: HealthLevel | "neutral"): string {
-  if (level === "good") return "Pass";
-  if (level === "warn") return "Warn";
-  if (level === "bad") return "Fail";
-  return "Neutral";
+function thresholdValue(result: ReportThresholdResult, value: number): string {
+	return result.metric === "p95LatencyMs" ||
+		result.metric === "averageLatencyMs"
+		? `${Math.round(value)}ms`
+		: result.metric === "mrr"
+			? value.toFixed(2)
+			: percent(value, 1);
 }
-
-function caseHealth(testCase: CaseResult): HealthLevel {
-  if (!testCase.passed || testCase.retrieval.recallAt5 < 0.5) return "bad";
-  if (
-    testCase.retrieval.recallAt5 < 1 ||
-    (testCase.retrieval.bestExpectedPathRank ?? 1) > 3
-  )
-    return "warn";
-  return "good";
+function isHealthMetric(
+	metric: ReportThresholdResult["metric"],
+): metric is HealthMetric {
+	return metric in HEALTH_THRESHOLDS;
 }
-
-function caseSummary(testCase: CaseResult): string {
-  if (testCase.expectedBehavior) return testCase.expectedBehavior;
-  if (testCase.claim) return testCase.claim;
-  return `Query: ${testCase.query}`;
-}
-
-function caseSearchText(testCase: CaseResult): string {
-  return [
-    testCase.id,
-    testCase.category,
-    testCase.profile,
-    testCase.feature,
-    testCase.riskArea,
-    testCase.priority,
-    testCase.coverageType,
-    testCase.claim,
-    testCase.whyItMatters,
-    testCase.expectedBehavior,
-    testCase.query,
-    ...testCase.topPaths,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-}
-
 function deltaFor(
-  report: Report,
-  metric: HealthMetric,
+	report: Report,
+	metric: HealthMetric,
 ): MetricDeltaEntry | undefined {
-  return report.deltas?.entries.find((entry) => entry.metric === metric);
+	return report.deltas?.entries.find((entry) => entry.metric === metric);
 }
-
-function formatDeltaMagnitude(delta: MetricDeltaEntry): string {
-  const sign = delta.delta > 0 ? "+" : "";
-  if (delta.metric === "p95LatencyMs" || delta.metric === "averageLatencyMs") {
-    return `${sign}${Math.round(delta.delta)}ms`;
-  }
-  if (delta.metric === "mrr") return `${sign}${delta.delta.toFixed(2)}`;
-  return `${sign}${(delta.delta * 100).toFixed(1)}pp`;
+function deltaText(report: Report, metric: HealthMetric): string {
+	const delta = deltaFor(report, metric);
+	if (delta === undefined) return "No baseline";
+	if (metric === "p95LatencyMs" || metric === "averageLatencyMs")
+		return `${delta.delta >= 0 ? "+" : ""}${Math.round(delta.delta)}ms`;
+	if (metric === "mrr")
+		return `${delta.delta >= 0 ? "+" : ""}${delta.delta.toFixed(2)}`;
+	return signedPoints(delta.delta);
 }
-
-function signedPercentagePoints(value: number): string {
-  return `${value > 0 ? "+" : ""}${(value * 100).toFixed(1)}pp`;
+function signedPoints(value: number): string {
+	return `${value >= 0 ? "+" : ""}${(value * 100).toFixed(1)}pp`;
 }
-
-function signedNumber(value: number): string {
-  return `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
-}
-
-function formatMetric(metric: HealthMetric, value: number): string {
-  if (metric === "p95LatencyMs" || metric === "averageLatencyMs")
-    return `${Math.round(value)}ms`;
-  if (metric === "mrr") return value.toFixed(2);
-  return percent(value, 1);
-}
-
 function percent(value: number, digits = 0): string {
-  return `${(value * 100).toFixed(digits)}%`;
+	return `${(value * 100).toFixed(digits)}%`;
 }
-
+function health(value: number): HealthLevel {
+	return value >= 0.9 ? "good" : value >= 0.7 ? "warn" : "bad";
+}
+function healthLabel(level: HealthLevel | "neutral"): string {
+	return level === "good"
+		? "Pass"
+		: level === "warn"
+			? "Warn"
+			: level === "bad"
+				? "Fail"
+				: "Info";
+}
+function statusGlyph(level: HealthLevel): string {
+	return level === "good" ? "✓" : level === "warn" ? "!" : "×";
+}
+function caseHealth(item: CaseResult): HealthLevel {
+	return !item.passed || item.retrieval.recallAt5 < 0.5
+		? "bad"
+		: item.retrieval.recallAt5 < 1 ||
+			  (item.retrieval.bestExpectedPathRank ?? 1) > 3
+			? "warn"
+			: "good";
+}
+function heatmapHealth(value: QualityGroupSummary): HealthLevel {
+	const states = [
+		classifyHealth("pathRecallAt5", value.recallAt5),
+		classifyHealth("mrr", value.mrr),
+		classifyHealth("passRate", value.passRate),
+	];
+	return states.includes("bad")
+		? "bad"
+		: states.includes("warn")
+			? "warn"
+			: "good";
+}
+function caseSummary(item: CaseResult): string {
+	return item.expectedBehavior ?? item.claim ?? `Query: ${item.query}`;
+}
+function caseDiagnosis(item: CaseResult): string {
+	return item.passed
+		? item.retrieval.recallAt5 < 1
+			? "Deterministic expectations passed, but known-good evidence has ranking headroom."
+			: "The case passed deterministic retrieval expectations."
+		: "One or more deterministic expectations failed; inspect the machine-readable report for missing evidence and diagnostics.";
+}
+function caseSearchText(item: CaseResult): string {
+	return [
+		item.id,
+		item.category,
+		item.profile,
+		item.feature,
+		item.riskArea,
+		item.priority,
+		item.coverageType,
+		item.claim,
+		item.expectedBehavior,
+		item.query,
+		...item.topPaths,
+	]
+		.filter(Boolean)
+		.join(" ")
+		.toLowerCase();
+}
+function optionList(values: string[]): string {
+	return values
+		.map(
+			(value) =>
+				`<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`,
+		)
+		.join("");
+}
+function unique(values: string[]): string[] {
+	return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+}
 function formatTimestamp(value: string): string {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return `${parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })} ${parsed.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
+	const parsed = new Date(value);
+	return Number.isNaN(parsed.getTime())
+		? value
+		: `${parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })} ${parsed.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
 }
-
 function reportClientData(report: Report): unknown {
-  return {
-    quality: report.quality,
-    narrative: report.narrative,
-    glossary: METRIC_GLOSSARY,
-    thresholds: HEALTH_THRESHOLDS,
-    metrics: report.metrics,
-    ...(report.deltas === undefined ? {} : { deltas: report.deltas }),
-    cases: report.cases.map((testCase) => ({
-      id: testCase.id,
-      category: testCase.category,
-      profile: testCase.profile ?? "unknown",
-      feature: testCase.feature ?? "unknown",
-      riskArea: testCase.riskArea ?? "unknown",
-      priority: testCase.priority ?? "unknown",
-      passed: testCase.passed,
-      query: testCase.query,
-      claim: testCase.claim,
-      expectedBehavior: testCase.expectedBehavior,
-      scores: testCase.scores,
-      retrieval: testCase.retrieval,
-      missing: testCase.missing,
-      topPaths: testCase.topPaths.slice(0, 12),
-      latencyMs: testCase.latencyMs,
-      cliLatencyMs: testCase.cliLatencyMs,
-      rankedCount: testCase.rankedCount,
-    })),
-  };
+	return {
+		quality: report.quality,
+		narrative: report.narrative,
+		glossary: METRIC_GLOSSARY,
+		thresholds: HEALTH_THRESHOLDS,
+		metrics: report.metrics,
+		...(report.deltas === undefined ? {} : { deltas: report.deltas }),
+		cases: report.cases.map((item) => ({
+			id: item.id,
+			category: item.category,
+			profile: item.profile ?? "unknown",
+			feature: item.feature ?? "unknown",
+			riskArea: item.riskArea ?? "unknown",
+			priority: item.priority ?? "unknown",
+			passed: item.passed,
+			query: item.query,
+			claim: item.claim,
+			expectedBehavior: item.expectedBehavior,
+			scores: item.scores,
+			retrieval: item.retrieval,
+			missing: item.missing,
+			topPaths: item.topPaths.slice(0, 12),
+			latencyMs: item.latencyMs,
+			cliLatencyMs: item.cliLatencyMs,
+			rankedCount: item.rankedCount,
+		})),
+	};
 }
-
 function safeJson(value: unknown): string {
-  return JSON.stringify(value)
-    .replace(/</g, "\\u003c")
-    .replace(/\u2028/g, "\\u2028")
-    .replace(/\u2029/g, "\\u2029");
+	return JSON.stringify(value)
+		.replace(/</g, "\\u003c")
+		.replace(/\u2028/g, "\\u2028")
+		.replace(/\u2029/g, "\\u2029");
 }
-
 function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+	return value
+		.replaceAll("&", "&amp;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("'", "&#039;");
 }
