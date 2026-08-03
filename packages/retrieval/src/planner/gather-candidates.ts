@@ -39,16 +39,47 @@ export function gatherCandidates(
   try {
     const candidates: RetrievalCandidate[] = [];
     const expandedQuery = context.expandedQuery;
-    const lexicalQuery = toLexicalQuery(expandedQuery);
-
-    if (lexicalQuery.length > 0) {
-      const lexicalHits = store.lexicalSearch({
+    const lexicalQuery = toLexicalQuery(context.query);
+    const expandedLexicalQuery = toLexicalQuery(expandedQuery);
+    const useAtlasVocabulary = shouldUseAtlasVocabulary(context.repoId);
+    let useExpandedRetrieval = lexicalQuery.length === 0;
+    let lexicalHits =
+      lexicalQuery.length === 0
+        ? []
+        : store.lexicalSearch({
         query: lexicalQuery,
         repoId: context.repoId,
         limit: context.candidateLimit,
         filters: context.filters,
       });
-      const lexicalScores = normalizedLexicalScores(lexicalHits);
+    let lexicalScores = normalizedLexicalScores(lexicalHits);
+    if (
+      (lexicalHits.length < Math.min(context.candidateLimit, 3) ||
+        useAtlasVocabulary) &&
+      expandedLexicalQuery.length > 0 &&
+      expandedLexicalQuery !== lexicalQuery
+    ) {
+      useExpandedRetrieval = true;
+      const expandedHits = store.lexicalSearch({
+        query: expandedLexicalQuery,
+        repoId: context.repoId,
+        limit: context.candidateLimit,
+        filters: context.filters,
+      });
+      lexicalScores = mergeLexicalScores(
+        lexicalScores,
+        normalizedLexicalScores(expandedHits),
+      );
+      lexicalHits = mergeLexicalHits(
+        lexicalHits,
+        expandedHits,
+        useAtlasVocabulary
+          ? context.candidateLimit * 2
+          : context.candidateLimit,
+      );
+    }
+
+    if (lexicalHits.length > 0) {
       for (const hit of lexicalHits) {
         const hydrated = candidateFromLexicalHit({
           store,
@@ -69,7 +100,11 @@ export function gatherCandidates(
       }
     }
 
-    for (const signal of pathSignals(context.query, expandedQuery)) {
+    for (const signal of pathSignals(
+      context.query,
+      expandedQuery,
+      useExpandedRetrieval,
+    )) {
       for (const document of store.pathSearch({
         path: signal.path,
         mode: signal.path.includes("/") ? "contains" : "prefix",
@@ -306,6 +341,39 @@ function normalizedLexicalScores(
   return scores;
 }
 
+function shouldUseAtlasVocabulary(repoId: string | undefined): boolean {
+  return repoId === "atlas" || repoId === "github.com/moxellabs/atlas";
+}
+
+function mergeLexicalScores(
+  primary: ReadonlyMap<string, number>,
+  expanded: ReadonlyMap<string, number>,
+): ReadonlyMap<string, number> {
+  const scores = new Map(primary);
+  for (const [key, score] of expanded) {
+    scores.set(key, Math.max(score, scores.get(key) ?? 0));
+  }
+  return scores;
+}
+
+function mergeLexicalHits(
+  primary: readonly LexicalSearchHit[],
+  expanded: readonly LexicalSearchHit[],
+  limit: number,
+): LexicalSearchHit[] {
+  const merged = new Map<string, LexicalSearchHit>();
+  for (const hit of [...primary, ...expanded]) {
+    const key = lexicalHitKey(hit);
+    if (!merged.has(key)) {
+      merged.set(key, hit);
+    }
+    if (merged.size >= limit) {
+      break;
+    }
+  }
+  return [...merged.values()];
+}
+
 function lexicalHitKey(hit: LexicalSearchHit): string {
   return `${hit.entityType}:${hit.entityId}`;
 }
@@ -339,21 +407,26 @@ const STOPWORDS = new Set([
   "to",
   "what",
   "where",
+  "work",
+  "works",
 ]);
 
 function pathSignals(
   query: string,
   expandedQuery: string,
+  includeExpanded: boolean,
 ): Array<{ path: string; expanded: boolean }> {
   const signals = new Map<string, { path: string; expanded: boolean }>();
   for (const path of extractPathSignals(query)) {
     signals.set(normalizePathSignal(path), { path, expanded: false });
   }
+  if (includeExpanded) {
   for (const path of extractPathSignals(expandedQuery)) {
     const key = normalizePathSignal(path);
     if (!signals.has(key)) {
       signals.set(key, { path, expanded: true });
     }
+  }
   }
   return [...signals.values()];
 }

@@ -145,7 +145,7 @@ order: 20
 
 Supported `visibility` values are `public` and `internal`. Supported `audience` values are `consumer`, `contributor`, `maintainer`, and `internal`. Supported `purpose` values are `guide`, `reference`, `api`, `architecture`, `operations`, `workflow`, `planning`, `implementation`, `archive`, and `troubleshooting`.
 
-Frontmatter fields override the selected metadata rule. Config rules and built-in defaults use the same glob matcher and priority order; the highest matching priority wins. Built-in priorities are negative, so normal nonnegative config rules take precedence. Use `docs.metadata.rules` for repository-specific policy:
+Metadata precedence is: frontmatter > config rule > built-in default. Frontmatter fields override the selected metadata rule. Config rules and built-in defaults use the same glob matcher and priority order; the highest matching priority wins. Built-in priorities are negative, so normal nonnegative config rules take precedence. Use `docs.metadata.rules` for repository-specific policy:
 
 ```yaml
 docs:

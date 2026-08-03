@@ -32,6 +32,7 @@ export interface EvalCase extends EvalCaseMetadata {
 export interface EvalExpected {
 	pathIncludes?: string[];
 	pathExcludes?: string[];
+  pathPrecedes?: Array<{ preferred: string; over: string }>;
 	terms?: string[];
 	tools?: string[];
 	noResults?: boolean;
@@ -78,6 +79,7 @@ export interface CaseResult extends EvalCaseMetadata {
 	missing: {
 		pathIncludes: string[];
 		pathExcludes: string[];
+    pathPrecedes: string[];
 		terms: string[];
 		diagnosticsInclude: string[];
 		rankedHits: string[];

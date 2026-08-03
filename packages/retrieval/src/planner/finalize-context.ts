@@ -32,6 +32,7 @@ export interface FinalizeContextInput {
 export function finalizeContext(input: FinalizeContextInput): PlannedContext {
 	const warnings = collectWarnings(input);
 	const confidence = computeConfidence(input, warnings);
+  const selected = orderSelected(input.state.selected, input.rankedHits);
 	const omissionDiagnostics = input.state.omitted.map(toOmissionDiagnostic);
 	return {
 		query: input.query,
@@ -39,7 +40,7 @@ export function finalizeContext(input: FinalizeContextInput): PlannedContext {
 		scopes: [...input.scopes],
 		budgetTokens: input.state.budgetTokens,
 		usedTokens: input.state.usedTokens,
-		selected: [...input.state.selected],
+    selected,
 		omitted: [...input.state.omitted],
 		omissionDiagnostics,
 		confidence,
@@ -73,6 +74,27 @@ export function finalizeContext(input: FinalizeContextInput): PlannedContext {
 	};
 }
 
+function orderSelected(
+  selected: readonly PlanningSelectionState["selected"][number][],
+  rankedHits: readonly RankedHit[],
+): PlanningSelectionState["selected"] {
+  const order = new Map(
+    rankedHits.map((hit, index) => [
+      `${hit.targetType}:${hit.targetId}`,
+      index,
+    ]),
+  );
+  return [...selected].sort((left, right) => {
+    const leftRank =
+      order.get(`${left.targetType}:${left.targetId}`) ??
+      Number.MAX_SAFE_INTEGER;
+    const rightRank =
+      order.get(`${right.targetType}:${right.targetId}`) ??
+      Number.MAX_SAFE_INTEGER;
+    return leftRank - rightRank;
+  });
+}
+
 function toOmissionDiagnostic(
 	item: PlanningSelectionState["omitted"][number],
 ): ContextOmissionDiagnostic {
@@ -92,6 +114,9 @@ function omissionReason(rationale: readonly string[]): ContextOmissionReason {
 	if (text.includes("budget")) {
 		return "budget";
 	}
+  if (text.includes("low-signal") || text.includes("path quality")) {
+    return "quality";
+  }
 	if (text.includes("stale") || text.includes("freshness")) {
 		return "freshness";
 	}

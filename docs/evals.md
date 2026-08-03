@@ -72,6 +72,7 @@ Each case contains:
 - Public-report metadata: `capability`, `claim`, `whyItMatters`, `expectedBehavior`, `coverageType`, and `riskArea`; these explain what the case is asserting and why the result matters to a reader.
 - `expected.pathIncludes`: path substrings that should appear in top retrieval results.
 - `expected.pathExcludes`: path substrings that must not appear in top retrieval results, useful for negative/edge cases.
+- `expected.pathPrecedes`: ordered path-substring pairs (`preferred`, `over`) that require the preferred source to rank first; the lower-priority path may be absent.
 - `expected.terms`: terms expected somewhere in selected/ranked context payloads or retrieved local source text.
 - `expected.minRankedHits` / `expected.maxRankedHits`: ranked-hit count bounds.
 - `expected.confidence`, `expected.diagnosticsInclude`, and `expected.noResults`: deterministic checks for diagnostics, confidence, and no-result behavior.

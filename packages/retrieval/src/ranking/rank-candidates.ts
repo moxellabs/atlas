@@ -63,10 +63,10 @@ export function rankCandidates(input: RankCandidatesInput): RankedHit[] {
 		});
 	}
 
-	return diversifyRankedHits(
-		ranked.sort(sortRankedHits),
-		kind,
-	).slice(0, input.limit ?? ranked.length);
+  return diversifyRankedHits(ranked.sort(sortRankedHits), kind).slice(
+    0,
+    input.limit ?? ranked.length,
+  );
 }
 
 function scoreCandidate(
@@ -78,7 +78,13 @@ function scoreCandidate(
 	previous: readonly RetrievalCandidate[],
 ): RankingFactors {
 	const lexicalScore = normalizeBaseScore(candidate.score ?? 0);
-	const evidenceMatch = evidenceMatchWeight(candidate, query, queryKind);
+  const queryText = normalizeQuery(query);
+  const evidenceMatch = evidenceMatchWeight(candidate, queryText, queryKind);
+  const qualityAdjustment = qualityAdjustmentWeight(
+    candidate,
+    queryKind,
+    queryText,
+  );
 	const rawLocality = localityWeight(candidate.provenance, scopes);
 	const locality =
 		lexicalScore >= 0.35 || evidenceMatch >= 0.25
@@ -91,6 +97,7 @@ function scoreCandidate(
 		queryKind: queryKindWeight(candidate, queryKind),
 		tokenEfficiency: tokenEfficiency(candidate.tokenCount),
 		freshness: freshnessByRepo?.get(candidate.provenance.repoId) ?? 0,
+    qualityAdjustment,
 		evidenceMatch,
 		redundancyPenalty: redundancyPenalty(candidate, previous),
 	};
@@ -104,7 +111,8 @@ function composeScore(factors: RankingFactors): number {
 		factors.queryKind * 0.62 +
 		factors.tokenEfficiency * 0.08 +
 		factors.freshness * 0.7 +
-		factors.evidenceMatch * 1.1 -
+    factors.evidenceMatch * 1.1 +
+    factors.qualityAdjustment * 1.1 -
 		factors.redundancyPenalty;
 	return Number(Math.max(0, score).toFixed(4));
 }
@@ -190,11 +198,10 @@ function lookupWeight(candidate: RetrievalCandidate): number {
 
 function evidenceMatchWeight(
 	candidate: RetrievalCandidate,
-	query: string,
+  queryText: string,
 	queryKind: QueryKind,
 ): number {
 	const path = normalizePath(candidate.provenance.path);
-	const queryText = normalizeQuery(query);
 	let weight = 0;
 
 	if (candidate.source === "path") {
@@ -225,14 +232,26 @@ function evidenceMatchWeight(
 	if (isCanonicalDocsPath(path)) {
 		weight += canonicalDocsBoost(candidate, queryKind, queryText);
 	}
-	weight += pathQualityAdjustment(path, queryKind, queryText);
+  return Number(Math.max(0, Math.min(1.4, weight)).toFixed(3));
+}
+
+function qualityAdjustmentWeight(
+  candidate: RetrievalCandidate,
+  queryKind: QueryKind,
+  queryText: string,
+): number {
+  let adjustment = pathQualityAdjustment(
+    normalizePath(candidate.provenance.path),
+    queryKind,
+    queryText,
+  );
 	if (
 		candidate.provenance.skillId !== undefined &&
 		queryKind !== "skill-invocation"
 	) {
-		weight -= 0.7;
+    adjustment -= 0.7;
 	}
-	return Number(Math.max(0, Math.min(1.4, weight)).toFixed(3));
+  return Number(Math.max(-1.4, Math.min(1.4, adjustment)).toFixed(3));
 }
 
 function pathQualityAdjustment(
@@ -328,7 +347,7 @@ function headingEvidenceWeight(
 	let weight = 0;
 	const leaf = normalizeQuery(headingPath.at(-1) ?? "");
 	if (leaf.length >= 4 && queryText.includes(leaf)) {
-		weight += 0.25;
+    weight += 0.45;
 	}
 	const headingTokens = evidenceTokens(headingPath.join(" "));
 	const matches = headingTokens.filter((token) =>
@@ -427,25 +446,16 @@ function diversifyRankedHits(
 		return [...hits];
 	}
 	const selected: RankedHit[] = [];
-	const deferred: RankedHit[] = [];
 	const docCounts = new Map<string, number>();
 	const dirCounts = new Map<string, number>();
 	const typeCounts = new Map<RankedHit["targetType"], number>();
 	const protectedWindow = Math.min(5, hits.length);
 
-	for (const [index, hit] of hits.entries()) {
-		if (index === 0) {
-			selected.push(hit);
-			increment(docCounts, hit.provenance.docId);
-			increment(dirCounts, parentDir(hit.provenance.path));
-			increment(typeCounts, hit.targetType);
-			continue;
+  for (const hit of hits) {
+    if (selected.length >= protectedWindow) {
+      break;
 		}
-		if (
-			selected.length < protectedWindow &&
-			wouldCrowdTopWindow(hit, { docCounts, dirCounts, typeCounts })
-		) {
-			deferred.push(hit);
+    if (wouldCrowdTopWindow(hit, { docCounts, dirCounts, typeCounts })) {
 			continue;
 		}
 		selected.push(hit);
@@ -454,7 +464,7 @@ function diversifyRankedHits(
 		increment(typeCounts, hit.targetType);
 	}
 
-	return [...selected, ...deferred.filter((hit) => !selected.includes(hit))];
+  return [...selected, ...hits.filter((hit) => !selected.includes(hit))];
 }
 
 function wouldCrowdTopWindow(

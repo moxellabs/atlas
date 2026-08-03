@@ -45,6 +45,15 @@ export function buildHitRationale(
 			`Concrete evidence match contributed ${format(factors.evidenceMatch)}.`,
 		);
 	}
+  if (factors.qualityAdjustment > 0) {
+    rationale.push(
+      `Path-quality policy contributed ${format(factors.qualityAdjustment)}.`,
+    );
+  } else if (factors.qualityAdjustment < 0) {
+    rationale.push(
+      `Candidate was penalized ${format(Math.abs(factors.qualityAdjustment))} by low-signal path policy.`,
+    );
+  }
 	if (factors.redundancyPenalty > 0) {
 		rationale.push(
 			`Candidate was penalized ${format(factors.redundancyPenalty)} for redundancy.`,

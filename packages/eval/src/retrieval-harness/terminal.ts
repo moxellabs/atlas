@@ -63,6 +63,9 @@ export function printTerminalSummary(report: Report): void {
 			...testCase.missing.pathExcludes.map(
 				(value) => `excluded path present: ${value}`,
 			),
+      ...testCase.missing.pathPrecedes.map(
+        (value) => `path precedence failed: ${value}`,
+      ),
 			...testCase.missing.diagnosticsInclude.map(
 				(value) => `missing diagnostic: ${value}`,
 			),
