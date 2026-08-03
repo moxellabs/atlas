@@ -1,23 +1,17 @@
-import {
-	ModuleRepository,
-	PackageRepository,
-	RepoRepository,
-	SkillRepository,
-	type StoreDatabase,
-} from "@atlas/store";
+import type { RepoRecord } from "@atlas/store";
 
 import { RetrievalDependencyError } from "../errors";
 import type {
 	QueryClassification,
 	RetrievalDiagnostic,
+  RetrievalStore,
 	ScopeCandidate,
 	ScopeInferenceResult,
 } from "../types";
-
 /** Input for conservative store-backed scope inference. */
 export interface InferScopesInput {
-	/** Initialized ATLAS store database. */
-	db: StoreDatabase;
+  /** Long-lived retrieval store adapter. */
+  store: RetrievalStore;
 	/** Raw query text. */
 	query: string;
 	/** Query classification from the classifier stage. */
@@ -38,16 +32,11 @@ export function inferScopes(input: InferScopesInput): ScopeInferenceResult {
 	try {
 		const repos =
 			input.repoId === undefined
-				? new RepoRepository(input.db).list()
-				: maybeOne(new RepoRepository(input.db).get(input.repoId));
-		const packages = new PackageRepository(input.db);
-		const modules = new ModuleRepository(input.db);
-		const skills = new SkillRepository(input.db);
+        ? input.store.listRepos()
+        : maybeOne(input.store.getRepo(input.repoId));
 		const candidates = collectScopeCandidates({
 			repos,
-			packages,
-			modules,
-			skills,
+      store: input.store,
 			normalizedQuery,
 			queryTerms,
 			skillBoost: input.classification.kind === "skill-invocation" ? 0.18 : 0,
@@ -81,10 +70,8 @@ export function inferScopes(input: InferScopesInput): ScopeInferenceResult {
 }
 
 interface ScopeCandidateCollectionInput {
-	repos: ReturnType<RepoRepository["list"]>;
-	packages: PackageRepository;
-	modules: ModuleRepository;
-	skills: SkillRepository;
+  repos: RepoRecord[];
+  store: RetrievalStore;
 	normalizedQuery: string;
 	queryTerms: readonly string[];
 	skillBoost: number;
@@ -96,19 +83,19 @@ function collectScopeCandidates(
 	return input.repos.flatMap((repo) => [
 		repoScopeCandidate(repo.repoId, input.normalizedQuery, input.queryTerms),
 		...packageScopeCandidates(
-			input.packages,
+      input.store,
 			repo.repoId,
 			input.normalizedQuery,
 			input.queryTerms,
 		),
 		...moduleScopeCandidates(
-			input.modules,
+      input.store,
 			repo.repoId,
 			input.normalizedQuery,
 			input.queryTerms,
 		),
 		...skillScopeCandidates(
-			input.skills,
+      input.store,
 			repo.repoId,
 			input.normalizedQuery,
 			input.queryTerms,
@@ -133,12 +120,12 @@ function repoScopeCandidate(
 }
 
 function packageScopeCandidates(
-	packages: PackageRepository,
+  store: RetrievalStore,
 	repoId: string,
 	normalizedQuery: string,
 	queryTerms: readonly string[],
 ): ScopeCandidate[] {
-	return packages.listByRepo(repoId).flatMap((pkg) => {
+  return store.listPackagesByRepo(repoId).flatMap((pkg) => {
 		const score = scoreLabel(normalizedQuery, queryTerms, [
 			pkg.name,
 			pkg.packageId,
@@ -163,12 +150,12 @@ function packageScopeCandidates(
 }
 
 function moduleScopeCandidates(
-	modules: ModuleRepository,
+  store: RetrievalStore,
 	repoId: string,
 	normalizedQuery: string,
 	queryTerms: readonly string[],
 ): ScopeCandidate[] {
-	return modules.listByRepo(repoId).flatMap((module) => {
+  return store.listModulesByRepo(repoId).flatMap((module) => {
 		const score = scoreLabel(normalizedQuery, queryTerms, [
 			module.name,
 			module.moduleId,
@@ -195,13 +182,13 @@ function moduleScopeCandidates(
 }
 
 function skillScopeCandidates(
-	skills: SkillRepository,
+  store: RetrievalStore,
 	repoId: string,
 	normalizedQuery: string,
 	queryTerms: readonly string[],
 	skillBoost: number,
 ): ScopeCandidate[] {
-	return skills.listByRepo(repoId).flatMap((skill) => {
+  return store.listSkillsByRepo(repoId).flatMap((skill) => {
 		const score = scoreLabel(normalizedQuery, queryTerms, [
 			skill.title ?? "",
 			skill.skillId,

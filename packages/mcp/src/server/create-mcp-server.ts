@@ -1,3 +1,4 @@
+import { createRetrievalStore } from "@atlas/retrieval";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { answerFromLocalDocsPrompt } from "../prompts/answer-from-local-docs.prompt";
@@ -68,6 +69,7 @@ import {
 } from "../tools/what-changed.tool";
 import type {
   AtlasMcpDependencies,
+  AtlasRetrievalMcpDependencies,
   AtlasMcpDiagnostic,
   AtlasMcpServer,
 } from "../types";
@@ -125,7 +127,11 @@ export function createAtlasMcpServer(
     ...createAtlasMcpServerMetadata(dependencies.identity),
     description: discoveryDescription(catalog),
   };
-  const effectiveDependencies = { ...dependencies, identity: metadata };
+  const effectiveDependencies: AtlasRetrievalMcpDependencies = {
+    ...dependencies,
+    identity: metadata,
+    retrievalStore: createRetrievalStore(dependencies.db),
+  };
   const exposeAggregates = dependencies.exposurePolicy !== "bounded-remote";
   const resourceNames = exposeAggregates
     ? DEFAULT_RESOURCE_NAMES.map((name) =>
@@ -248,7 +254,7 @@ export function createAtlasMcpServer(
 
 function registerTools(
   server: McpServer,
-  dependencies: AtlasMcpDependencies,
+  dependencies: AtlasRetrievalMcpDependencies,
   catalog: IndexedSourceCatalog,
 ) {
   const planTool = registerPlanContextTool(server, dependencies, {

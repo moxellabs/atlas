@@ -60,7 +60,7 @@ Source ingestion and retrieval are intentionally separated:
 4. `@atlas/compiler` parses Markdown into canonical documents, sections, outlines, summaries, and skill records.
 5. `@atlas/tokenizer` creates token-counted chunks with stable provenance.
 6. `@atlas/store` persists corpus records and search indexes transactionally.
-7. `@atlas/retrieval` reads the persisted corpus, classifies queries, ranks candidates, and builds context plans.
+7. `@atlas/retrieval` reads the persisted corpus through a long-lived `RetrievalStore` port, classifies queries, ranks candidates, and builds context plans.
 8. CLI, server, and MCP surfaces present those results to humans or agents.
 
 Retrieval never reads directly from remote source repositories. Builds never depend on agent-specific protocol behavior.

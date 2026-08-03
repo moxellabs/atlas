@@ -7,19 +7,19 @@ import {
   jsonOutputSchema,
   type FindScopesInput,
 } from "../schemas/tool-schemas";
-import type { AtlasMcpDependencies, McpJsonObject } from "../types";
+import type { AtlasRetrievalMcpDependencies, McpJsonObject } from "../types";
 
 export const FIND_SCOPES_TOOL = "find_scopes";
 
 /** Executes scope inference for an MCP caller. */
 export function executeFindScopes(
   input: FindScopesInput,
-  dependencies: AtlasMcpDependencies,
+  dependencies: AtlasRetrievalMcpDependencies,
 ): McpJsonObject {
   const parsed = findScopesInputSchema.parse(input);
   return {
     ...findScopes({
-      db: dependencies.db,
+      store: dependencies.retrievalStore,
       query: parsed.query,
       ...(parsed.repoId === undefined ? {} : { repoId: parsed.repoId }),
       ...(parsed.limit === undefined ? {} : { limit: parsed.limit }),
@@ -38,7 +38,7 @@ export function executeFindScopes(
 /** Registers the find_scopes MCP tool. */
 export function registerFindScopesTool(
   server: McpServer,
-  dependencies: AtlasMcpDependencies,
+  dependencies: AtlasRetrievalMcpDependencies,
 ): void {
   server.registerTool(
     FIND_SCOPES_TOOL,

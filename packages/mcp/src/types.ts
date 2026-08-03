@@ -1,5 +1,6 @@
 import type { SourceChange } from "@atlas/core";
 import type { StoreDatabase } from "@atlas/store";
+import type { RetrievalStore } from "@atlas/retrieval";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 /** Dependencies injected into all MCP tools and resources. */
@@ -29,6 +30,11 @@ export interface AtlasMcpDependencies {
   exposurePolicy?: AtlasMcpExposurePolicy | undefined;
   /** Optional source-backed diff provider used by what_changed in full runtimes. */
   sourceDiffProvider?: AtlasSourceDiffProvider | undefined;
+}
+
+/** MCP dependency view required by retrieval-backed tools. */
+export interface AtlasRetrievalMcpDependencies extends AtlasMcpDependencies {
+  retrievalStore: RetrievalStore;
 }
 
 /** Read-only source diff request issued by MCP. */

@@ -15,7 +15,12 @@ import {
   type IndexerDependencies,
 } from "@atlas/indexer";
 import type { AtlasSourceDiffProvider } from "@atlas/mcp";
-import { classifyQuery, inferScopes, planContext } from "@atlas/retrieval";
+import {
+  classifyQuery,
+  createRetrievalStore,
+  inferScopes,
+  planContext,
+} from "@atlas/retrieval";
 import { RepoCacheService } from "@atlas/source-git";
 import { openStore } from "@atlas/store";
 
@@ -50,6 +55,7 @@ export async function buildCliDependencies(
     config = await loadConfig({ ...options, configPath: defaultConfigPath });
   }
   const db = openStore({ path: config.config.corpusDbPath, migrate: true });
+  const retrievalStore = createRetrievalStore(db);
   const { deps: indexerDeps, service: indexer } = createIndexerServices({
     config,
     db,
@@ -70,7 +76,7 @@ export async function buildCliDependencies(
         repoId?: string | undefined;
       }) {
         return inferScopes({
-          db,
+          store: retrievalStore,
           query: input.query,
           classification: input.classification,
           ...(input.repoId === undefined ? {} : { repoId: input.repoId }),
@@ -82,7 +88,7 @@ export async function buildCliDependencies(
         budgetTokens: number;
       }) {
         return planContext({
-          db,
+          store: retrievalStore,
           query: input.query,
           budgetTokens: input.budgetTokens,
           ...(input.repoId === undefined ? {} : { repoId: input.repoId }),

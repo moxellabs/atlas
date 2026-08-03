@@ -1,5 +1,4 @@
 import { planContext } from "@atlas/retrieval";
-import { SectionRepository } from "@atlas/store";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
@@ -11,7 +10,7 @@ import {
   type PlanContextToolInput,
   planContextInputSchema,
 } from "../schemas/tool-schemas";
-import type { AtlasMcpDependencies, McpJsonObject } from "../types";
+import type { AtlasRetrievalMcpDependencies, McpJsonObject } from "../types";
 
 export const PLAN_CONTEXT_TOOL = "plan_context";
 
@@ -34,18 +33,18 @@ interface PlanCitation {
 /** Executes token-budgeted context planning for an MCP caller. */
 export function executePlanContext(
   input: PlanContextToolInput,
-  dependencies: AtlasMcpDependencies,
+  dependencies: AtlasRetrievalMcpDependencies,
 ): McpJsonObject {
   return buildPlanContextResult(input, dependencies);
 }
 
 function buildPlanContextResult(
   input: PlanContextToolInput,
-  dependencies: AtlasMcpDependencies,
+  dependencies: AtlasRetrievalMcpDependencies,
 ) {
   const parsed = planContextInputSchema.parse(input);
   const plan = planContext({
-    db: dependencies.db,
+    store: dependencies.retrievalStore,
     query: parsed.query,
     budgetTokens: parsed.budgetTokens,
     ...(parsed.repoId === undefined ? {} : { repoId: parsed.repoId }),
@@ -108,7 +107,7 @@ function buildPlanContextResult(
 /** Registers the plan_context MCP tool. */
 export function registerPlanContextTool(
   server: McpServer,
-  dependencies: AtlasMcpDependencies,
+  dependencies: AtlasRetrievalMcpDependencies,
   options: { description?: string } = {},
 ) {
   return server.registerTool(
@@ -135,7 +134,7 @@ export function registerPlanContextTool(
 /** Registers a source-bound answer tool that is discoverable by source name. */
 export function registerSourcePlanContextTool(
   server: McpServer,
-  dependencies: AtlasMcpDependencies,
+  dependencies: AtlasRetrievalMcpDependencies,
   source: IndexedSourceCatalogEntry,
 ) {
   const name = `answer_${source.toolSuffix}_docs`;
@@ -202,18 +201,17 @@ function uniqueSelectedSources(
 function selectExactPassages(
   query: string,
   citations: readonly PlanCitation[],
-  dependencies: AtlasMcpDependencies,
+  dependencies: AtlasRetrievalMcpDependencies,
 ) {
   const terms = queryTerms(query);
   const compounds = [
     ...query.toLowerCase().matchAll(/[a-z0-9]+(?:[._/-][a-z0-9]+)+/g),
   ].map((match) => match[0]!);
-  const sections = new SectionRepository(dependencies.db);
   return citations
     .slice(0, 3)
     .flatMap((citation, citationIndex) =>
-      sections
-        .listByDocument(citation.docId)
+      dependencies.retrievalStore
+        .listSectionsByDocument(citation.docId)
         .map((section) => ({
           citation,
           citationIndex,
