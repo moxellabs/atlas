@@ -22,15 +22,15 @@ order: 250
 
 ## Data Flow
 
-Retrieval accepts a query, optional repo/scope filters, budget settings, and a store-like dependency. It classifies intent, searches persisted records, builds candidates, applies ranking factors, expands related sections when useful, and finalizes a context plan under token budget.
+Retrieval accepts a query, optional repo/scope filters, budget settings, and a required `RetrievalStore` read port. Runtime composition roots create the port once. Retrieval classifies intent, searches persisted records, builds candidates, applies ranking factors, expands related sections when useful, and finalizes a context plan under token budget.
 
 ## Ranking Signals
 
-Ranking combines lexical fit, authority, locality, query-kind policy, token efficiency, freshness, and redundancy. Results should include rationale and diagnostics so agents can explain why a document, section, summary, or skill was selected or omitted.
+Ranking combines lexical fit, authority, locality, an exhaustive table-driven query-kind policy, token efficiency, freshness, and progressive redundancy. Results include rationale and diagnostics so agents can explain why a document, section, summary, or skill was selected or omitted.
 
 ## Boundaries
 
-Retrieval reads persisted local artifacts through store-like dependencies. It does not sync sources, rebuild the corpus, or speak MCP protocol directly.
+Retrieval reads persisted local artifacts through the `RetrievalStore` port. Planner and scope-inference code do not construct store repositories or access the raw database. The package does not sync sources, rebuild the corpus, or speak MCP protocol directly.
 
 ## Tests
 

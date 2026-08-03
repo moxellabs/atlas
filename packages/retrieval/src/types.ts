@@ -7,14 +7,19 @@ import type {
 	QueryKind,
 } from "@atlas/core";
 import type {
-	ChunkRepository,
-	DocRepository,
-	ManifestRepository,
-	RepoRepository,
-	SectionRepository,
-	SkillRepository,
-	StoreDatabase,
-	SummaryRepository,
+  ChunkRecord,
+  DocumentRecord,
+  LexicalSearchHit,
+  LexicalSearchOptions,
+  ManifestRecord,
+  ModuleRecord,
+  PackageRecord,
+  PathSearchOptions,
+  RepoRecord,
+  ScopeSearchOptions,
+  SectionRecord,
+  SkillRecord,
+  SummaryRecord,
 } from "@atlas/store";
 import type { TextEncoder } from "@atlas/tokenizer";
 
@@ -279,31 +284,44 @@ export interface PlannedContext {
 	diagnostics: RetrievalDiagnostic[];
 }
 
-/** Store-backed dependencies required by retrieval orchestration. */
+/** Read-only store port required by retrieval planning and scope inference. */
 export interface RetrievalStore {
-	/** Initialized ATLAS store database. */
-	db: StoreDatabase;
-	/**
-	 * Optional pre-built repository port for the plan. When omitted, planContext
-	 * constructs one repository set for the request instead of ad-hoc news on
-	 * every gather step.
-	 */
-	repositories?: RetrievalRepositories | undefined;
-}
-
-/** Repository handles used by planner hot paths. */
-export interface RetrievalRepositories {
-	docs: DocRepository;
-	summaries: SummaryRepository;
-	chunks: ChunkRepository;
-	sections: SectionRepository;
-	skills: SkillRepository;
-	repos: RepoRepository;
-	manifests: ManifestRepository;
+  lexicalSearch(options: LexicalSearchOptions): LexicalSearchHit[];
+  pathSearch(options: PathSearchOptions): DocumentRecord[];
+  scopeSearch(options: ScopeSearchOptions): DocumentRecord[];
+  getDocument(docId: string): DocumentRecord | undefined;
+  listDocumentsByRepo(
+    repoId: string,
+    options?: { limit?: number },
+  ): DocumentRecord[];
+  listSummaries(
+    targetType: SummaryRecord["targetType"],
+    targetId: string,
+  ): SummaryRecord[];
+  listSectionsByDocument(docId: string): SectionRecord[];
+  getChunk(chunkId: string): ChunkRecord | undefined;
+  getSection(sectionId: string): SectionRecord | undefined;
+  getSkill(skillId: string): SkillRecord | undefined;
+  listSkillsByRepo(
+    repoId: string,
+    scope?: {
+      packageId?: string;
+      moduleId?: string;
+    },
+  ): SkillRecord[];
+  getRepo(repoId: string): RepoRecord | undefined;
+  listRepos(): RepoRecord[];
+  getManifest(repoId: string): ManifestRecord | undefined;
+  getPackage(packageId: string): PackageRecord | undefined;
+  listPackagesByRepo(repoId: string): PackageRecord[];
+  getModule(moduleId: string): ModuleRecord | undefined;
+  listModulesByRepo(repoId: string): ModuleRecord[];
 }
 
 /** Input accepted by end-to-end context planning. */
-export interface PlanContextInput extends RetrievalStore {
+export interface PlanContextInput {
+  /** Long-lived retrieval store adapter created by the runtime composition root. */
+  store: RetrievalStore;
 	/** Raw user query. */
 	query: string;
 	/** Optional repository constraint. */
