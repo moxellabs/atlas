@@ -14,10 +14,11 @@ import { RepoCacheService } from "@atlas/source-git";
 import { openStore } from "@atlas/store";
 
 import { loadServerEnv } from "../../../server/src/env";
+import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { runProcess } from "../utils/node-runtime";
 import { resolveRepoTarget } from "./repo-target";
-import { readArgvString, renderSuccess } from "./shared";
+import { renderSuccess } from "./shared";
 
 interface DoctorCheck {
 	name: string;
@@ -32,7 +33,7 @@ export async function runDoctorCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
 	const checks: DoctorCheck[] = [];
-	const configPath = readArgvString(context.argv, "--config");
+	const configPath = readStringOption(context, "config");
 	const resolved = await loadConfig({
 		cwd: context.cwd,
 		env: context.env,
@@ -78,13 +79,13 @@ export async function runDoctorCommand(
 				: "Install git and ensure it is on PATH.",
 		});
 
-		const rawTargetRepoId = readArgvString(context.argv, "--repo");
+		const rawTargetRepoId = readStringOption(context, "repo");
 		const target = rawTargetRepoId
 			? await resolveRepoTarget(context, {
 					config: resolved.config,
 					explicit: rawTargetRepoId,
 					command: "doctor",
-					nonInteractive: context.argv.includes("--non-interactive"),
+					nonInteractive: readBooleanOption(context, "nonInteractive"),
 				})
 			: undefined;
 		const targetRepoId = target?.repoId;

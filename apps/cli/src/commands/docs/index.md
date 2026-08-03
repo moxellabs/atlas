@@ -1,6 +1,6 @@
 # CLI Commands Module
 
-The commands module owns concrete CLI workflows. Each command receives a `CliCommandContext`, parses command-specific options, delegates to package services, and returns a structured command result.
+The commands module owns concrete CLI workflows. Each command receives Commander-parsed positional arguments and options through `CliCommandContext`, validates its inputs, delegates to package services, and returns a structured command result.
 
 ## Responsibilities
 
@@ -14,7 +14,7 @@ The commands module owns concrete CLI workflows. Each command receives a `CliCom
 
 Each command module should:
 
-- parse only the flags and positional arguments it owns;
+- validate only the options and positional arguments it owns;
 - use shared runtime dependencies instead of opening config, stores, or source adapters directly when a helper already exists;
 - return a structured `CliCommandResult` with stable command names and data shapes;
 - map domain errors to `CliError` only at the CLI boundary; and

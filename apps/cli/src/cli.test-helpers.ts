@@ -3,7 +3,7 @@ import { stat } from "node:fs/promises";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import { runCli } from "./index";
-import type { CliCommandContext } from "./runtime/types";
+import type { CliCommandContext, CliCommandOptions } from "./runtime/types";
 
 export async function runWithCapture(
 	argv: readonly string[],
@@ -42,9 +42,11 @@ export async function runWithCapture(
 
 export function createCommandContext(
 	argv: readonly string[],
+	options: CliCommandOptions = {},
 ): CliCommandContext {
 	return {
-		argv,
+		positionals: argv,
+		options,
 		cwd: process.cwd(),
 		output: { json: true, verbose: false, quiet: false },
 		stdin: process.stdin,

@@ -1,3 +1,4 @@
+import { readStringOption } from "../runtime/args";
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -70,7 +71,7 @@ export async function resolveCliArtifactRoot(
 ): Promise<CliArtifactRootResolution> {
 	let configIdentity: { root?: string | undefined } | undefined;
 	try {
-		const configPath = readArgvString(context.argv, "--config");
+		const configPath = readStringOption(context, "config");
 		const loaded = await loadConfig({
 			cwd: context.cwd,
 			env: context.env,
@@ -867,19 +868,6 @@ export function parseDuration(value: string | undefined): number | undefined {
 						? 3_600_000
 						: 86_400_000;
 	return amount * multiplier;
-}
-
-/** Reads a string from the raw argv for bootstrap cases before parsed globals exist. */
-export function readArgvString(
-	argv: readonly string[],
-	flag: string,
-): string | undefined {
-	const index = argv.findIndex((token) => token === flag);
-	if (index === -1) {
-		return undefined;
-	}
-	const next = argv[index + 1];
-	return next?.startsWith("--") ? undefined : next;
 }
 
 /** Renders a sync/build report batch in human mode. */

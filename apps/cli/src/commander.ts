@@ -32,6 +32,7 @@ export function createAtlasCommand(config: AtlasMountConfig): Command {
     stderr: process.stderr,
     env: process.env,
     cwdFallback: process.cwd(),
+    output: { json: false, verbose: false, quiet: false },
   };
   const defaults = mountDefaults(config);
   const namespace = validateNamespace(config.namespace);

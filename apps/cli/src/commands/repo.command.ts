@@ -8,13 +8,13 @@ import {
 	RepoRepository,
 } from "@atlas/store";
 import { mutateAtlasConfig } from "../runtime/dependencies";
+import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { resolveCliPath } from "../utils/paths";
 import { readRepoTargetArg, resolveRepoTarget } from "./repo-target";
 import {
 	listRepoMetadata,
-	readArgvString,
 	readRepoMetadata,
 	removeRepoFolder,
 	renderRows,
@@ -27,7 +27,7 @@ import {
 export async function runRepoCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const subcommand = context.argv[0] ?? "list";
+	const subcommand = context.positionals[0] ?? "list";
 	if (subcommand === "list") return runRepoList(context);
 	if (subcommand === "doctor") return runRepoDoctor(context);
 	if (subcommand === "remove") return runRepoRemove(context);
@@ -39,7 +39,7 @@ export async function runRepoCommand(
 }
 
 async function loadRegistryContext(context: CliCommandContext) {
-	const configPath = readArgvString(context.argv, "--config");
+	const configPath = readStringOption(context, "config");
 	const resolved = await loadConfig({
 		cwd: context.cwd,
 		env: context.env,
@@ -74,9 +74,9 @@ async function runRepoDoctor(
 	const { resolved, atlasHome } = await loadRegistryContext(context);
 	const target = await resolveRepoTarget(context, {
 		config: resolved.config,
-		...readRepoTargetArg(context.argv, 1),
+		...readRepoTargetArg(context, 1),
 		command: "repo doctor",
-		nonInteractive: context.argv.includes("--non-interactive"),
+		nonInteractive: readBooleanOption(context, "nonInteractive"),
 	});
 	const repoId = target.repoId;
 	const checks: Array<{
@@ -200,9 +200,9 @@ async function runRepoShow(
 	const { resolved, atlasHome } = await loadRegistryContext(context);
 	const target = await resolveRepoTarget(context, {
 		config: resolved.config,
-		...readRepoTargetArg(context.argv, 1),
+		...readRepoTargetArg(context, 1),
 		command: "repo show",
-		nonInteractive: context.argv.includes("--non-interactive"),
+		nonInteractive: readBooleanOption(context, "nonInteractive"),
 	});
 	const repoId = target.repoId;
 	const configEntry = resolved.config.repos.find(
@@ -353,8 +353,8 @@ function appendOptionalLine(
 async function runRepoRemove(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const yes = context.argv.includes("--yes");
-	const dryRun = context.argv.includes("--dry-run");
+	const yes = readBooleanOption(context, "yes");
+	const dryRun = readBooleanOption(context, "dryRun");
 	if (!yes && !dryRun)
 		throw new CliError("Confirmation required. Re-run with --yes.", {
 			code: "CLI_CONFIRMATION_REQUIRED",
@@ -364,7 +364,7 @@ async function runRepoRemove(
 		await loadRegistryContext(context);
 	const target = await resolveRepoTarget(context, {
 		config: resolved.config,
-		...readRepoTargetArg(context.argv, 1),
+		...readRepoTargetArg(context, 1),
 		command: "repo remove",
 		nonInteractive: true,
 		allowSingleConfigured: false,

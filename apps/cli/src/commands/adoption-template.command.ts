@@ -1,14 +1,12 @@
+import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import {
 	buildAdoptionTemplates,
 	renderAdoptionTemplateHumanLines,
 } from "./adoption-templates";
-import { readArgvString, renderSuccess } from "./shared";
+import { renderSuccess } from "./shared";
 
-function firstRepoInput(argv: readonly string[]): string | undefined {
-	return argv[0]?.startsWith("--") ? undefined : argv[0];
-}
 
 function partsFromRepoId(repoId: string): {
 	host: string;
@@ -22,8 +20,8 @@ function partsFromRepoId(repoId: string): {
 export async function runAdoptionTemplateCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const repoInput = firstRepoInput(context.argv);
-	const repoId = readArgvString(context.argv, "--repo-id");
+	const repoInput = context.positionals[0];
+	const repoId = readStringOption(context, "repoId");
 	if (!repoInput && !repoId)
 		throw new CliError("Repository input or --repo-id is required.", {
 			code: "CLI_REPO_ID_REQUIRED",
@@ -41,16 +39,16 @@ export async function runAdoptionTemplateCommand(
 	const templates = buildAdoptionTemplates({
 		repoId: resolvedRepoId,
 		repoInput: displayRepoInput,
-		host: readArgvString(context.argv, "--host") ?? parts.host,
-		owner: readArgvString(context.argv, "--owner") ?? parts.owner,
-		name: readArgvString(context.argv, "--name") ?? parts.name,
-		ref: readArgvString(context.argv, "--ref") ?? "main",
+		host: readStringOption(context, "host") ?? parts.host,
+		owner: readStringOption(context, "owner") ?? parts.owner,
+		name: readStringOption(context, "name") ?? parts.name,
+		ref: readStringOption(context, "ref") ?? "main",
 	});
 	const data = { repoId: resolvedRepoId, adoptionTemplates: templates };
 	const lines = renderAdoptionTemplateHumanLines(templates, {
-		issueOnly: context.argv.includes("--issue-only"),
-		prOnly: context.argv.includes("--pr-only"),
-		maintainerOnly: context.argv.includes("--maintainer-only"),
+		issueOnly: readBooleanOption(context, "issueOnly"),
+		prOnly: readBooleanOption(context, "prOnly"),
+		maintainerOnly: readBooleanOption(context, "maintainerOnly"),
 	});
 	return renderSuccess(context, "adoption-template", data, lines);
 }

@@ -13,13 +13,14 @@ import {
   createRemoteMcpProxy,
 } from "@atlas/mcp";
 
+import { readStringOption } from "../runtime/args";
 import { buildCliDependencies } from "../runtime/dependencies";
 import type {
   AtlasCliDependencies,
   CliCommandContext,
   CliCommandResult,
 } from "../runtime/types";
-import { createCliConsole, readArgvString } from "./shared";
+import { createCliConsole } from "./shared";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 
 type StdioTransport = ReturnType<typeof createStdioTransport>;
@@ -56,9 +57,9 @@ const defaultRuntime: McpCommandRuntime = {
 export async function runMcpCommand(
   context: CliCommandContext,
 ): Promise<CliCommandResult> {
-  if (readArgvString(context.argv, "--remote-url") !== undefined)
+  if (readStringOption(context, "remoteUrl") !== undefined)
     return runRemoteMcpCommand(context);
-  const configPath = readArgvString(context.argv, "--config");
+  const configPath = readStringOption(context, "config");
   const deps = await buildCliDependencies({
     cwd: context.cwd,
     env: context.env,
@@ -101,7 +102,7 @@ export async function runMcpCommandWithDependencies(
             envMcpResourcePrefix: context.env.ATLAS_MCP_RESOURCE_PREFIX,
           },
         }).mcpIdentity;
-  const discoveryPolicy = readDiscoveryPolicy(context.argv);
+  const discoveryPolicy = readDiscoveryPolicy(context);
   const server = runtime.createServer(deps, identity, discoveryPolicy);
   const transport = runtime.createTransport(context);
   const refreshTimer = setInterval(() => {
@@ -152,7 +153,7 @@ async function runRemoteMcpCommand(
   context: CliCommandContext,
 ): Promise<CliCommandResult> {
   const consoleIo = createCliConsole(context);
-  const url = readArgvString(context.argv, "--remote-url");
+  const url = readStringOption(context, "remoteUrl");
   if (url === undefined)
     throw new CliError("Remote MCP URL is required.", {
       code: "CLI_MISSING_REQUIRED_OPTION",
@@ -162,7 +163,7 @@ async function runRemoteMcpCommand(
   const proxy = await createRemoteMcpProxy({
     url,
     token,
-    expectedDiscoveryPolicy: readDiscoveryPolicy(context.argv),
+    expectedDiscoveryPolicy: readDiscoveryPolicy(context),
   });
   const transport = createStdioTransport(context.stdin, context.stdout);
   await serveProxyOverStdio(context, proxy, transport, consoleIo);
@@ -203,8 +204,8 @@ async function serveProxyOverStdio(
 }
 
 async function readRemoteToken(context: CliCommandContext): Promise<string> {
-  const envName = readArgvString(context.argv, "--auth-token-env");
-  const file = readArgvString(context.argv, "--auth-token-file");
+  const envName = readStringOption(context, "authTokenEnv");
+  const file = readStringOption(context, "authTokenFile");
   if ((envName === undefined) === (file === undefined))
     throw new CliError(
       "Remote MCP requires exactly one of --auth-token-env or --auth-token-file.",
@@ -243,8 +244,8 @@ async function readRemoteToken(context: CliCommandContext): Promise<string> {
   return token;
 }
 
-function readDiscoveryPolicy(argv: readonly string[]): AtlasMcpDiscoveryPolicy {
-  const value = readArgvString(argv, "--discovery-policy") ?? "neutral";
+function readDiscoveryPolicy(context: CliCommandContext): AtlasMcpDiscoveryPolicy {
+  const value = readStringOption(context, "discoveryPolicy") ?? "neutral";
   if (ATLAS_MCP_DISCOVERY_POLICIES.includes(value as AtlasMcpDiscoveryPolicy)) {
     return value as AtlasMcpDiscoveryPolicy;
   }

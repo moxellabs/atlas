@@ -19,8 +19,7 @@ const MCP_ADOPTION_KIND = "mcp-adoption";
 export async function runEvalCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const options = parseOptions(context.argv);
-	const datasetPath = readStringOption(options, "dataset");
+	const datasetPath = readStringOption(context, "dataset");
 	if (datasetPath === undefined) {
 		throw new CliError("eval requires --dataset <path>.", {
 			code: "CLI_EVAL_DATASET_REQUIRED",
@@ -28,11 +27,11 @@ export async function runEvalCommand(
 		});
 	}
 
-	const kind = readStringOption(options, "kind");
+	const kind = readStringOption(context, "kind");
 	if (kind === MCP_ADOPTION_KIND) {
 		const dataset = await readMcpAdoptionDataset(datasetPath);
 		const traces = await readMcpAdoptionTrace(
-			readStringOption(options, "trace"),
+			readStringOption(context, "trace"),
 		);
 		const report = runMcpAdoptionEval({
 			dataset,
@@ -57,7 +56,7 @@ export async function runEvalCommand(
 			exitCode: EXIT_INPUT_ERROR,
 		});
 	}
-	if (readStringOption(options, "trace") !== undefined) {
+	if (readStringOption(context, "trace") !== undefined) {
 		throw new CliError(
 			"eval --trace is only supported with --kind mcp-adoption.",
 			{
@@ -67,11 +66,11 @@ export async function runEvalCommand(
 		);
 	}
 
-	const budgetTokens = parseBudget(readStringOption(options, "budget-tokens"));
+	const budgetTokens = parseBudget(readStringOption(context, "budgetTokens"));
 	const dataset = await readDataset(datasetPath);
 	const deps = await loadDependenciesFromGlobal(
 		context,
-		readStringOption(options, "config"),
+		readStringOption(context, "config"),
 	);
 	try {
 		const report = runAtlasEval({
@@ -269,22 +268,6 @@ function evalLines(report: ReturnType<typeof runAtlasEval>): string[] {
 	];
 }
 
-function parseOptions(
-	argv: readonly string[],
-): Record<string, string | boolean | string[]> {
-	const options: Record<string, string | boolean | string[]> = {};
-	for (let index = 0; index < argv.length; index += 1) {
-		const token = argv[index];
-		if (!token?.startsWith("--")) {
-			continue;
-		}
-		const key = token.slice(2);
-		const value = argv[index + 1];
-		options[key] = value ?? "";
-		index += 1;
-	}
-	return options;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
