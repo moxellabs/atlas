@@ -8,6 +8,7 @@ import {
 	openStore,
 	RepoRepository,
 } from "@atlas/store";
+import { readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError } from "../utils/errors";
 import { runProcess } from "../utils/node-runtime";
@@ -21,7 +22,6 @@ import {
 import { readRepoTargetArg, resolveRepoTarget } from "./repo-target";
 import {
 	listRepoMetadata,
-	readArgvString,
 	renderSuccess,
 	resolveCliArtifactRoot,
 } from "./shared";
@@ -52,7 +52,7 @@ async function gitOutput(cwd: string, args: readonly string[]) {
 export async function probeNextStepState(
 	context: CliCommandContext,
 ): Promise<NextStepState> {
-	const configPath = readArgvString(context.argv, "--config");
+	const configPath = readStringOption(context, "config");
 	const issues: NextProbeIssue[] = [];
 	const gitRoot = await gitOutput(context.cwd, [
 		"rev-parse",
@@ -175,7 +175,7 @@ async function resolveNextTarget(
 	config: Awaited<ReturnType<typeof loadConfig>>["config"],
 	issues: NextProbeIssue[],
 ) {
-	const args = readRepoTargetArg(context.argv, 0);
+	const args = readRepoTargetArg(context, 0);
 	try {
 		return await resolveRepoTarget(context, {
 			config,

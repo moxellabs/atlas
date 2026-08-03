@@ -134,7 +134,7 @@ type BuildTargetResolution = Awaited<ReturnType<typeof resolveRepoTarget>>;
 export async function runBuildCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const parsed = parseBuildCommandInput(context.argv);
+	const parsed = parseBuildCommandInput(context);
 	const repoLocal = await resolveRepoLocalBuildMetadata(context, parsed);
 	const deps =
 		repoLocal === undefined
@@ -169,18 +169,19 @@ export async function runBuildCommand(
 	);
 }
 
-function parseBuildCommandInput(argv: readonly string[]): BuildCommandInput {
-	const options = parseOptions(argv);
-	const docIds = readStringListOption(options, "doc-id");
+function parseBuildCommandInput(
+	context: CliCommandContext,
+): BuildCommandInput {
+	const docIds = readStringListOption(context, "docId");
 	const parsed = {
-		repoId: readStringOption(options, "repo"),
-		force: readBooleanOption(options, "force"),
-		mode: readStringOption(options, "mode"),
+		repoId: readStringOption(context, "repo"),
+		force: readBooleanOption(context, "force"),
+		mode: readStringOption(context, "mode"),
 		docIds,
-		packageId: readStringOption(options, "package-id"),
-		moduleId: readStringOption(options, "module-id"),
-		config: readStringOption(options, "config"),
-		profile: readStringOption(options, "profile") ?? "public",
+		packageId: readStringOption(context, "packageId"),
+		moduleId: readStringOption(context, "moduleId"),
+		config: readStringOption(context, "config"),
+		profile: readStringOption(context, "profile") ?? "public",
 	};
 	const selectorCount = [
 		docIds.length > 0,
@@ -234,7 +235,7 @@ async function resolveBuildTarget(
 			config: deps.config.config,
 			...(input.repoId === undefined ? {} : { explicit: input.repoId }),
 			command: "build",
-			nonInteractive: context.argv.includes("--non-interactive"),
+			nonInteractive: readBooleanOption(context, "nonInteractive"),
 			allowSingleConfigured: input.selectorCount > 0,
 		});
 	} catch (error) {
@@ -592,28 +593,3 @@ async function gitOutput(
 	}
 }
 
-function parseOptions(
-	argv: readonly string[],
-): Record<string, string | boolean | string[]> {
-	const options: Record<string, string | boolean | string[]> = {};
-	for (let index = 0; index < argv.length; index += 1) {
-		const token = argv[index];
-		if (!token?.startsWith("--")) continue;
-		const key = token.slice(2);
-		const value = argv[index + 1];
-		if (["force", "json", "verbose", "quiet", "all"].includes(key)) {
-			options[key] = true;
-			continue;
-		}
-		if (key === "doc-id") {
-			options[key] = Array.isArray(options[key])
-				? [...(options[key] as string[]), value ?? ""]
-				: [value ?? ""];
-			index += 1;
-			continue;
-		}
-		options[key] = value ?? "";
-		index += 1;
-	}
-	return options;
-}

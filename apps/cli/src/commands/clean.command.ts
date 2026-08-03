@@ -1,8 +1,9 @@
 import { loadConfig } from "@atlas/config";
 import { rm, stat } from "node:fs/promises";
 
+import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
-import { readArgvString, renderSuccess } from "./shared";
+import { renderSuccess } from "./shared";
 
 interface CleanArtifact {
   path: string;
@@ -21,12 +22,12 @@ const SQLITE_SIDECAR_SUFFIXES = ["-wal", "-shm", "-journal"] as const;
 
 /** Removes generated local corpus artifacts without touching managed repo caches. */
 export async function runCleanCommand(context: CliCommandContext): Promise<CliCommandResult<CleanResult>> {
-  const configPath = readArgvString(context.argv, "--config");
+  const configPath = readStringOption(context, "config");
   const resolved = await loadConfig({
     cwd: context.cwd,
     ...(configPath === undefined ? {} : { configPath })
   });
-  const dryRun = context.argv.includes("--dry-run");
+  const dryRun = readBooleanOption(context, "dryRun");
   const corpusDbPath = resolved.config.corpusDbPath;
   const artifactPaths = corpusArtifactPaths(corpusDbPath);
   const existing = await existingArtifacts(artifactPaths);

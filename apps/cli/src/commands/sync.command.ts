@@ -1,15 +1,16 @@
 import type { SyncBatchReport, SyncReport } from "@atlas/indexer";
+import { readBooleanOption, readStringOption } from "../runtime/args";
 
-import { loadDependenciesFromGlobal, readArgvString, renderSuccess, reportExitCode, reportLines } from "./shared";
+import { loadDependenciesFromGlobal, renderSuccess, reportExitCode, reportLines } from "./shared";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { EXIT_FAILURE, EXIT_PARTIAL_FAILURE } from "../utils/errors";
 
 /** Delegates sync orchestration to the shared indexer service. */
 export async function runSyncCommand(context: CliCommandContext): Promise<CliCommandResult> {
-  const deps = await loadDependenciesFromGlobal(context, readArgvString(context.argv, "--config"));
+  const deps = await loadDependenciesFromGlobal(context, readStringOption(context, "config"));
   try {
-    const repoId = readArgvString(context.argv, "--repo");
-    const check = context.argv.includes("--check");
+    const repoId = readStringOption(context, "repo");
+    const check = readBooleanOption(context, "check");
     const report = repoId ? await deps.indexer.syncRepo(repoId) : await deps.indexer.syncAll({ all: true });
     return await renderSuccess(context, "sync", report, reportLines(report), check ? syncCheckExitCode(report) : reportExitCode(report));
   } finally {

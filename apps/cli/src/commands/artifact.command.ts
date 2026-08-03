@@ -22,23 +22,21 @@ export const CLI_ARTIFACT_FRESH_REF_UNAVAILABLE =
 export async function runArtifactCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const [subcommand = "help"] = context.argv;
-	const options = parseOptions(context.argv.slice(1));
-	if (subcommand === "verify") return runVerify(context, options);
-	if (subcommand === "inspect") return runInspect(context, options);
+	const [subcommand = "help"] = context.positionals;
+	if (subcommand === "verify") return runVerify(context);
+	if (subcommand === "inspect") return runInspect(context);
 	return renderSuccess(context, "artifact", helpText(), helpText().split("\n"));
 }
 
 async function resolveArtifactCommandPath(
 	context: CliCommandContext,
-	options: Record<string, string | boolean | string[]>,
 ): Promise<{
 	artifactDir: string;
 	artifactLabel: string;
 	artifactRoot?: string | undefined;
 	migrationHint?: string | undefined;
 }> {
-	const explicitPath = readStringOption(options, "path");
+	const explicitPath = readStringOption(context, "path");
 	if (explicitPath !== undefined) {
 		return {
 			artifactDir: resolve(context.cwd, explicitPath),
@@ -61,11 +59,10 @@ async function resolveArtifactCommandPath(
 
 async function runVerify(
 	context: CliCommandContext,
-	options: Record<string, string | boolean | string[]>,
 ): Promise<CliCommandResult> {
-	const resolved = await resolveArtifactCommandPath(context, options);
-	const requireFresh = readBooleanOption(options, "fresh");
-	const explicitRef = readStringOption(options, "ref");
+	const resolved = await resolveArtifactCommandPath(context);
+	const requireFresh = readBooleanOption(context, "fresh");
+	const explicitRef = readStringOption(context, "ref");
 	const freshRef = requireFresh
 		? (explicitRef ??
 			(await resolveCurrentHead(resolved.artifactDir, context.cwd)))
@@ -78,7 +75,7 @@ async function runVerify(
 	}
 	const result = await verifyMoxelAtlasArtifact({
 		artifactDir: resolved.artifactDir,
-		expectedRepoId: readStringOption(options, "repo-id"),
+		expectedRepoId: readStringOption(context, "repoId"),
 		freshRef,
 		requireFresh,
 	});
@@ -124,9 +121,8 @@ async function runVerify(
 
 async function runInspect(
 	context: CliCommandContext,
-	options: Record<string, string | boolean | string[]>,
 ): Promise<CliCommandResult> {
-	const resolved = await resolveArtifactCommandPath(context, options);
+	const resolved = await resolveArtifactCommandPath(context);
 	const result = await inspectMoxelAtlasArtifact({
 		artifactDir: resolved.artifactDir,
 	});
@@ -174,23 +170,6 @@ async function runInspect(
 	]);
 }
 
-function parseOptions(
-	argv: readonly string[],
-): Record<string, string | boolean | string[]> {
-	const options: Record<string, string | boolean | string[]> = {};
-	for (let index = 0; index < argv.length; index += 1) {
-		const token = argv[index];
-		if (!token?.startsWith("--")) continue;
-		const key = token.slice(2);
-		if (["json", "fresh"].includes(key)) {
-			options[key] = true;
-			continue;
-		}
-		options[key] = argv[index + 1] ?? "";
-		index += 1;
-	}
-	return options;
-}
 
 async function resolveCurrentHead(
 	artifactDir: string,

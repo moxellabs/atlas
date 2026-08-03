@@ -5,22 +5,23 @@ import {
 	buildCliDependencies,
 	managedRepoCacheRoot,
 } from "../runtime/dependencies";
+import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
-import { parseDuration, readArgvString, renderSuccess } from "./shared";
+import { parseDuration, renderSuccess } from "./shared";
 
 /** Safely prunes orphaned managed repo caches under the CLI cache root. */
 export async function runPruneCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const configPath = readArgvString(context.argv, "--config");
+	const configPath = readStringOption(context, "config");
 	const deps = await buildCliDependencies({
 		cwd: context.cwd,
 		...(configPath === undefined ? {} : { configPath }),
 	});
 	try {
-		const dryRun = context.argv.includes("--dry-run");
+		const dryRun = readBooleanOption(context, "dryRun");
 		const olderThanMs = parseDuration(
-			readArgvString(context.argv, "--older-than"),
+			readStringOption(context, "olderThan"),
 		);
 		const cacheRoot = managedRepoCacheRoot(deps.config.config.cacheDir);
 		const legacyCheckoutRoot = join(deps.config.config.cacheDir, "checkouts");

@@ -1,27 +1,28 @@
 import { type AtlasHostConfig, sortHostsByPriority } from "@atlas/config";
 import { mutateAtlasConfig } from "../runtime/dependencies";
+import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
-import { readArgvString, renderSuccess } from "./shared";
+import { renderSuccess } from "./shared";
 
 function positional(
 	argv: readonly string[],
 	index: number,
 ): string | undefined {
-	return argv.filter((token) => !token.startsWith("--"))[index];
+	return argv[index];
 }
 
 function hostFromFlags(
 	context: CliCommandContext,
 	name: string,
 ): AtlasHostConfig {
-	const webUrl = readArgvString(context.argv, "--web-url");
-	const apiUrl = readArgvString(context.argv, "--api-url");
-	const protocol = readArgvString(context.argv, "--protocol") as
+	const webUrl = readStringOption(context, "webUrl");
+	const apiUrl = readStringOption(context, "apiUrl");
+	const protocol = readStringOption(context, "protocol") as
 		| "ssh"
 		| "https"
 		| undefined;
-	const priorityInput = readArgvString(context.argv, "--priority") ?? "100";
+	const priorityInput = readStringOption(context, "priority") ?? "100";
 	const priority = Number(priorityInput);
 	if (!Number.isInteger(priority)) {
 		throw new CliError(
@@ -44,15 +45,15 @@ function hostFromFlags(
 		apiUrl,
 		protocol,
 		priority,
-		default: context.argv.includes("--default"),
+		default: readBooleanOption(context, "default"),
 	};
 }
 
 export async function runHostsCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const sub = context.argv[0] ?? "list";
-	const configPath = readArgvString(context.argv, "--config");
+	const sub = context.positionals[0] ?? "list";
+	const configPath = readStringOption(context, "config");
 	const configOptions = {
 		cwd: context.cwd,
 		env: context.env,
@@ -71,7 +72,7 @@ export async function runHostsCommand(
 			),
 		);
 	}
-	const name = positional(context.argv.slice(1), 0)?.toLowerCase();
+	const name = positional(context.positionals.slice(1), 0)?.toLowerCase();
 	if (!name)
 		throw new CliError("Missing host name.", {
 			code: "CLI_HOST_REQUIRED",
@@ -99,7 +100,7 @@ export async function runHostsCommand(
 			if (
 				removing.default &&
 				remaining.length > 0 &&
-				!context.argv.includes("--force")
+				!readBooleanOption(context, "force")
 			)
 				throw new CliError(
 					"Cannot remove default host while other hosts remain. Use --force.",
@@ -120,7 +121,7 @@ export async function runHostsCommand(
 				});
 			hosts = hosts.map((h) => ({ ...h, default: h.name === name }));
 		} else if (sub === "prioritize") {
-			const priorityInput = readArgvString(context.argv, "--priority");
+			const priorityInput = readStringOption(context, "priority");
 			if (priorityInput === undefined)
 				throw new CliError("Missing priority.", {
 					code: "CLI_PRIORITY_REQUIRED",

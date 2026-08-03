@@ -21,6 +21,11 @@ import {
 import { RepoCacheService } from "@atlas/source-git";
 import { STORE_SCHEMA_VERSION } from "@atlas/store";
 import { canUseInteractiveUi, createPrompts } from "../io/prompts";
+import {
+	readBooleanOption,
+	readStringListOption,
+	readStringOption,
+} from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import {
@@ -35,16 +40,12 @@ import {
 import { type ResolvedRepoInput, resolveRepoInput } from "./repo-resolver";
 import {
 	appendRepoConfig,
-	readArgvString,
 	renderSuccess,
 	resolveCliArtifactRoot,
 	resolveRepoConfigInput,
 	writeRepoArtifactMetadata,
 } from "./shared";
 
-function firstRepoInput(argv: readonly string[]): string | undefined {
-	return argv[0]?.startsWith("--") ? undefined : argv[0];
-}
 
 async function fileExists(path: string): Promise<boolean> {
 	try {
@@ -64,14 +65,14 @@ async function completeArtifactDir(path: string): Promise<boolean> {
 async function selectedMissingArtifactAction(
 	context: CliCommandContext,
 ): Promise<MissingArtifactAction | undefined> {
-	if (context.argv.includes("--local-only"))
+	if (readBooleanOption(context, "localOnly"))
 		return "clone-and-index-local-only";
-	if (context.argv.includes("--skip-missing-artifact")) return "skip";
-	if (context.argv.includes("--maintainer-instructions"))
+	if (readBooleanOption(context, "skipMissingArtifact")) return "skip";
+	if (readBooleanOption(context, "maintainerInstructions"))
 		return "show-maintainer-instructions";
-	if (context.argv.includes("--issue-pr-instructions"))
+	if (readBooleanOption(context, "issuePrInstructions"))
 		return "generate-issue-pr-instructions";
-	const explicit = readArgvString(context.argv, "--missing-artifact-action");
+	const explicit = readStringOption(context, "missingArtifactAction");
 	if (explicit) {
 		if (missingArtifactNextActions.includes(explicit as MissingArtifactAction))
 			return explicit as MissingArtifactAction;
@@ -80,12 +81,11 @@ async function selectedMissingArtifactAction(
 			exitCode: EXIT_INPUT_ERROR,
 		});
 	}
-	if (!context.argv.includes("--interactive") && !context.argv.includes("-i"))
-		return "skip";
+	if (!readBooleanOption(context, "interactive")) return "skip";
 	if (
 		!canUseInteractiveUi(context, {
 			interactive: true,
-			nonInteractive: context.argv.includes("--non-interactive"),
+			nonInteractive: readBooleanOption(context, "nonInteractive"),
 		})
 	) {
 		throw new CliError(
@@ -290,9 +290,9 @@ async function prepareAddRepoSetup(
 ): Promise<AddRepoSetup> {
 	const loadedConfig = await loadAddRepoConfig(context);
 	const cacheDir =
-		readArgvString(context.argv, "--cache-dir") ?? loadedConfig.config.cacheDir;
+		readStringOption(context, "cacheDir") ?? loadedConfig.config.cacheDir;
 	const identityArtifact = await resolveCliArtifactRoot(context);
-	const positional = firstRepoInput(context.argv);
+	const positional = context.positionals[0];
 	const resolved = await resolveAddRepoInput(context, loadedConfig, positional);
 	return {
 		loadedConfig,
@@ -302,14 +302,14 @@ async function prepareAddRepoSetup(
 		artifactRoot: identityArtifact.artifactRoot,
 		positional,
 		resolved,
-		ref: readArgvString(context.argv, "--ref") ?? "main",
+		ref: readStringOption(context, "ref") ?? "main",
 	};
 }
 
 async function loadAddRepoConfig(
 	context: CliCommandContext,
 ): Promise<LoadedAddRepoConfig> {
-	const explicitConfigPath = readArgvString(context.argv, "--config");
+	const explicitConfigPath = readStringOption(context, "config");
 	const identityProfile = resolveIdentityProfile({
 		cliIdentityRoot: context.identityRoot,
 		envIdentityRoot: context.env.ATLAS_IDENTITY_ROOT,
@@ -362,15 +362,15 @@ async function resolveAddRepoInput(
 	positional: string | undefined,
 ): Promise<AddRepoResolvedInput | undefined> {
 	if (positional === undefined) return undefined;
-	const hostFlag = readArgvString(context.argv, "--host");
+	const hostFlag = readStringOption(context, "host");
 	let resolved = await resolveRepoInput(context, loadedConfig.config, {
 		input: positional,
 		...(hostFlag === undefined ? {} : { host: hostFlag }),
-		nonInteractive: context.argv.includes("--non-interactive"),
+		nonInteractive: readBooleanOption(context, "nonInteractive"),
 	});
 	resolved = await fallbackWhenPrimaryRepoMissing(resolved);
-	const explicitRepoId = readArgvString(context.argv, "--repo-id");
-	if (explicitRepoId && !context.argv.includes("--force")) {
+	const explicitRepoId = readStringOption(context, "repoId");
+	if (explicitRepoId && !readBooleanOption(context, "force")) {
 		let canonicalExplicit: string;
 		try {
 			canonicalExplicit = canonicalizeRepoId(explicitRepoId);
@@ -423,38 +423,36 @@ async function buildAddRepoConfig(
 ) {
 	const resolved = setup.resolved;
 	const mode =
-		(readArgvString(context.argv, "--mode") as
+		(readStringOption(context, "mode") as
 			| "local-git"
 			| "ghes-api"
 			| undefined) ?? "local-git";
 	return await resolveRepoConfigInput(context, {
-		repoId: readArgvString(context.argv, "--repo-id") ?? resolved?.repoId,
+		repoId: readStringOption(context, "repoId") ?? resolved?.repoId,
 		mode,
 		remote:
-			readArgvString(context.argv, "--remote") ??
+			readStringOption(context, "remote") ??
 			resolved?.remote ??
 			defaultResolvedRemote(resolved),
 		localPath:
-			readArgvString(context.argv, "--local-path") ?? resolved?.localPath,
+			readStringOption(context, "localPath") ?? resolved?.localPath,
 		ref: setup.ref,
-		refMode: readArgvString(context.argv, "--ref-mode") as
+		refMode: readStringOption(context, "refMode") as
 			| "remote"
 			| "current-checkout"
 			| undefined,
-		baseUrl:
-			readArgvString(context.argv, "--base-url") ?? resolved?.host.apiUrl,
-		owner: readArgvString(context.argv, "--owner") ?? resolved?.owner,
-		name: readArgvString(context.argv, "--name") ?? resolved?.name,
-		tokenEnvVar: readArgvString(context.argv, "--token-env-var"),
-		packageGlobs: readRepeatedOption(context.argv, "--package-glob"),
-		packageManifestFiles: readRepeatedOption(
-			context.argv,
-			"--package-manifest-file",
+		baseUrl: readStringOption(context, "baseUrl") ?? resolved?.host.apiUrl,
+		owner: readStringOption(context, "owner") ?? resolved?.owner,
+		name: readStringOption(context, "name") ?? resolved?.name,
+		tokenEnvVar: readStringOption(context, "tokenEnvVar"),
+		packageGlobs: readStringListOption(context, "packageGlob"),
+		packageManifestFiles: readStringListOption(
+			context,
+			"packageManifestFile",
 		),
-		template: readArgvString(context.argv, "--template") as never,
+		template: readStringOption(context, "template") as never,
 		cacheDir: setup.cacheDir,
-		nonInteractive:
-			!context.argv.includes("--interactive") && !context.argv.includes("-i"),
+		nonInteractive: !readBooleanOption(context, "interactive"),
 	});
 }
 
@@ -467,11 +465,6 @@ function defaultResolvedRemote(
 		: `${resolved.host.webUrl}/${resolved.owner}/${resolved.name}.git`;
 }
 
-function readRepeatedOption(argv: readonly string[], flag: string): string[] {
-	return argv
-		.flatMap((token, index) => (token === flag ? [argv[index + 1] ?? ""] : []))
-		.filter(Boolean);
-}
 
 async function renderConfigOnlyAddRepo(
 	context: CliCommandContext,
@@ -536,7 +529,7 @@ async function acquireAddRepoArtifact(
 				host: setup.resolved.host.name,
 				owner: setup.resolved.owner,
 				name: setup.resolved.name,
-				nonInteractive: context.argv.includes("--non-interactive"),
+				nonInteractive: readBooleanOption(context, "nonInteractive"),
 				json: context.output.json,
 				selectedAction: await selectedMissingArtifactAction(context),
 			}),

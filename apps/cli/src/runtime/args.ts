@@ -1,37 +1,46 @@
-// No argv parsing lives here; commander owns parsing.
-// Temporary option-reader helpers remain for command internals that consume
-// reconstructed commander option bags during the hard-cut migration.
+import type {
+	CliCommandContext,
+	CliOptionName,
+} from "./types";
 
-export type CliOptionBag = Record<string, string | boolean | string[]>;
+type OptionContext = Pick<CliCommandContext, "options">;
 
-/** Reads a boolean flag from command options. */
+/** Reads a boolean flag from Commander options. */
 export function readBooleanOption(
-	options: CliOptionBag,
-	name: string,
+	context: OptionContext,
+	name: CliOptionName,
 ): boolean {
-	return options[name] === true;
+	return context.options[name] === true;
 }
 
-/** Reads an optional string flag from command options. */
+/** Reads the first string value from Commander options. */
 export function readStringOption(
-	options: CliOptionBag,
-	name: string,
+	context: OptionContext,
+	name: CliOptionName,
 ): string | undefined {
-	const value = options[name];
-	if (value === undefined || typeof value !== "string") {
-		return undefined;
+	const value = context.options[name];
+	if (typeof value === "string") {
+		return value;
 	}
-	return value;
+	if (Array.isArray(value)) {
+		const first = value.find((entry) => typeof entry === "string");
+		return typeof first === "string" ? first : undefined;
+	}
+	return undefined;
 }
 
-/** Reads a repeatable string flag from command options. */
+/** Reads every string value from a repeatable Commander option. */
 export function readStringListOption(
-	options: CliOptionBag,
-	name: string,
+	context: OptionContext,
+	name: CliOptionName,
 ): string[] {
-	const value = options[name];
+	const value = context.options[name];
 	if (value === undefined) {
 		return [];
 	}
-	return Array.isArray(value) ? value : [String(value)];
+	return Array.isArray(value)
+		? value.filter((entry): entry is string => typeof entry === "string")
+		: typeof value === "string"
+			? [value]
+			: [];
 }
