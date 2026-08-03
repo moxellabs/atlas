@@ -1,14 +1,19 @@
 import type { DocumentMetadataFilters } from "@atlas/core";
 import { lexicalSearch } from "@atlas/store";
 import { buildCliDependencies } from "../runtime/dependencies";
+import {
+	readBooleanOption,
+	readStringListOption,
+	readStringOption,
+} from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
-import { readArgvString, renderRows, renderSuccess } from "./shared";
+import { renderRows, renderSuccess } from "./shared";
 
 export async function runSearchCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const query = context.argv[0]?.startsWith("--") ? undefined : context.argv[0];
+	const query = context.positionals[0];
 	if (!query) {
 		throw new CliError("search requires a query.", {
 			code: "CLI_SEARCH_QUERY_REQUIRED",
@@ -16,10 +21,10 @@ export async function runSearchCommand(
 		});
 	}
 	const repoId =
-		readArgvString(context.argv, "--repo") ??
-		readArgvString(context.argv, "--repo-id");
-	const configPath = readArgvString(context.argv, "--config");
-	const { filters, profileDefaulted, allProfiles } = readSearchFilters(context.argv);
+		readStringOption(context, "repo") ??
+		readStringOption(context, "repoId");
+	const configPath = readStringOption(context, "config");
+	const { filters, profileDefaulted, allProfiles } = readSearchFilters(context);
 	const deps = await buildCliDependencies({
 		cwd: context.cwd,
 		env: context.env,
@@ -63,30 +68,22 @@ interface SearchFiltersResult {
 	allProfiles: boolean;
 }
 
-function readSearchFilters(argv: readonly string[]): SearchFiltersResult {
+function readSearchFilters(context: CliCommandContext): SearchFiltersResult {
 	const filters: DocumentMetadataFilters = {};
-	const profile = readArgvString(argv, "--profile");
-	const allProfiles = argv.includes("--all-profiles") || profile === "any";
+	const profile = readStringOption(context, "profile");
+	const allProfiles =
+		readBooleanOption(context, "allProfiles") || profile === "any";
 	const profileDefaulted = profile === undefined && !allProfiles;
 	if (!allProfiles) filters.profile = profile ?? "public";
-	const audience = readRepeatedOption(argv, "--audience");
+	const audience = readStringListOption(context, "audience");
 	if (audience.length > 0)
 		filters.audience = audience as DocumentMetadataFilters["audience"];
-	const purpose = readRepeatedOption(argv, "--purpose");
+	const purpose = readStringListOption(context, "purpose");
 	if (purpose.length > 0)
 		filters.purpose = purpose as DocumentMetadataFilters["purpose"];
-	const visibility = readRepeatedOption(argv, "--visibility");
+	const visibility = readStringListOption(context, "visibility");
 	if (visibility.length > 0)
 		filters.visibility = visibility as DocumentMetadataFilters["visibility"];
 	return { filters, profileDefaulted, allProfiles };
 }
 
-function readRepeatedOption(argv: readonly string[], flag: string): string[] {
-	const values: string[] = [];
-	for (let index = 0; index < argv.length; index += 1) {
-		if (argv[index] === flag && argv[index + 1] !== undefined) {
-			values.push(argv[index + 1] as string);
-		}
-	}
-	return values;
-}

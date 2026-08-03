@@ -24,7 +24,12 @@ import { runSyncCommand } from "./commands/sync.command";
 import { CliConsole } from "./io/console";
 import { canPrompt } from "./io/prompts";
 import { resolveCliConfigTarget } from "./runtime/dependencies";
-import type { CliCommandContext, CliCommandResult } from "./runtime/types";
+import type {
+  CliCommandContext,
+  CliCommandOptions,
+  CliOutputOptions,
+  CliCommandResult,
+} from "./runtime/types";
 import { CliError, EXIT_INPUT_ERROR, toFailureResult } from "./utils/errors";
 import { fileExists } from "./utils/node-runtime";
 
@@ -34,6 +39,7 @@ export interface Runtime {
   stderr: NodeJS.WriteStream;
   env: NodeJS.ProcessEnv;
   cwdFallback: string;
+  output: CliOutputOptions;
   exitCode?: number;
   mountDefaults?: Partial<Record<string, string>> | undefined;
   exposeIdentityOptions?: boolean;
@@ -49,14 +55,24 @@ export async function runCli(
   > = {},
 ): Promise<number> {
   const runtime = createRuntime(streams);
-  const output = cliOutputOptions(argv);
-  const consoleIo = new CliConsole(output, runtime.stdout, runtime.stderr);
+  const program = createAtlasProgram(runtime);
 
   try {
-    await parseAtlasProgram(runtime, argv);
+    await parseAtlasProgram(runtime, argv, program);
     return runtime.exitCode ?? 0;
   } catch (error) {
-    return handleCliError({ argv, runtime, consoleIo, output, error });
+    const consoleIo = new CliConsole(
+      runtime.output,
+      runtime.stdout,
+      runtime.stderr,
+    );
+    return handleCliError({
+      program,
+      runtime,
+      consoleIo,
+      output: runtime.output,
+      error,
+    });
   }
 }
 
@@ -71,29 +87,20 @@ function createRuntime(
     stderr: streams.stderr ?? process.stderr,
     env: streams.env ?? process.env,
     cwdFallback: process.cwd(),
+    output: { json: false, verbose: false, quiet: false },
   };
 }
 
-function cliOutputOptions(argv: readonly string[]): {
-  json: boolean;
-  verbose: boolean;
-  quiet: boolean;
-} {
-  return {
-    json: argv.includes("--json"),
-    verbose: argv.includes("--verbose"),
-    quiet: argv.includes("--quiet"),
-  };
-}
 
 async function parseAtlasProgram(
   runtime: Runtime,
   argv: readonly string[],
+  program: Command,
 ): Promise<void> {
   if (await startFirstRunOnboarding(runtime, argv)) return;
   const normalizedArgv =
     argv.length === 0 || argv[0] === "help" ? ["--help"] : [...argv];
-  await createAtlasProgram(runtime).parseAsync(normalizedArgv, {
+  await program.parseAsync(normalizedArgv, {
     from: "user",
   });
 }
@@ -131,7 +138,7 @@ export async function shouldStartFirstRunOnboarding(
 }
 
 async function handleCliError(input: {
-  argv: readonly string[];
+  program: Command;
   runtime: Runtime;
   consoleIo: CliConsole;
   output: { json: boolean; verbose: boolean; quiet: boolean };
@@ -143,7 +150,7 @@ async function handleCliError(input: {
     );
   }
   const failure = toFailureResult(
-    commandNameFromArgv(input.argv),
+    commandNameFromProgram(input.program),
     input.error,
     input.output.verbose,
   );
@@ -153,7 +160,7 @@ async function handleCliError(input: {
 }
 
 async function handleCommanderError(input: {
-  argv: readonly string[];
+  program: Command;
   runtime: Runtime;
   consoleIo: CliConsole;
   output: { json: boolean; verbose: boolean; quiet: boolean };
@@ -165,14 +172,14 @@ async function handleCommanderError(input: {
   )
     return 0;
   const failure = toFailureResult(
-    commandNameFromArgv(input.argv),
-    commanderCliError(input.argv, input.error),
+    commandNameFromProgram(input.program),
+    commanderCliError(input.program, input.error),
     input.output.verbose,
   );
   if (input.output.json) await input.consoleIo.jsonFailure(failure);
   else {
     if (failure.error.code === "CLI_UNKNOWN_COMMAND" && !input.output.quiet) {
-      createAtlasProgram(input.runtime).outputHelp();
+      input.program.outputHelp();
     }
     await input.consoleIo.error(failure.error.message);
   }
@@ -180,10 +187,10 @@ async function handleCommanderError(input: {
 }
 
 function commanderCliError(
-  argv: readonly string[],
+  program: Command,
   error: CommanderError,
 ): CliError {
-  const unknownCommand = commandNameFromArgv(argv);
+  const unknownCommand = commandNameFromProgram(program);
   const unknown = error.code === "commander.unknownCommand";
   return new CliError(
     unknown
@@ -492,7 +499,10 @@ export function registerAtlasCommands(
       args: ["[repo]"],
       options: addRepoOptions,
       runner: (context: CliCommandContext) =>
-        runAddRepoCommand({ ...context, argv: context.argv.slice(1) }),
+        runAddRepoCommand({
+          ...context,
+          positionals: context.positionals.slice(1),
+        }),
       description: `Add a repo's published ${identity.identityName} docs`,
     },
     {
@@ -586,16 +596,10 @@ export function createAtlasBaseCommand(
 ): Command {
   runtime.mountDefaults = options.mountDefaults;
   runtime.exposeIdentityOptions = options.exposeIdentityOptions;
-  const command = new Command()
+  const command = configureCommandIo(new Command(), runtime)
     .name(options.name)
     .description(options.description)
     .version(packageJson.version, "-v, --version", "Display version")
-    .exitOverride()
-    .configureOutput({
-      writeOut: (str) => runtime.stdout.write(str),
-      writeErr: (str) => runtime.stderr.write(str),
-      outputError: () => undefined,
-    })
     .option("--json", "Emit machine-readable JSON output")
     .option("--verbose", "Emit verbose diagnostics")
     .option("--quiet", "Suppress human informational output")
@@ -696,6 +700,15 @@ function addSubcommand(
 }
 
 function configureCommandIo(command: Command, runtime: Runtime): Command {
+  command.on("option:json", () => {
+    runtime.output.json = true;
+  });
+  command.on("option:verbose", () => {
+    runtime.output.verbose = true;
+  });
+  command.on("option:quiet", () => {
+    runtime.output.quiet = true;
+  });
   return command.exitOverride().configureOutput({
     writeOut: (str) => runtime.stdout.write(str),
     writeErr: (str) => runtime.stderr.write(str),
@@ -709,7 +722,10 @@ async function emitCommandResult(
   values: readonly unknown[],
   runner: Runner,
 ): Promise<void> {
-  const opts = command.optsWithGlobals<Record<string, unknown>>();
+  const opts = command.optsWithGlobals<CliCommandOptions>();
+  runtime.output.json = Boolean(opts.json);
+  runtime.output.verbose = Boolean(opts.verbose);
+  runtime.output.quiet = Boolean(opts.quiet);
   const positionals = collectCommandPositionals(values, command.args);
   const context = buildContext(runtime, positionals, opts);
   const consoleIo = new CliConsole(
@@ -747,7 +763,7 @@ export function collectCommandPositionals(
 function buildContext(
   runtime: Runtime,
   positionals: readonly string[],
-  opts: Record<string, unknown>,
+  opts: CliCommandOptions,
 ): CliCommandContext {
   const defaults = runtime.mountDefaults ?? {};
   const identityRoot =
@@ -756,15 +772,8 @@ function buildContext(
   const mcpTitle = stringOpt(opts.atlasMcpTitle) ?? defaults.ATLAS_MCP_TITLE;
   const mcpResourcePrefix = defaults.ATLAS_MCP_RESOURCE_PREFIX;
   const configPath = firstStringOpt(opts.config) ?? defaults.ATLAS_CONFIG;
-  const commandArgv = [...positionals, ...optionsToArgv(opts)];
   return {
-    argv: commandArgv,
-    args: Object.fromEntries(
-      positionals.map((value, index) => [
-        index === 0 ? "repo" : `arg${index}`,
-        value,
-      ]),
-    ),
+    positionals,
     options: opts,
     cwd: stringOpt(opts.cwd) ?? runtime.cwdFallback,
     output: {
@@ -815,26 +824,8 @@ async function emitResult(
   return result.ok ? (result.exitCode ?? 0) : result.exitCode;
 }
 
-function commandNameFromArgv(argv: readonly string[]): string {
-  const optionsWithValues = new Set([
-    "--cwd",
-    "--config",
-    "--atlas-identity-root",
-    "--atlas-mcp-name",
-    "--atlas-mcp-title",
-  ]);
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index];
-    if (arg === undefined) continue;
-    if (optionsWithValues.has(arg)) {
-      index++;
-      continue;
-    }
-    if (arg.startsWith("--") && arg.includes("=")) continue;
-    if (arg.startsWith("-")) continue;
-    return arg;
-  }
-  return "help";
+function commandNameFromProgram(program: Command): string {
+  return program.args[0] ?? "help";
 }
 
 function cleanCommanderMessage(message: string): string {
@@ -854,29 +845,6 @@ function firstStringOpt(value: unknown): string | undefined {
   return undefined;
 }
 
-function optionsToArgv(opts: Record<string, unknown>): string[] {
-  const argv: string[] = [];
-  for (const [key, value] of Object.entries(opts)) {
-    if (
-      [
-        "json",
-        "verbose",
-        "quiet",
-        "cwd",
-        "atlasIdentityRoot",
-        "atlasMcpName",
-        "atlasMcpTitle",
-      ].includes(key)
-    )
-      continue;
-    const flag = `--${key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`;
-    if (value === true) argv.push(flag);
-    else if (typeof value === "string") argv.push(flag, value);
-    else if (Array.isArray(value))
-      for (const item of value) argv.push(flag, String(item));
-  }
-  return argv;
-}
 
 interface OptionSpec {
   flags: string;
@@ -1266,9 +1234,21 @@ const searchOptions: OptionSpec[] = [
     flags: "--all-profiles",
     description: "Search without the default public profile filter",
   },
-  { flags: "--audience <audience>", description: "Filter by audience" },
-  { flags: "--purpose <purpose>", description: "Filter by purpose" },
-  { flags: "--visibility <visibility>", description: "Filter by visibility" },
+  {
+    flags: "--audience <audience>",
+    description: "Filter by audience",
+    parser: collect,
+  },
+  {
+    flags: "--purpose <purpose>",
+    description: "Filter by purpose",
+    parser: collect,
+  },
+  {
+    flags: "--visibility <visibility>",
+    description: "Filter by visibility",
+    parser: collect,
+  },
 ];
 const evalOptions: OptionSpec[] = [
   ...globalOptions,

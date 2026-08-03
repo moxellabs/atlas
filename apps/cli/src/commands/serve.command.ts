@@ -1,18 +1,19 @@
 import type { AtlasRunningServer } from "../../../server/src/start-server";
 import { buildCliDependencies } from "../runtime/dependencies";
+import { readBooleanOption, readStringOption } from "../runtime/args";
 import type {
 	AtlasCliDependencies,
 	CliCommandContext,
 	CliCommandResult,
 } from "../runtime/types";
 import { openUrl } from "../utils/open-url";
-import { readArgvString, renderSuccess } from "./shared";
+import { renderSuccess } from "./shared";
 
 /** Starts the local ATLAS server via the shared server runtime entrypoint. */
 export async function runServeCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const configPath = readArgvString(context.argv, "--config");
+	const configPath = readStringOption(context, "config");
 	const deps = await buildCliDependencies({
 		cwd: context.cwd,
 		env: context.env,
@@ -30,8 +31,8 @@ export async function runServeCommandWithDependencies(
 ): Promise<CliCommandResult> {
 	let server: AtlasRunningServer | undefined;
 	try {
-		const host = readArgvString(context.argv, "--host");
-		const portValue = readArgvString(context.argv, "--port");
+		const host = readStringOption(context, "host");
+		const portValue = readStringOption(context, "port");
 		server = await deps.server.start({
 			...(host === undefined ? {} : { host }),
 			...(portValue === undefined
@@ -39,7 +40,7 @@ export async function runServeCommandWithDependencies(
 				: { port: Number.parseInt(portValue, 10) }),
 		});
 		const url = `http://${server.host}:${server.port}`;
-		const openRequested = context.argv.includes("--open");
+		const openRequested = readBooleanOption(context, "open");
 		const openResult = openRequested
 			? await tryOpenUrl(url, openBrowser)
 			: undefined;

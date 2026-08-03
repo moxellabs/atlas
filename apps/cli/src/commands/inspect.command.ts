@@ -1,4 +1,5 @@
 import { ChunkRepository } from "@atlas/store";
+import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import {
@@ -10,7 +11,6 @@ import {
 	inspectArtifacts,
 	inspectRetrievalPlan,
 	loadDependenciesFromGlobal,
-	readArgvString,
 	renderSuccess,
 } from "./shared";
 
@@ -18,14 +18,14 @@ import {
 export async function runInspectCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const mode = requireInspectMode(context.argv);
-	if (mode === "topology" && hasFlag(context.argv, "--live")) {
+	const mode = requireInspectMode(context);
+	if (mode === "topology" && readBooleanOption(context, "live")) {
 		return inspectLiveTopologyCommand(context);
 	}
 
 	const deps = await loadDependenciesFromGlobal(
 		context,
-		readArgvString(context.argv, "--config"),
+		readStringOption(context, "config"),
 	);
 	try {
 		const artifacts = inspectArtifacts(deps.db);
@@ -69,8 +69,8 @@ type InspectDependencies = Awaited<
 type InspectConfig = InspectDependencies["config"]["config"];
 type InspectDb = InspectDependencies["db"];
 
-function requireInspectMode(argv: readonly string[]): string {
-	const mode = resolveInspectMode(argv);
+function requireInspectMode(context: CliCommandContext): string {
+	const mode = resolveInspectMode(context);
 	if (mode !== undefined) return mode;
 	throw new CliError(
 		"inspect requires a subcommand: manifest, freshness, repo, topology, retrieval, doc, section, or skill.",
@@ -81,8 +81,8 @@ function requireInspectMode(argv: readonly string[]): string {
 async function inspectLiveTopologyCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const configPath = readArgvString(context.argv, "--config");
-	const repoId = readTopologyRepoId(context.argv);
+	const configPath = readStringOption(context, "config");
+	const repoId = readTopologyRepoId(context);
 	const result = await inspectLiveTopology({
 		cwd: context.cwd,
 		...(configPath === undefined ? {} : { configPath }),
@@ -100,7 +100,7 @@ function inspectFreshness(
 	context: CliCommandContext,
 	artifacts: InspectArtifacts,
 ): Promise<CliCommandResult> {
-	const repoId = context.argv[1];
+	const repoId = context.positionals[1];
 	const repos =
 		repoId === undefined
 			? artifacts.repos.list()
@@ -182,9 +182,9 @@ function resolveInspectRepoTarget(
 ) {
 	return resolveRepoTarget(context, {
 		config,
-		...readRepoTargetArg(context.argv, 1),
+		...readRepoTargetArg(context, 1),
 		command,
-		nonInteractive: context.argv.includes("--non-interactive"),
+		nonInteractive: readBooleanOption(context, "nonInteractive"),
 	});
 }
 
@@ -192,7 +192,7 @@ function inspectRetrieval(
 	context: CliCommandContext,
 	deps: InspectDependencies,
 ): Promise<CliCommandResult> {
-	const query = readArgvString(context.argv, "--query");
+	const query = readStringOption(context, "query");
 	if (!query) {
 		throw new CliError("inspect retrieval requires --query.", {
 			code: "CLI_QUERY_REQUIRED",
@@ -202,7 +202,7 @@ function inspectRetrieval(
 	return renderSuccess(
 		context,
 		"inspect",
-		inspectRetrievalPlan(deps, query, readArgvString(context.argv, "--repo")),
+		inspectRetrievalPlan(deps, query, readStringOption(context, "repo")),
 	);
 }
 
@@ -212,7 +212,7 @@ function inspectDoc(
 	db: InspectDb,
 ): Promise<CliCommandResult> {
 	const docId = requiredInspectPositional(
-		context.argv,
+		context.positionals,
 		"inspect doc requires <docId>.",
 		"CLI_DOC_REQUIRED",
 	);
@@ -237,7 +237,7 @@ function inspectSection(
 	db: InspectDb,
 ): Promise<CliCommandResult> {
 	const sectionId = requiredInspectPositional(
-		context.argv,
+		context.positionals,
 		"inspect section requires <sectionId>.",
 		"CLI_SECTION_REQUIRED",
 	);
@@ -262,7 +262,7 @@ function inspectSkill(
 	artifacts: InspectArtifacts,
 ): Promise<CliCommandResult> {
 	const skillId = requiredInspectPositional(
-		context.argv,
+		context.positionals,
 		"inspect skill requires <skillId>.",
 		"CLI_SKILL_REQUIRED",
 	);
@@ -291,26 +291,21 @@ function requiredInspectPositional(
 	return value;
 }
 
-function resolveInspectMode(argv: readonly string[]): string | undefined {
-	const first = argv[0];
-	if (first !== undefined && !first.startsWith("-")) {
+function resolveInspectMode(context: CliCommandContext): string | undefined {
+	const first = context.positionals[0];
+	if (first !== undefined) {
 		return first;
 	}
-	if (hasFlag(argv, "--live")) {
+	if (readBooleanOption(context, "live")) {
 		return "topology";
 	}
-	if (readArgvString(argv, "--query") !== undefined) {
+	if (readStringOption(context, "query") !== undefined) {
 		return "retrieval";
 	}
 	return undefined;
 }
 
-function hasFlag(argv: readonly string[], flag: string): boolean {
-	return argv.includes(flag);
-}
 
-function readTopologyRepoId(argv: readonly string[]): string | undefined {
-	const repoId = argv[1];
-	if (repoId !== undefined && !repoId.startsWith("--")) return repoId;
-	return readArgvString(argv, "--repo");
+function readTopologyRepoId(context: CliCommandContext): string | undefined {
+	return context.positionals[1] ?? readStringOption(context, "repo");
 }

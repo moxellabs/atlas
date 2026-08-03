@@ -141,7 +141,8 @@ function commandContext(cwd: string): CliCommandContext {
 	Object.assign(stdin, { isTTY: true });
 	Object.assign(stdout, { isTTY: true });
 	return {
-		argv: [],
+		positionals: [],
+		options: {},
 		cwd,
 		output: { json: false, verbose: false, quiet: false },
 		stdin,

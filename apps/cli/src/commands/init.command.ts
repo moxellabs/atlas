@@ -15,6 +15,7 @@ import {
 	mutateAtlasConfig,
 	resolveCliConfigTarget,
 } from "../runtime/dependencies";
+import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { fileExists, runProcess } from "../utils/node-runtime";
@@ -24,7 +25,6 @@ import {
 	appendRepoConfig,
 	defaultCliConfig,
 	maybeRenderArtifactRootMigrationHint,
-	readArgvString,
 	renderSuccess,
 	resolveCliArtifactRoot,
 	resolveRepoConfigInput,
@@ -46,17 +46,17 @@ export async function runInitCommand(
 async function runRepoArtifactInitCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const force = context.argv.includes("--force");
+	const force = readBooleanOption(context, "force");
 	const gitRoot =
 		(await gitOutput(context.cwd, ["rev-parse", "--show-toplevel"])) ??
 		context.cwd;
 	let targetConfig = await loadTargetConfig(context);
 	const explicitRepoId =
-		readArgvString(context.argv, "--repo-id") ?? repoIdFromParts(context);
+		readStringOption(context, "repoId") ?? repoIdFromParts(context);
 	let target = await resolveRepoTargetForInit(context, targetConfig.config, {
 		...(explicitRepoId === undefined ? {} : { explicit: explicitRepoId }),
 		command: "init",
-		nonInteractive: context.argv.includes("--non-interactive"),
+		nonInteractive: readBooleanOption(context, "nonInteractive"),
 	});
 	if (target.hostStatus === "unknown" && target.source === "git-origin") {
 		if (targetConfig.configPath === undefined) {
@@ -99,7 +99,7 @@ async function runRepoArtifactInitCommand(
 		});
 	}
 	const ref =
-		readArgvString(context.argv, "--ref") ??
+		readStringOption(context, "ref") ??
 		(await gitOutput(gitRoot, [
 			"symbolic-ref",
 			"--quiet",
@@ -108,7 +108,7 @@ async function runRepoArtifactInitCommand(
 		])) ??
 		(await gitOutput(gitRoot, ["rev-parse", "HEAD"])) ??
 		"HEAD";
-	const refMode = parseRefMode(readArgvString(context.argv, "--ref-mode"));
+	const refMode = parseRefMode(readStringOption(context, "refMode"));
 	const artifactRoot = await resolveCliArtifactRoot(context, gitRoot);
 	const migrationHint = await maybeRenderArtifactRootMigrationHint({
 		root: gitRoot,
@@ -167,9 +167,9 @@ function parseRefMode(
 }
 
 function repoIdFromParts(context: CliCommandContext): string | undefined {
-	const host = readArgvString(context.argv, "--host");
-	const owner = readArgvString(context.argv, "--owner");
-	const name = readArgvString(context.argv, "--name");
+	const host = readStringOption(context, "host");
+	const owner = readStringOption(context, "owner");
+	const name = readStringOption(context, "name");
 	return host && owner && name ? `${host}/${owner}/${name}` : undefined;
 }
 
@@ -177,7 +177,7 @@ async function loadTargetConfig(context: CliCommandContext): Promise<{
 	config: AtlasConfig;
 	configPath?: string | undefined;
 }> {
-	const configPath = readArgvString(context.argv, "--config");
+	const configPath = readStringOption(context, "config");
 	try {
 		const loaded = await loadConfig({
 			cwd: context.cwd,
@@ -236,7 +236,7 @@ async function runSetupCommand(
 	context: CliCommandContext,
 	command: "setup",
 ): Promise<CliCommandResult> {
-	const explicitConfigPath = readArgvString(context.argv, "--config");
+	const explicitConfigPath = readStringOption(context, "config");
 	const identityProfile = resolveIdentityProfile({
 		cliIdentityRoot: context.identityRoot,
 		envIdentityRoot: context.env.ATLAS_IDENTITY_ROOT,
@@ -261,11 +261,11 @@ async function runSetupCommand(
 					env: identityEnv,
 					configPath: explicitConfigPath,
 				});
-	const force = context.argv.includes("--force");
+	const force = readBooleanOption(context, "force");
 	const existingConfig = await fileExists(configPath);
 
-	const cacheDirFlag = readArgvString(context.argv, "--cache-dir");
-	const nonInteractive = context.argv.includes("--non-interactive");
+	const cacheDirFlag = readStringOption(context, "cacheDir");
+	const nonInteractive = readBooleanOption(context, "nonInteractive");
 	const interactive = canPrompt(context, { nonInteractive });
 	const prompts = interactive ? createPrompts() : undefined;
 	if (interactive) prompts?.intro("Atlas setup");
@@ -287,14 +287,14 @@ async function runSetupCommand(
 		});
 	}
 
-	const hostName = readArgvString(context.argv, "--host");
-	const webUrl = readArgvString(context.argv, "--web-url");
-	const apiUrl = readArgvString(context.argv, "--api-url");
-	const protocol = readArgvString(context.argv, "--protocol") as
+	const hostName = readStringOption(context, "host");
+	const webUrl = readStringOption(context, "webUrl");
+	const apiUrl = readStringOption(context, "apiUrl");
+	const protocol = readStringOption(context, "protocol") as
 		| "ssh"
 		| "https"
 		| undefined;
-	const priority = Number(readArgvString(context.argv, "--priority") ?? "100");
+	const priority = Number(readStringOption(context, "priority") ?? "100");
 	const setupHost = hostName
 		? {
 				name: hostName.toLowerCase(),

@@ -1,5 +1,6 @@
 import { stat } from "node:fs/promises";
 import type { SkillRecord } from "@atlas/store";
+import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import {
@@ -11,7 +12,6 @@ import {
 import {
 	inspectArtifacts,
 	loadDependenciesFromGlobal,
-	readArgvString,
 	renderRows,
 	renderSuccess,
 } from "./shared";
@@ -20,18 +20,18 @@ import {
 export async function runInstallSkillCommand(
 	context: CliCommandContext,
 ): Promise<CliCommandResult> {
-	const configPath = readArgvString(context.argv, "--config");
-	const target = readTarget(context.argv);
-	const scope = readScope(context.argv);
-	const workspacePath = readArgvString(context.argv, "--workspace");
-	const dryRun = context.argv.includes("--dry-run");
-	const overwrite = context.argv.includes("--overwrite");
+	const configPath = readStringOption(context, "config");
+	const target = readTarget(context);
+	const scope = readScope(context);
+	const workspacePath = readStringOption(context, "workspace");
+	const dryRun = readBooleanOption(context, "dryRun");
+	const overwrite = readBooleanOption(context, "overwrite");
 
 	const deps = await loadDependenciesFromGlobal(context, configPath);
 	try {
 		const artifacts = inspectArtifacts(deps.db);
 		const skills = resolveSkillSelection(
-			context.argv,
+			context,
 			deps.config.config.repos.map((repo) => repo.repoId),
 			artifacts,
 		).map((record) => ({
@@ -77,8 +77,8 @@ export async function runInstallSkillCommand(
 	}
 }
 
-function readTarget(argv: readonly string[]): SkillInstallTarget {
-	const value = readArgvString(argv, "--target");
+function readTarget(context: CliCommandContext): SkillInstallTarget {
+	const value = readStringOption(context, "target");
 	if (
 		value === "codex" ||
 		value === "claude-code" ||
@@ -101,8 +101,8 @@ function readTarget(argv: readonly string[]): SkillInstallTarget {
 	);
 }
 
-function readScope(argv: readonly string[]): SkillInstallScope {
-	const value = readArgvString(argv, "--scope");
+function readScope(context: CliCommandContext): SkillInstallScope {
+	const value = readStringOption(context, "scope");
 	if (value === "user" || value === "workspace") {
 		return value;
 	}
@@ -121,17 +121,15 @@ function readScope(argv: readonly string[]): SkillInstallScope {
 }
 
 function resolveSkillSelection(
-	argv: readonly string[],
+	context: CliCommandContext,
 	configuredRepoIds: readonly string[],
 	artifacts: ReturnType<typeof inspectArtifacts>,
 ): SkillRecord[] {
-	const positional = argv.filter(
-		(arg) => !arg.startsWith("--") && !isFlagValue(argv, arg),
-	);
-	const all = argv.includes("--all");
-	const repoId = readArgvString(argv, "--repo");
-	const packageId = readArgvString(argv, "--package");
-	const moduleId = readArgvString(argv, "--module");
+	const positional = context.positionals;
+	const all = readBooleanOption(context, "all");
+	const repoId = readStringOption(context, "repo");
+	const packageId = readStringOption(context, "package");
+	const moduleId = readStringOption(context, "module");
 	const selectorCount = [
 		positional.length > 0,
 		all,
@@ -189,10 +187,6 @@ function resolveSkillSelection(
 	});
 }
 
-function isFlagValue(argv: readonly string[], value: string): boolean {
-	const index = argv.indexOf(value);
-	return index > 0 && argv[index - 1]?.startsWith("--") === true;
-}
 
 async function exists(path: string): Promise<boolean> {
 	return stat(path).then(
