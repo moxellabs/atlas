@@ -33,6 +33,12 @@ export function selectSummaries(
 	);
 
 	for (const hit of summaryHits) {
+    if (hit.factors.qualityAdjustment < 0) {
+      state.omitted.push(
+        toPlannedItem(hit, "Omitted by low-signal path quality policy."),
+      );
+      continue;
+    }
 		if (state.selected.length >= limit) {
 			state.omitted.push(toPlannedItem(hit, "Summary limit reached."));
 			continue;

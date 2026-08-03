@@ -55,6 +55,7 @@ function result(
     missing: input.missing ?? {
       pathIncludes: [],
       pathExcludes: [],
+      pathPrecedes: [],
       terms: [],
       diagnosticsInclude: [],
       rankedHits: [],
@@ -242,6 +243,7 @@ describe("eval reporting", () => {
           missing: {
             pathIncludes: ["docs/missing.md"],
             pathExcludes: [],
+            pathPrecedes: [],
             terms: [],
             diagnosticsInclude: [],
             rankedHits: [],
@@ -447,7 +449,14 @@ describe("eval reporting", () => {
           p95DurationMs: 0,
         },
         paired: { wins: 0, ties: 0, losses: 0 },
-        mcp: { adoptionRate: 0, atlasFirstRate: 0, localOnlyRate: 0, fallbackRate: 0, averageCalls: 0, protocolErrorRate: 0 },
+        mcp: {
+          adoptionRate: 0,
+          atlasFirstRate: 0,
+          localOnlyRate: 0,
+          fallbackRate: 0,
+          averageCalls: 0,
+          protocolErrorRate: 0,
+        },
       },
       representativeTraces: [],
     };
@@ -663,6 +672,7 @@ describe("eval reporting", () => {
     expect(scored.missing).toEqual({
       pathIncludes: [],
       pathExcludes: [],
+      pathPrecedes: [],
       terms: [],
       diagnosticsInclude: [],
       rankedHits: [],

@@ -175,6 +175,9 @@ function failureSummary(item: CaseResult): string {
       item.missing.pathExcludes.length > 0
         ? `forbidden paths: ${item.missing.pathExcludes.join(", ")}`
         : "",
+      item.missing.pathPrecedes.length > 0
+        ? `path precedence: ${item.missing.pathPrecedes.join(", ")}`
+        : "",
     ]
       .filter(Boolean)
       .join("; ") || "deterministic expectation failed"
