@@ -1,20 +1,18 @@
+import { type z } from "zod";
+
+import type {
+	apiFailureSchema,
+	apiSuccessSchema,
+} from "./schemas/response.schema";
+
 /** Successful API response envelope. */
-export interface ApiSuccess<T> {
-  ok: true;
-  requestId: string;
-  data: T;
-}
+export type ApiSuccess<T> = Omit<
+	z.infer<typeof apiSuccessSchema>,
+	"data"
+> & { data: T };
 
 /** Error API response envelope. */
-export interface ApiFailure {
-  ok: false;
-  requestId: string;
-  error: {
-    code: string;
-    message: string;
-    details?: unknown;
-  };
-}
+export type ApiFailure = z.infer<typeof apiFailureSchema>;
 
 /** Wraps route payloads in the stable success envelope. */
 export function ok<T>(requestId: string, data: T): ApiSuccess<T> {
