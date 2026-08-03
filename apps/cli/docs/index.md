@@ -84,7 +84,7 @@ The CLI should not implement source acquisition, topology classification, compil
 
 ## Tests
 
-Primary coverage lives in `apps/cli/src/cli.test.ts`. Package-level checks can run with:
+Primary integration coverage is split by workflow under `apps/cli/src/cli.*.test.ts`; shared harness code lives in `cli.test-helpers.ts`, with artifact, repository, and eval fixtures in focused helpers. Package-level checks can run with:
 
 ```bash
 bun --cwd apps/cli run typecheck
@@ -113,5 +113,5 @@ Behavior should remain deterministic for the same inputs, preserve local-first b
 ## Validation Pointer
 
 ```bash
-bun test apps/cli/src/cli.test.ts
+bun test apps/cli
 ```
