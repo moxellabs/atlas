@@ -17,12 +17,10 @@ import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 import { topologyTemplate } from "../utils/topology-templates";
-import { resolveRepoInput } from "./repo-resolver";
-import {
-	appendRepoConfig,
-	renderSuccess,
-	writeRepoArtifactMetadata,
-} from "./shared";
+import { resolveRepoIdentity } from "./repo-identity";
+import { appendRepoConfig } from "./repo-config";
+import { writeRepoArtifactMetadata } from "./repo-metadata";
+import { renderSuccess } from "./render";
 
 const WEAK_DOCS_HINT =
 	"Consider running the document-codebase skill before indexing.";
@@ -76,11 +74,9 @@ export async function runIndexCommand(
 		readStringOption(context, "cacheDir") ?? loaded.config.cacheDir;
 	const configPath = loaded.source.configPath;
 	const hostFlag = readStringOption(context, "host");
-	const resolved = await resolveRepoInput(context, loaded.config, {
-		input: repoInput,
+	const resolved = await resolveRepoIdentity(context, { intent: "configure", config: loaded.config, input: repoInput,
 		...(hostFlag === undefined ? {} : { host: hostFlag }),
-		nonInteractive: readBooleanOption(context, "nonInteractive"),
-	});
+		nonInteractive: readBooleanOption(context, "nonInteractive"), });
   const rawRepoId =
     readStringOption(context, "repoId") ?? resolved.repoId;
 	let repoId: string;

@@ -33,17 +33,20 @@ import {
 } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
-import { fileExists, runProcess } from "../utils/node-runtime";
-import { resolveRepoTarget } from "./repo-target";
+import { fileExists } from "../utils/node-runtime";
+import {
+	maybeRenderArtifactRootMigrationHint,
+	resolveCliArtifactRoot,
+} from "./artifact-root";
+import { loadDependenciesFromGlobal } from "./dependencies";
+import { gitOutput, readGitRoot } from "./git";
+import { resolveRepoIdentity } from "./repo-identity";
 import {
 	buildFailureLines,
-	loadDependenciesFromGlobal,
-	maybeRenderArtifactRootMigrationHint,
-	renderSuccess,
 	reportExitCode,
 	reportLines,
-	resolveCliArtifactRoot,
-} from "./shared";
+} from "./reports";
+import { renderSuccess } from "./render";
 
 const REPO_METADATA_FILE = "atlas.repo.json";
 const COMMIT_HINT =
@@ -128,7 +131,7 @@ interface BuildCommandInput {
 }
 
 type BuildDependencies = Awaited<ReturnType<typeof loadDependenciesFromGlobal>>;
-type BuildTargetResolution = Awaited<ReturnType<typeof resolveRepoTarget>>;
+type BuildTargetResolution = Awaited<ReturnType<typeof resolveRepoIdentity>>;
 
 /** Delegates build orchestration to shared indexer service or repo-local artifact mode. */
 export async function runBuildCommand(
@@ -231,13 +234,11 @@ async function resolveBuildTarget(
 ): Promise<BuildTargetResolution | undefined> {
 	if (repoLocal !== undefined || deps === undefined) return undefined;
 	try {
-		return await resolveRepoTarget(context, {
-			config: deps.config.config,
+		return await resolveRepoIdentity(context, { intent: "target", config: deps.config.config,
 			...(input.repoId === undefined ? {} : { explicit: input.repoId }),
 			command: "build",
 			nonInteractive: readBooleanOption(context, "nonInteractive"),
-			allowSingleConfigured: input.selectorCount > 0,
-		});
+			allowSingleConfigured: input.selectorCount > 0, });
 	} catch (error) {
 		if (input.selectorCount > 0 || input.repoId !== undefined) throw error;
 		if (
@@ -545,9 +546,7 @@ interface RepoLocalMetadata {
 async function findRepoArtifactMetadata(
 	context: CliCommandContext,
 ): Promise<RepoLocalMetadata | undefined> {
-	const root =
-		(await gitOutput(context.cwd, ["rev-parse", "--show-toplevel"])) ??
-		context.cwd;
+	const root = (await readGitRoot(context.cwd)) ?? context.cwd;
 	const artifactRoot = await resolveCliArtifactRoot(context, root);
 	const migrationHint = await maybeRenderArtifactRootMigrationHint({
 		root,
@@ -579,17 +578,4 @@ async function findRepoArtifactMetadata(
 	};
 }
 
-async function gitOutput(
-	cwd: string,
-	args: readonly string[],
-): Promise<string | undefined> {
-	try {
-		const { exitCode, stdout } = await runProcess(["git", ...args], { cwd });
-		if (exitCode !== 0) return undefined;
-		const output = stdout.trim();
-		return output.length > 0 ? output : undefined;
-	} catch {
-		return undefined;
-	}
-}
 

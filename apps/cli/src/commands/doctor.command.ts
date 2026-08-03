@@ -17,8 +17,8 @@ import { loadServerEnv } from "../../../server/src/env";
 import { readBooleanOption, readStringOption } from "../runtime/args";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { runProcess } from "../utils/node-runtime";
-import { resolveRepoTarget } from "./repo-target";
-import { renderSuccess } from "./shared";
+import { resolveRepoIdentity } from "./repo-identity";
+import { renderSuccess } from "./render";
 
 interface DoctorCheck {
 	name: string;
@@ -81,12 +81,10 @@ export async function runDoctorCommand(
 
 		const rawTargetRepoId = readStringOption(context, "repo");
 		const target = rawTargetRepoId
-			? await resolveRepoTarget(context, {
-					config: resolved.config,
+			? await resolveRepoIdentity(context, { intent: "target", config: resolved.config,
 					explicit: rawTargetRepoId,
 					command: "doctor",
-					nonInteractive: readBooleanOption(context, "nonInteractive"),
-				})
+					nonInteractive: readBooleanOption(context, "nonInteractive"), })
 			: undefined;
 		const targetRepoId = target?.repoId;
 		const repos =

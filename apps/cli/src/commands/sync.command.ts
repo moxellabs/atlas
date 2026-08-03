@@ -1,7 +1,9 @@
 import type { SyncBatchReport, SyncReport } from "@atlas/indexer";
 import { readBooleanOption, readStringOption } from "../runtime/args";
 
-import { loadDependenciesFromGlobal, renderSuccess, reportExitCode, reportLines } from "./shared";
+import { loadDependenciesFromGlobal } from "./dependencies";
+import { reportExitCode, reportLines } from "./reports";
+import { renderSuccess } from "./render";
 import type { CliCommandContext, CliCommandResult } from "../runtime/types";
 import { EXIT_FAILURE, EXIT_PARTIAL_FAILURE } from "../utils/errors";
 

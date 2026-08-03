@@ -7,7 +7,7 @@ import type {
 	CliCommandResult,
 } from "../runtime/types";
 import { openUrl } from "../utils/open-url";
-import { renderSuccess } from "./shared";
+import { renderSuccess } from "./render";
 
 /** Starts the local ATLAS server via the shared server runtime entrypoint. */
 export async function runServeCommand(

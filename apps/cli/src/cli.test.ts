@@ -25,8 +25,8 @@ import {
 import { runMcpCommandWithDependencies } from "./commands/mcp.command";
 import { runServeCommandWithDependencies } from "./commands/serve.command";
 import { buildCliDependencies } from "./runtime/dependencies";
-import { buildFailureLines } from "./commands/shared";
-import { repoIdFromGitRemote } from "./commands/git-remote";
+import { repoIdFromGitRemote } from "./commands/git";
+import { buildFailureLines } from "./commands/reports";
 import {
   createCommandContext,
   exists,
