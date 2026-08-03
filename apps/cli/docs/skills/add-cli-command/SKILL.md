@@ -29,7 +29,7 @@ Use this skill for changes under `apps/cli`. The CLI is an operator shell over p
    - Config mutations should go through config helpers and preserve existing config shape.
 
 4. Test the workflow.
-   - Add or update coverage in `apps/cli/src/cli.test.ts`.
+   - Add or update coverage in the matching `apps/cli/src/cli.*.test.ts` workflow suite.
    - Cover success, invalid input, JSON mode, and any config/store side effects.
    - Run `bun test apps/cli`, then repo gates when behavior is public.
 

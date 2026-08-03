@@ -1,6 +1,7 @@
 import { validateIdentityRoot, validateMcpIdentifier } from "@atlas/config";
 import type { Command } from "commander";
-import { createAtlasProgram, type Runtime } from "./index";
+import type { Runtime } from "./composition/contracts";
+import { createAtlasProgram } from "./composition/factory";
 
 export type AtlasMountConfig = {
   /** Commander namespace under enterprise CLI, e.g. `userCli acme ...`. */
