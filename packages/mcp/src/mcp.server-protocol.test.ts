@@ -107,7 +107,7 @@ describe("MCP server registration and in-memory protocol", () => {
     expect(advanced.resources).toEqual([]);
   });
 
-  test("advertises the generic router for additive client preload", async () => {
+  test("advertises the generic planner with a concrete contract", async () => {
     const { store } = fixture;
     const atlasServer = createAtlasMcpServer({ db: store });
     fixture.registerCleanup(() => atlasServer.server.close());
@@ -130,14 +130,13 @@ describe("MCP server registration and in-memory protocol", () => {
     }
     const planTool = tools.tools.find((tool) => tool.name === "plan_context");
     expect(planTool).toMatchObject({
-      title: "Build answer-ready context",
+      title: "Resolve multi-passage context",
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
         idempotentHint: true,
         openWorldHint: false,
       },
-      _meta: { "anthropic/alwaysLoad": true },
     });
     expect(planTool?.outputSchema).toMatchObject({ type: "object" });
   });
