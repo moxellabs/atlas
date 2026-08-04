@@ -331,7 +331,7 @@ function genericPlanDescription(catalog: IndexedSourceCatalog): string {
       (source) => `${source.title} (${source.topics.slice(0, 8).join(", ")})`,
     )
     .join("; ");
-  return `Find and package local evidence for a library, framework, API, or repository question. Returns coverage (sufficient, partial, absent, or stale), citations, and the next safe action. Indexed sources and topics: ${sourceNames || "none"}. Use scope.repoId when the source is known.`;
+  return `Build a multi-passage local evidence packet for an ambiguous, comparative, cross-source, or module-boundary question. Returns coverage (sufficient, partial, absent, or stale), citations, and the next safe action. For a broad overview of one named source, use its answer_<source>_docs facade instead. Indexed sources and topics: ${sourceNames || "none"}. Use scope.repoId when the source is known.`;
 }
 
 function registerPrompts(server: McpServer): void {

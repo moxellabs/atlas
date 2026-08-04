@@ -161,7 +161,7 @@ export function registerPlanContextTool(
       title: "Build answer-ready context",
       description:
         options.description ??
-        "Use first for broad or cross-source questions. Returns one token-budgeted, deduplicated evidence packet with inferred scopes, coverage, citations, and an explicit next action. When nextAction is answer_locally, answer from this result without another retrieval call. Use exact scope constraints when the repository, package, or module is known.",
+        "Use for ambiguity, comparison, cross-source questions, module boundaries, or an answer that genuinely needs multiple passages. For a broad overview of one named source, use its answer_<source>_docs facade instead. Returns one token-budgeted, deduplicated evidence packet with inferred scopes, coverage, citations, and an explicit next action. When nextAction is answer_locally, answer from this result without another retrieval call. Use exact scope constraints when the repository, package, or module is known.",
       inputSchema: planContextInputSchema,
       outputSchema: planContextOutputSchema,
       annotations: {

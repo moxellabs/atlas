@@ -186,8 +186,8 @@ describe("MCP resources, prompts, and discovery", () => {
     const preferLocal = discoveryInstructions(catalog, "prefer-local");
 
     expect(neutral).toContain("Atlas provides indexed documentation");
-    expect(neutral).toContain("Route Atlas calls by task");
-    expect(neutral).toContain("do not list or traverse resources");
+    expect(neutral).toContain("Route by task");
+    expect(neutral).toContain("MCP resources are addressable artifacts");
     expect(neutral).not.toContain("before external search");
     expect(preferLocal).toContain("before external search");
   });
