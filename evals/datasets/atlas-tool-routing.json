@@ -29,7 +29,10 @@
           "description": "Explains the retrieval-to-context flow and runtime boundary.",
           "evidencePaths": [
             "docs/architecture.md",
-            "docs/retrieval-and-context.md"
+            "docs/retrieval-and-context.md",
+            "docs/index.md",
+            "docs/runtime-surfaces.md",
+            "packages/mcp/README.md"
           ]
         },
         {
@@ -38,7 +41,10 @@
           "description": "Claims are supported by indexed Atlas documentation.",
           "evidencePaths": [
             "docs/architecture.md",
-            "docs/retrieval-and-context.md"
+            "docs/retrieval-and-context.md",
+            "docs/index.md",
+            "docs/runtime-surfaces.md",
+            "packages/mcp/README.md"
           ]
         },
         {
@@ -47,7 +53,10 @@
           "description": "Cites at least one relevant repository-relative documentation path.",
           "evidencePaths": [
             "docs/architecture.md",
-            "docs/retrieval-and-context.md"
+            "docs/retrieval-and-context.md",
+            "docs/index.md",
+            "docs/runtime-surfaces.md",
+            "packages/mcp/README.md"
           ]
         }
       ]
