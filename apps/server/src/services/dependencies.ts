@@ -8,11 +8,9 @@ import {
   resolveIdentityProfile,
 } from "@atlas/config";
 import {
-  computeSourceDiff,
   createIndexerServices,
-  type IndexerDependencies,
+  RepositoryLifecycleService,
 } from "@atlas/indexer";
-import type { AtlasSourceDiffProvider } from "@atlas/mcp";
 import { type AtlasStoreClient, openStore, RepoRepository } from "@atlas/store";
 
 import type { ServerEnv } from "../env";
@@ -55,11 +53,16 @@ export async function buildServerDependencies(
     ...(runtime.mcp === undefined
       ? {}
       : { mcp: runtime.mcp, mcpServer: runtime.mcp.atlasMcpServer }),
+    ...(runtime.lifecycle === undefined
+      ? {}
+      : { lifecycle: runtime.lifecycle }),
     reloadConfig(nextConfig) {
       const previousMcp = dependencies.mcp;
+      const previousLifecycle = dependencies.lifecycle;
       const nextRuntime = createConfigBoundServices(env, nextConfig, db);
       dependencies.config = nextConfig;
       dependencies.operations = nextRuntime.operations;
+      dependencies.lifecycle = nextRuntime.lifecycle;
       if (nextRuntime.mcp === undefined) {
         dependencies.mcp = undefined;
         dependencies.mcpServer = undefined;
@@ -69,6 +72,12 @@ export async function buildServerDependencies(
       }
       if (previousMcp !== undefined && previousMcp !== nextRuntime.mcp) {
         void previousMcp.close();
+      }
+      if (
+        previousLifecycle !== undefined &&
+        previousLifecycle !== nextRuntime.lifecycle
+      ) {
+        void previousLifecycle.close();
       }
     },
   };
@@ -212,8 +221,8 @@ function createConfigBoundServices(
   env: ServerEnv,
   config: ResolvedAtlasConfig,
   db: AtlasStoreClient,
-): Pick<AtlasServerDependencies, "operations" | "mcp"> {
-  const { deps: indexerDeps, service: indexer } = createIndexerServices({
+): Pick<AtlasServerDependencies, "operations" | "mcp" | "lifecycle"> {
+  const { service: indexer } = createIndexerServices({
     config,
     db,
   });
@@ -226,59 +235,43 @@ function createConfigBoundServices(
       envMcpResourcePrefix: config.env.ATLAS_MCP_RESOURCE_PREFIX,
     },
   }).mcpIdentity;
-  const mcp = env.enableMcp
-    ? new McpBridgeService(
-        db,
+  let mcp: McpBridgeService | undefined;
+  const lifecycle =
         env.remote?.enabled === true
           ? undefined
-          : createSourceDiffProvider(indexerDeps),
+      : new RepositoryLifecycleService({
+          config,
+          indexer,
+          onCorpusChanged: () => {
+            mcp?.refreshDiscovery();
+          },
+        });
+  mcp = env.enableMcp
+    ? new McpBridgeService(
+        db,
+        lifecycle,
         mcpIdentity,
         env.discoveryPolicy,
         env.remote?.enabled === true ? "bounded-remote" : "full",
       )
     : undefined;
+  lifecycle?.start();
   return {
     operations: new BuildOperationsService(indexer),
     ...(mcp === undefined ? {} : { mcp }),
-  };
-}
-
-function createSourceDiffProvider(
-  indexerDeps: IndexerDependencies,
-): AtlasSourceDiffProvider {
-  return {
-    async diff(request) {
-      const repo = indexerDeps.resolveRepo(request.repoId);
-      const diff = await computeSourceDiff(
-        repo,
-        indexerDeps,
-        request.fromRevision,
-        request.toRevision,
-      );
-      return {
-        repoId: diff.repoId,
-        fromRevision: request.fromRevision,
-        toRevision: request.toRevision,
-        changes: diff.changes,
-        relevantChanges: diff.relevantChanges,
-        relevantDocPaths: diff.relevantDocPaths,
-        topologySensitivePaths: diff.topologySensitivePaths,
-        packageManifestPaths: diff.packageManifestPaths,
-        ...(diff.fullRebuildRequired === undefined
-          ? {}
-          : { fullRebuildRequired: diff.fullRebuildRequired }),
-        ...(diff.fullRebuildReason === undefined
-          ? {}
-          : { fullRebuildReason: diff.fullRebuildReason }),
-      };
-    },
+    ...(lifecycle === undefined ? {} : { lifecycle }),
   };
 }
 
 /** Closes server resources owned by dependencies. */
 export async function closeServerDependencies(
-  dependencies: Pick<AtlasServerDependencies, "db" | "mcp" | "ownedDbDir">,
+  dependencies: Pick<
+    AtlasServerDependencies,
+    "db" | "mcp" | "lifecycle" | "ownedDbDir"
+  >,
 ): Promise<void> {
+  if (dependencies.lifecycle !== undefined)
+    await dependencies.lifecycle.close();
   if (dependencies.mcp !== undefined) await dependencies.mcp.close();
   dependencies.db.close();
   if (dependencies.ownedDbDir !== undefined)

@@ -17,6 +17,7 @@ order: 210
 - Resolve config file discovery, explicit config paths, and `ATLAS_CONFIG`.
 - Normalize cache, corpus DB, local repo, and CA certificate paths.
 - Validate local Git and GHES repo source shapes.
+- Validate repository refresh lifecycle settings and install the 15-minute default.
 - Resolve GHES tokens from repo-specific env vars, standard env vars, or GitHub CLI credentials.
 - Mutate config files for CLI and server repository operations.
 

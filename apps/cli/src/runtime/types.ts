@@ -1,6 +1,5 @@
 import type { ResolvedAtlasConfig } from "@atlas/config";
 import type { IndexerService } from "@atlas/indexer";
-import type { AtlasSourceDiffProvider } from "@atlas/mcp";
 import type {
 	PlannedContext,
 	QueryClassification,
@@ -104,7 +103,6 @@ export type CliCommandOptions = Readonly<AtlasCliKnownOptions> &
 
 export type CliOptionName = keyof AtlasCliKnownOptions;
 
-
 /** Shared command context passed to every CLI command. */
 export interface CliCommandContext {
 	/** Positional arguments only. Commander owns all option parsing. */
@@ -127,7 +125,6 @@ export interface AtlasCliDependencies {
 	config: ResolvedAtlasConfig;
 	db: AtlasStoreClient;
 	indexer: IndexerService;
-	sourceDiffProvider: AtlasSourceDiffProvider;
 	repoCache: RepoCacheService;
 	retrieval: {
 		classifyQuery(query: string): QueryClassification;

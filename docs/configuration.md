@@ -20,6 +20,7 @@ The config package owns schema validation, defaults, path normalization, reposit
 - `corpusDbPath`: SQLite corpus path; default `~/.moxel/atlas/corpus.db`.
 - `logLevel`: runtime log verbosity.
 - `server`: transport, host, and port.
+- `lifecycle.repositoryRefresh`: background source reconciliation settings.
 - `repos`: configured source repositories.
 
 `loadConfig` normalizes paths relative to the config file and returns `runtimeRepos` for indexer and source adapters. CLI, HTTP, tests, and MCP-hosting workflows therefore use the same repository root and source contract.
@@ -36,6 +37,19 @@ The config package owns schema validation, defaults, path normalization, reposit
 `ghes-api` is for GitHub Enterprise Server repositories read through REST APIs. Credential discovery is resolved by `@atlas/config`; `@atlas/source-ghes` receives resolved auth metadata and performs API operations.
 
 Repo IDs should be stable because they participate in provenance, deterministic IDs, manifest state, retrieval scopes, and MCP resource identifiers.
+
+## Repository Refresh Lifecycle
+
+Local stdio MCP and loopback HTTP runtimes check eligible imported repositories in the background. The first check runs at startup, then Atlas uses the configured interval. Query handling remains local and never waits on a source check.
+
+```yaml
+lifecycle:
+  repositoryRefresh:
+    enabled: true
+    intervalMs: 900000
+```
+
+The interval defaults to 15 minutes and accepts values from 1 second through 24 hours. Set `enabled: false` for hermetic or manually managed runtimes. Atlas excludes `current-checkout` repositories and authenticated remote read-only server processes from automatic refresh. Concurrent Atlas processes share per-repository locks. Failed checks preserve the last good corpus and expose stale or failed state through `plan_context`.
 
 ## Workspace Discovery
 

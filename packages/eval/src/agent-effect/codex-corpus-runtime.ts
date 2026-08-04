@@ -37,6 +37,12 @@ export async function snapshotGlobalCorpus(input: {
         corpusDbPath,
         logLevel: "warn",
         server: { transport: "stdio" },
+        lifecycle: {
+          repositoryRefresh: {
+            enabled: false,
+            intervalMs: 15 * 60 * 1000,
+          },
+        },
         hosts: [],
         repos: [],
       },

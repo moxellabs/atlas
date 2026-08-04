@@ -40,10 +40,6 @@ import {
   FIND_SCOPES_TOOL,
   registerFindScopesTool,
 } from "../tools/find-scopes.tool";
-import {
-  GET_FRESHNESS_TOOL,
-  registerGetFreshnessTool,
-} from "../tools/get-freshness.tool";
 import { GET_SKILL_TOOL, registerGetSkillTool } from "../tools/get-skill.tool";
 import {
   LIST_SKILLS_TOOL,
@@ -63,10 +59,6 @@ import {
   registerReadSectionTool,
 } from "../tools/read-section.tool";
 import { USE_SKILL_TOOL, registerUseSkillTool } from "../tools/use-skill.tool";
-import {
-  WHAT_CHANGED_TOOL,
-  registerWhatChangedTool,
-} from "../tools/what-changed.tool";
 import type {
   AtlasMcpDependencies,
   AtlasRetrievalMcpDependencies,
@@ -89,8 +81,6 @@ const TOOL_NAMES = [
   LIST_SKILLS_TOOL,
   GET_SKILL_TOOL,
   USE_SKILL_TOOL,
-  GET_FRESHNESS_TOOL,
-  WHAT_CHANGED_TOOL,
 ] as const;
 const BOUNDED_REMOTE_TOOL_NAMES = [
   PLAN_CONTEXT_TOOL,
@@ -270,8 +260,6 @@ function registerTools(
     registerListSkillsTool(server, dependencies);
     registerGetSkillTool(server, dependencies);
     registerUseSkillTool(server, dependencies);
-    registerGetFreshnessTool(server, dependencies);
-    registerWhatChangedTool(server, dependencies);
   }
   return planTool;
 }

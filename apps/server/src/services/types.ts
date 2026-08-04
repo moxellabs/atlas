@@ -1,4 +1,5 @@
 import type { ResolvedAtlasConfig } from "@atlas/config";
+import type { RepositoryLifecycleService } from "@atlas/indexer";
 import type { AtlasMcpServer } from "@atlas/mcp";
 import type { AtlasStoreClient } from "@atlas/store";
 
@@ -25,6 +26,8 @@ export interface AtlasServerDependencies {
   retrieval: RetrievalHttpService;
   /** Shared sync/build orchestration adapter over the indexer package. */
   operations: BuildOperationsService;
+  /** Atlas-owned background repository freshness reconciler. */
+  lifecycle?: RepositoryLifecycleService | undefined;
   /** Optional MCP bridge service. */
   mcp?: McpBridgeService | undefined;
   /** Registered MCP metadata, when MCP is enabled. */

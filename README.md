@@ -17,7 +17,7 @@ Atlas helps teams publish ready-to-query documentation artifacts, import those a
 
 ## Why local-first docs retrieval matters
 
-Engineering docs often live across many repos, private hosts, and local checkouts. Atlas keeps retrieval predictable by compiling docs into local artifacts and querying local storage at runtime. Remote access happens only during explicit source sync, artifact fetch, or build workflows.
+Engineering docs often live across many repos, private hosts, and local checkouts. Atlas compiles them into local artifacts and serves retrieval from local SQLite. Source access occurs during explicit sync, artifact fetch, build workflows, or the configured background freshness cycle. Retrieval requests never fetch remote content.
 
 ## Features
 

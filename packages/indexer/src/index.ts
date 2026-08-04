@@ -35,6 +35,12 @@ export type {
 } from "./services/create-indexer-services";
 export { createIndexerServices } from "./services/create-indexer-services";
 export {
+  RepositoryLifecycleService,
+  type RepositoryLifecycleDiagnostic,
+  type RepositoryLifecycleDiagnosticType,
+  type RepositoryLifecycleServiceOptions,
+} from "./lifecycle/repository-lifecycle.service";
+export {
 	computeSourceDiff,
 	computeSourceUpdates,
 } from "./sync/compute-source-updates";
