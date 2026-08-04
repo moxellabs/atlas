@@ -161,16 +161,36 @@ describe("MCP server registration and in-memory protocol", () => {
     );
     expect(facade).toMatchObject({
       title: "Answer from atlas documentation",
-      description: expect.stringMatching(/session.*append/),
+      description: expect.stringMatching(
+        /answer immediately without calling another retrieval tool.*session.*append/,
+      ),
       annotations: expect.objectContaining({ readOnlyHint: true }),
       _meta: { "anthropic/alwaysLoad": true },
     });
     const result = await client.callTool({
       name: "answer_atlas_docs",
-      arguments: { query: "how do I rotate session tokens?" },
+      arguments: {
+        query: "What does `rotateSessionToken` do during renewal?",
+      },
     });
+    const structuredContent = result.structuredContent as {
+      context: { evidence: unknown[] };
+    };
+    expect(structuredContent.context.evidence.length).toBeLessThanOrEqual(4);
     expect(result.structuredContent).toMatchObject({
-      coverage: expect.objectContaining({ status: expect.any(String) }),
+      coverage: { status: "sufficient" },
+      nextAction: "answer_locally",
+      context: {
+        evidence: expect.arrayContaining([
+          expect.objectContaining({
+            targetType: "section",
+            text: expect.stringContaining("Rotate session tokens"),
+          }),
+        ]),
+        recommendedNextActions: [
+          "Answer directly from context.evidence and cite provenance paths. Do not call another retrieval tool unless a required claim is unsupported.",
+        ],
+      },
       citations: expect.arrayContaining([expect.objectContaining({ repoId })]),
       exactPassages: expect.arrayContaining([
         expect.objectContaining({
