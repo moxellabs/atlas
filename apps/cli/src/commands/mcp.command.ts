@@ -1,6 +1,15 @@
 import { readFile, stat } from "node:fs/promises";
 
-import { resolveIdentityProfile } from "@atlas/config";
+import {
+  type ResolvedAtlasConfig,
+  resolveIdentityProfile,
+} from "@atlas/config";
+import type { RepositoryRefreshStateProvider } from "@atlas/core";
+import {
+  type IndexerService,
+  RepositoryLifecycleService,
+  type RepositoryLifecycleDiagnostic,
+} from "@atlas/indexer";
 import type {
   AtlasMcpDiscoveryPolicy,
   AtlasMcpServer,
@@ -24,18 +33,25 @@ import { createCliConsole } from "./render";
 import { CliError, EXIT_INPUT_ERROR } from "../utils/errors";
 
 type StdioTransport = ReturnType<typeof createStdioTransport>;
-type McpRuntimeDependencies = Pick<
-  AtlasCliDependencies,
-  "db" | "sourceDiffProvider" | "close"
-> &
-  Partial<Pick<AtlasCliDependencies, "config">>;
+type McpRuntimeDependencies = Pick<AtlasCliDependencies, "db" | "close"> &
+  Partial<Pick<AtlasCliDependencies, "config" | "indexer">>;
 
 interface McpCommandRuntime {
   createServer(
-    deps: Pick<AtlasCliDependencies, "db" | "sourceDiffProvider">,
+    deps: Pick<AtlasCliDependencies, "db"> & {
+      repositoryRefreshStateProvider?:
+        | RepositoryRefreshStateProvider
+        | undefined;
+    },
     identity: ReturnType<typeof resolveIdentityProfile>["mcpIdentity"],
     discoveryPolicy: AtlasMcpDiscoveryPolicy,
   ): AtlasMcpServer;
+  createLifecycle?(
+    config: ResolvedAtlasConfig,
+    indexer: IndexerService,
+    onCorpusChanged: () => void,
+    onDiagnostic: (diagnostic: RepositoryLifecycleDiagnostic) => void,
+  ): RepositoryLifecycleService;
   createTransport(context: CliCommandContext): StdioTransport;
 }
 
@@ -45,7 +61,19 @@ const defaultRuntime: McpCommandRuntime = {
       db: deps.db,
       identity,
       discoveryPolicy,
-      sourceDiffProvider: deps.sourceDiffProvider,
+      ...(deps.repositoryRefreshStateProvider === undefined
+        ? {}
+        : {
+            repositoryRefreshStateProvider: deps.repositoryRefreshStateProvider,
+          }),
+    });
+  },
+  createLifecycle(config, indexer, onCorpusChanged, onDiagnostic) {
+    return new RepositoryLifecycleService({
+      config,
+      indexer,
+      onCorpusChanged,
+      onDiagnostic,
     });
   },
   createTransport(context) {
@@ -103,7 +131,35 @@ export async function runMcpCommandWithDependencies(
           },
         }).mcpIdentity;
   const discoveryPolicy = readDiscoveryPolicy(context);
-  const server = runtime.createServer(deps, identity, discoveryPolicy);
+  let server!: AtlasMcpServer;
+  const createLifecycle =
+    runtime.createLifecycle ?? defaultRuntime.createLifecycle;
+  const lifecycle =
+    deps.config === undefined ||
+    deps.indexer === undefined ||
+    createLifecycle === undefined
+      ? undefined
+      : createLifecycle(
+          deps.config,
+          deps.indexer,
+          () => {
+            server.refreshDiscovery();
+          },
+          (diagnostic) => {
+            void consoleIo.debug(diagnostic.message);
+          },
+        );
+  server = runtime.createServer(
+    {
+      db: deps.db,
+      ...(lifecycle === undefined
+        ? {}
+        : { repositoryRefreshStateProvider: lifecycle }),
+    },
+    identity,
+    discoveryPolicy,
+  );
+  lifecycle?.start();
   const transport = runtime.createTransport(context);
   const refreshTimer = setInterval(() => {
     try {
@@ -146,6 +202,7 @@ export async function runMcpCommandWithDependencies(
     clearInterval(refreshTimer);
     context.stdin.off("end", closeTransport);
     context.stdin.off("close", closeTransport);
+    await lifecycle?.close();
     deps.close();
   }
 }
@@ -244,7 +301,9 @@ async function readRemoteToken(context: CliCommandContext): Promise<string> {
   return token;
 }
 
-function readDiscoveryPolicy(context: CliCommandContext): AtlasMcpDiscoveryPolicy {
+function readDiscoveryPolicy(
+  context: CliCommandContext,
+): AtlasMcpDiscoveryPolicy {
   const value = readStringOption(context, "discoveryPolicy") ?? "neutral";
   if (ATLAS_MCP_DISCOVERY_POLICIES.includes(value as AtlasMcpDiscoveryPolicy)) {
     return value as AtlasMcpDiscoveryPolicy;

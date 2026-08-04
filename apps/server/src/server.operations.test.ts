@@ -49,6 +49,7 @@ describe("server operations", () => {
               corpusAffected: true,
               corpusImpact: "docs",
               changedPathCount: 1,
+              changedPaths: ["packages/auth/docs/session.md"],
               relevantChangedPathCount: 1,
               relevantDocPathCount: 1,
               topologySensitivePathCount: 0,

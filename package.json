@@ -44,7 +44,7 @@
     "@opentelemetry/sdk-node": "0.221.0",
     "@protobufjs/utf8": "1.1.2",
     "body-parser": "2.3.0",
-    "fast-uri": "3.1.4",
+    "fast-uri": "3.1.5",
     "hono": "4.12.34",
     "ip-address": "10.4.0",
     "protobufjs": "7.6.5",

@@ -55,6 +55,13 @@ export type {
   FreshnessSnapshot,
 } from "./types/freshness.types";
 export { computeFreshness } from "./types/freshness.types";
+export type {
+  RepositoryRefreshFailure,
+  RepositoryRefreshState,
+  RepositoryRefreshStateProvider,
+  RepositoryRefreshStatus,
+} from "./types/repository-refresh.types";
+export { REPOSITORY_REFRESH_STATUSES } from "./types/repository-refresh.types";
 export type { Provenance, SourceProvenance } from "./types/provenance.types";
 export type {
   DocMetadataRule,
@@ -88,10 +95,7 @@ export type {
 } from "./types/topology.types";
 export { stableHash } from "./utils/hash";
 export { stableJson } from "./utils/stable-json";
-export {
-  matchesAnyRepoPath,
-  matchesRepoPath,
-} from "./utils/repo-path-match";
+export { matchesAnyRepoPath, matchesRepoPath } from "./utils/repo-path-match";
 export {
   estimateTokenCount,
   fitsWithinTokenBudget,

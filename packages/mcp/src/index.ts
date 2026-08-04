@@ -42,21 +42,18 @@ export type {
   ExplainModuleInput,
   FindDocsInput,
   FindScopesInput,
-  GetFreshnessInput,
   GetSkillInput,
   ListSkillsInput,
   PlanContextToolInput,
   ReadOutlineInput,
   ReadSectionInput,
   UseSkillInput,
-  WhatChangedInput,
 } from "./schemas/tool-schemas";
 export {
   expandRelatedInputSchema,
   explainModuleInputSchema,
   findDocsInputSchema,
   findScopesInputSchema,
-  getFreshnessInputSchema,
   getSkillInputSchema,
   jsonOutputSchema,
   limitSchema,
@@ -68,7 +65,6 @@ export {
   repoIdSchema,
   scopeFilterSchema,
   useSkillInputSchema,
-  whatChangedInputSchema,
 } from "./schemas/tool-schemas";
 export { createAtlasMcpServer } from "./server/create-mcp-server";
 export {
@@ -107,11 +103,6 @@ export {
   registerFindScopesTool,
 } from "./tools/find-scopes.tool";
 export {
-  executeGetFreshness,
-  GET_FRESHNESS_TOOL,
-  registerGetFreshnessTool,
-} from "./tools/get-freshness.tool";
-export {
   executeGetSkill,
   GET_SKILL_TOOL,
   registerGetSkillTool,
@@ -142,11 +133,6 @@ export {
   registerUseSkillTool,
   USE_SKILL_TOOL,
 } from "./tools/use-skill.tool";
-export {
-  executeWhatChanged,
-  registerWhatChangedTool,
-  WHAT_CHANGED_TOOL,
-} from "./tools/what-changed.tool";
 export { ATLAS_MCP_DISCOVERY_POLICIES } from "./types";
 export type { AtlasMcpDiscoveryPolicy } from "./types";
 export type {
@@ -156,8 +142,5 @@ export type {
   AtlasMcpIdentity,
   AtlasRetrievalMcpDependencies,
   AtlasMcpServer,
-  AtlasSourceDiffProvider,
-  AtlasSourceDiffRequest,
-  AtlasSourceDiffResult,
   McpJsonObject,
 } from "./types";

@@ -1,6 +1,8 @@
 export type {
 	AtlasConfig,
 	AtlasGhesRepoSourceConfig,
+  AtlasLifecycleConfig,
+  AtlasRepositoryRefreshConfig,
 	AtlasGitRepoSourceConfig,
 	AtlasHostConfig,
 	AtlasIdentityConfig,
@@ -17,6 +19,9 @@ export {
 	atlasDocVisibilitySchema,
 	atlasGhesRepoSourceConfigSchema,
 	atlasGitRepoSourceConfigSchema,
+  atlasLifecycleConfigSchema,
+  atlasRepositoryRefreshConfigSchema,
+  DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
 	atlasHostConfigSchema,
 	atlasIdentityConfigSchema,
 	atlasMcpIdentityConfigSchema,

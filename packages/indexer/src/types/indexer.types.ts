@@ -123,6 +123,8 @@ export interface SyncReport {
 	corpusAffected: boolean;
 	corpusImpact: CorpusImpact;
 	changedPathCount: number;
+  /** Deterministic source paths changed since the indexed baseline. */
+  changedPaths: string[];
 	relevantChangedPathCount: number;
 	relevantDocPathCount: number;
 	topologySensitivePathCount: number;

@@ -33,7 +33,13 @@ Sync reports should be safe for humans and agents to inspect. They can include r
 4. The tokenizer builds chunks with exact token counts and stable provenance.
 5. The store persists repos, packages, modules, docs, sections, chunks, summaries, skills, FTS rows, and manifests transactionally.
 
-Failed rebuilds must not replace the last good corpus. Recovery status and diagnostics are surfaced through reports, CLI output, server routes, and MCP freshness tools.
+Failed rebuilds must not replace the last good corpus. Recovery status and diagnostics are surfaced through reports, CLI output, server routes, and `plan_context`.
+
+## Background Freshness Lifecycle
+
+Local stdio MCP and loopback HTTP runtimes start a nonblocking repository freshness cycle. Atlas checks eligible managed repositories at startup and on the configured TTL. A source change that affects the corpus runs the normal transactional build path. A source-only change can fast-forward compatible manifest state without recompiling documents.
+
+Lifecycle state is stored under the Atlas cache root and includes source and indexed revisions, last check and success times, status, bounded changed paths, and a sanitized failure. Per-repository locks prevent duplicate work across Atlas processes. Failed syncs or builds leave the last good corpus available. Retrieval stays local, while `plan_context` reports whether selected evidence is fresh, stale, refreshing, or refresh-failed. Diff questions receive the bounded changed paths already recorded by the lifecycle cycle.
 
 ## Repo Artifact Format
 

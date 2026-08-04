@@ -1,4 +1,4 @@
-import type { SourceChange } from "@atlas/core";
+import type { RepositoryRefreshStateProvider } from "@atlas/core";
 import type { StoreDatabase } from "@atlas/store";
 import type { RetrievalStore } from "@atlas/retrieval";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -28,39 +28,13 @@ export interface AtlasMcpDependencies {
   discoveryPolicy?: AtlasMcpDiscoveryPolicy | undefined;
   /** Controls whether aggregate resources and tools are exposed. */
   exposurePolicy?: AtlasMcpExposurePolicy | undefined;
-  /** Optional source-backed diff provider used by what_changed in full runtimes. */
-  sourceDiffProvider?: AtlasSourceDiffProvider | undefined;
+  /** Query-time view of Atlas-owned background repository refresh health. */
+  repositoryRefreshStateProvider?: RepositoryRefreshStateProvider | undefined;
 }
 
 /** MCP dependency view required by retrieval-backed tools. */
 export interface AtlasRetrievalMcpDependencies extends AtlasMcpDependencies {
   retrievalStore: RetrievalStore;
-}
-
-/** Read-only source diff request issued by MCP. */
-export interface AtlasSourceDiffRequest {
-  repoId: string;
-  fromRevision: string;
-  toRevision: string;
-}
-
-/** Source diff payload returned by a runtime-specific provider. */
-export interface AtlasSourceDiffResult {
-  repoId: string;
-  fromRevision: string;
-  toRevision: string;
-  changes: SourceChange[];
-  relevantChanges: SourceChange[];
-  relevantDocPaths: string[];
-  topologySensitivePaths: string[];
-  packageManifestPaths: string[];
-  fullRebuildRequired?: boolean | undefined;
-  fullRebuildReason?: string | undefined;
-}
-
-/** Runtime boundary for source-backed diffing without coupling MCP to source packages. */
-export interface AtlasSourceDiffProvider {
-  diff(request: AtlasSourceDiffRequest): Promise<AtlasSourceDiffResult>;
 }
 
 /** One registered MCP surface diagnostic. */
