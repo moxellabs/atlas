@@ -97,7 +97,7 @@ The runner uses ephemeral Codex configuration and never calls `codex mcp add`, m
 bun run eval:luna:routing
 ```
 
-Each routing case declares accepted first Atlas tools, a maximum successful Atlas-call count, and whether external fallback is required or forbidden. The gate reports first-tool selection, budget compliance, fallback precision, and repeated Atlas-call rate. It fails on protocol errors, wrong first-tool routing, excess retrieval calls, incorrect fallback, or duplicate successful calls to the same Atlas tool.
+Each routing case declares accepted first successful evidence calls as `<source>:<name>`, a maximum successful Atlas-call count, and whether external fallback is required or forbidden. This lets the absent-corpus case require direct web retrieval without pretending an Atlas call is useful. The gate reports first-tool selection, budget compliance, fallback precision, and repeated Atlas-call rate. It fails on protocol errors, wrong first-tool routing, excess retrieval calls, incorrect fallback, or duplicate successful calls to the same Atlas tool.
 
 ## Adding or changing cases
 

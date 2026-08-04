@@ -29,9 +29,9 @@ Identity changes server metadata, resource display names, and skill aliases. Gen
 
 ## Protocol surface
 
-The default `agent` profile exposes `plan_context`, `find_docs`, `read_document`, `expand_related`, `use_skill`, and one `answer_<source>_docs` facade. `plan_context` and source facades are eagerly advertised through `anthropic/alwaysLoad`. All tools publish concrete output schemas.
+The default `agent` profile exposes `plan_context`, `find_docs`, `read_document`, `expand_related`, `use_skill`, and one `answer_<source>_docs` facade. `plan_context` and the primary source facade are eagerly advertised through `anthropic/alwaysLoad`; additional advanced-profile facades remain discoverable without forced preload. All tools publish concrete output schemas.
 
-`read_document` combines outline and exact-section reads. `plan_context` handles module explanations through exact scope constraints and returns one deduplicated evidence packet under one token budget. `use_skill` handles browsing, exact resolution, and deterministic task matching.
+`read_document` combines outline and exact-section reads. `plan_context` handles module explanations through exact scope constraints and returns one deduplicated evidence packet under one token budget. Retrieval results include explicit next-action guidance so clients can answer immediately, refine once, or use external fallback without restarting broad retrieval. `use_skill` handles browsing, exact resolution, and deterministic task matching.
 
 The `advanced` profile adds `find_scopes` and exposes up to 12 configured source facades. The CLI selects it with `--tool-profile advanced`; the HTTP server uses `ATLAS_MCP_TOOL_PROFILE=advanced`. Resources expose persisted corpus artifacts by stable identifier. Prompts cover onboarding, module summaries, local-document answers, document comparison, and skill usage.
 

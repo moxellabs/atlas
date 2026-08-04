@@ -199,7 +199,7 @@ describe("agent evaluation runs", () => {
       tasks: dataset.tasks.map((task) => ({
         ...task,
         routing: {
-          firstAtlasTools: ["plan_context"],
+          firstTools: ["atlas:plan_context"],
           maxAtlasCalls: 1,
           externalFallback: "forbidden" as const,
         },

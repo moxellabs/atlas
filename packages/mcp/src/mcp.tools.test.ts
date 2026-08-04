@@ -126,6 +126,12 @@ describe("MCP tool contracts", () => {
         }),
       ]),
     );
+    expect(
+      executeFindDocs(
+        { query: "session rotation", repoId, limit: 5 },
+        dependencies,
+      ).nextActionGuidance,
+    ).toContain("do not repeat find_docs");
     const filteredHits = executeFindDocs(
       {
         query: "session rotation",
@@ -159,6 +165,7 @@ describe("MCP tool contracts", () => {
       query: "how do I rotate session tokens?",
       coverage: { status: expect.any(String) },
       nextAction: expect.any(String),
+      nextActionGuidance: expect.any(String),
       context: {
         evidence: expect.arrayContaining([
           expect.objectContaining({
@@ -295,6 +302,7 @@ describe("MCP tool contracts", () => {
       status: "outline",
       document: expect.objectContaining({ docId }),
       outline: [expect.objectContaining({ sectionId })],
+      nextActionGuidance: expect.stringContaining("call read_document once"),
     });
     expect(
       executeReadDocument({ docId, sectionId }, dependencies),
@@ -304,6 +312,7 @@ describe("MCP tool contracts", () => {
         sectionId,
         text: "Rotate session tokens by calling rotateSessionToken during renewal.",
       }),
+      nextActionGuidance: expect.stringContaining("Answer now"),
     });
     expect(
       executeReadDocument(
@@ -520,6 +529,7 @@ describe("MCP tool contracts", () => {
         ]),
         skills: expect.arrayContaining([expect.objectContaining({ skillId })]),
       },
+      nextActionGuidance: expect.stringContaining("Do not restart retrieval"),
     });
     expect(
       executeExpandRelated(

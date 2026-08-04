@@ -162,8 +162,8 @@ export function aggregateAgentEffect(
       firstToolSelectionRate: rate(routingRuns, ({ run, expectation }) => {
         const first = successfulEvidenceCalls(run)[0];
         return (
-          first?.source === "atlas" &&
-          expectation.firstAtlasTools.includes(first.name)
+          first !== undefined &&
+          expectation.firstTools.includes(evidenceCallKey(first))
         );
       }),
       budgetComplianceRate: rate(
@@ -270,8 +270,8 @@ export function assertAgentToolRouting(
     if (run.status !== "completed") reasons.push(`status=${run.status}`);
     if ((run.mcp?.protocolErrors ?? 0) !== 0) reasons.push("protocol-errors");
     if (
-      first?.source !== "atlas" ||
-      !expectation.firstAtlasTools.includes(first.name)
+      first === undefined ||
+      !expectation.firstTools.includes(evidenceCallKey(first))
     ) {
       reasons.push(`first=${first?.source ?? "none"}:${first?.name ?? "none"}`);
     }
@@ -319,6 +319,10 @@ function hasRedundantAtlasCalls(
     seen.add(call.name);
     return false;
   });
+}
+
+function evidenceCallKey(call: NonNullable<AgentRun["mcp"]>["calls"][number]) {
+  return `${call.source}:${call.name}`;
 }
 
 function successfulEvidenceCalls(run: AgentRun) {

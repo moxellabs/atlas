@@ -211,6 +211,7 @@ export const findDocsOutputSchema = z
     filters: metadataSchema.optional(),
     ambiguity: ambiguitySchema.optional(),
     diagnostics: z.array(diagnosticSchema),
+    nextActionGuidance: z.string(),
   })
   .strict();
 
@@ -277,6 +278,7 @@ export const readDocumentOutputSchema = z
       })
       .strict()
       .optional(),
+    nextActionGuidance: z.string(),
   })
   .strict();
 
@@ -435,6 +437,7 @@ export const expandRelatedOutputSchema = z
       })
       .strict(),
     diagnostics: z.array(diagnosticSchema),
+    nextActionGuidance: z.string(),
   })
   .strict();
 
@@ -457,6 +460,7 @@ export const planContextOutputSchema = z
       })
       .strict(),
     nextAction: z.enum(["answer_locally", "refine_locally", "web_fallback"]),
+    nextActionGuidance: z.string(),
     context: contextPacketSchema,
     citations: z.array(
       z

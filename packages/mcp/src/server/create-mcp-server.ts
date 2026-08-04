@@ -164,12 +164,15 @@ export function createAtlasMcpServer(
         allResourceNames.push(resource.name);
       }
     }
-    for (const source of selectedSourceFacades(nextCatalog, dependencies)) {
+    for (const [index, source] of selectedSourceFacades(
+      nextCatalog,
+      dependencies,
+    ).entries()) {
       const tool = registerSourcePlanContextTool(
         server,
         effectiveDependencies,
         source,
-        { alwaysLoad: true },
+        { alwaysLoad: index === 0 },
       );
       dynamicTools.set(source.repoId, tool);
       toolNames.push(tool.name);

@@ -7,6 +7,7 @@ import { isolateCorpusSnapshot } from "./corpus-snapshot";
 export async function snapshotGlobalCorpus(input: {
   readonly workDir: string;
   readonly repoId: string;
+  readonly sourcePath?: string;
 }): Promise<{
   readonly configPath: string;
   readonly corpusDbPath: string;
@@ -17,7 +18,8 @@ export async function snapshotGlobalCorpus(input: {
     readonly corpusDigest: string;
   };
 }> {
-  const sourcePath = join(homedir(), ".moxel", "atlas", "corpus.db");
+  const sourcePath =
+    input.sourcePath ?? join(homedir(), ".moxel", "atlas", "corpus.db");
   const snapshotDir = join(input.workDir, "corpus-snapshot");
   const cacheDir = join(snapshotDir, "cache");
   const corpusDbPath = join(snapshotDir, "corpus.db");

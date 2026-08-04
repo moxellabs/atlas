@@ -115,6 +115,12 @@ function buildPlanContextResult(
       : coverage === "partial"
         ? "refine_locally"
         : "web_fallback";
+  const nextActionGuidance =
+    nextAction === "answer_locally"
+      ? "Answer directly from context.evidence and cite provenance paths. Do not call another retrieval tool unless a required claim is unsupported."
+      : nextAction === "refine_locally"
+        ? "Coverage is partial. Call find_docs once for only the unsupported claim, then answer."
+        : "Indexed coverage is absent or stale. Use an external source, cite it, and do not attribute the answer to Atlas.";
   const citations = uniqueCitations(selected);
   return planContextOutputSchema.parse({
     query: parsed.query,
@@ -127,7 +133,16 @@ function buildPlanContextResult(
       ),
     },
     nextAction,
-    context: plan.contextPacket,
+    nextActionGuidance,
+    context: {
+      ...plan.contextPacket,
+      recommendedNextActions: [
+        nextActionGuidance,
+        ...plan.contextPacket.recommendedNextActions
+          .filter((action) => action !== nextActionGuidance)
+          .slice(0, 2),
+      ],
+    },
     citations,
     ...(classifyQuery(parsed.query).kind === "diff"
       ? { recentChanges: recentRepositoryChanges(refreshStateByRepo) }
@@ -148,7 +163,7 @@ export function registerPlanContextTool(
       title: "Build answer-ready context",
       description:
         options.description ??
-        "Use first for broad or cross-source questions. Returns one token-budgeted, deduplicated evidence packet with inferred scopes, coverage, citations, and the next safe action. Use exact scope constraints when the repository, package, or module is known. Call find_docs or expand_related only when a required claim remains unsupported.",
+        "Use first for broad or cross-source questions. Returns one token-budgeted, deduplicated evidence packet with inferred scopes, coverage, citations, and an explicit next action. When nextAction is answer_locally, answer from this result without another retrieval call. Use exact scope constraints when the repository, package, or module is known.",
       inputSchema: planContextInputSchema,
       outputSchema: planContextOutputSchema,
       annotations: {
@@ -177,7 +192,7 @@ export function registerSourcePlanContextTool(
       name,
       {
         title: `Answer from ${source.title} documentation`,
-        description: `Use first for questions about ${source.title}. Returns one token-budgeted, deduplicated evidence packet from the ${source.fresh ? "fresh" : "stale"} indexed corpus with source-relative citations. Answer immediately when coverage is sufficient. Aliases: ${source.aliases.slice(0, 5).join(", ")}. Topics: ${source.topics.slice(0, 12).join(", ")}.`,
+        description: `Use first for questions about ${source.title}. Returns one token-budgeted, deduplicated evidence packet from the ${source.fresh ? "fresh" : "stale"} indexed corpus with source-relative citations. When nextAction is answer_locally, answer immediately without another retrieval call. Aliases: ${source.aliases.slice(0, 5).join(", ")}. Topics: ${source.topics.slice(0, 12).join(", ")}.`,
         inputSchema: sourcePlanContextInputSchema,
         outputSchema: planContextOutputSchema,
         annotations: {

@@ -34,6 +34,8 @@ export function executeReadDocument(
       },
       outline: result.outline,
       summaries: result.summaries,
+      nextActionGuidance:
+        "Choose the one relevant outline section and call read_document once with its sectionId. If the summaries already support the claim, answer now.",
     });
   }
 
@@ -56,6 +58,8 @@ export function executeReadDocument(
       codeBlocks: result.section.codeBlocks,
       provenance: result.provenance,
     },
+    nextActionGuidance:
+      "Answer now from section.text and section.provenance. Do not call another retrieval tool unless a required claim remains unsupported.",
   });
 }
 

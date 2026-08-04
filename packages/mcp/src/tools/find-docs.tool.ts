@@ -17,29 +17,34 @@ export function executeFindDocs(
   dependencies: AtlasRetrievalMcpDependencies,
 ): McpJsonObject {
   const parsed = findDocsInputSchema.parse(input);
-  return findDocsOutputSchema.parse(
-    findDocs({
-      store: dependencies.retrievalStore,
-      query: parsed.query,
-      ...(parsed.repoId === undefined ? {} : { repoId: parsed.repoId }),
-      ...(parsed.scopeIds === undefined ? {} : { scopeIds: parsed.scopeIds }),
-      ...(parsed.documentKinds === undefined
+  const result = findDocs({
+    store: dependencies.retrievalStore,
+    query: parsed.query,
+    ...(parsed.repoId === undefined ? {} : { repoId: parsed.repoId }),
+    ...(parsed.scopeIds === undefined ? {} : { scopeIds: parsed.scopeIds }),
+    ...(parsed.documentKinds === undefined
+      ? {}
+      : { documentKinds: parsed.documentKinds }),
+    ...(parsed.targetTypes === undefined
+      ? {}
+      : { targetTypes: parsed.targetTypes }),
+    ...(parsed.limit === undefined ? {} : { limit: parsed.limit }),
+    filters: {
+      ...(parsed.profile === undefined ? {} : { profile: parsed.profile }),
+      ...(parsed.audience === undefined ? {} : { audience: parsed.audience }),
+      ...(parsed.purpose === undefined ? {} : { purpose: parsed.purpose }),
+      ...(parsed.visibility === undefined
         ? {}
-        : { documentKinds: parsed.documentKinds }),
-      ...(parsed.targetTypes === undefined
-        ? {}
-        : { targetTypes: parsed.targetTypes }),
-      ...(parsed.limit === undefined ? {} : { limit: parsed.limit }),
-      filters: {
-        ...(parsed.profile === undefined ? {} : { profile: parsed.profile }),
-        ...(parsed.audience === undefined ? {} : { audience: parsed.audience }),
-        ...(parsed.purpose === undefined ? {} : { purpose: parsed.purpose }),
-        ...(parsed.visibility === undefined
-          ? {}
-          : { visibility: parsed.visibility }),
-      },
-    }),
-  );
+        : { visibility: parsed.visibility }),
+    },
+  });
+  return findDocsOutputSchema.parse({
+    ...result,
+    nextActionGuidance:
+      result.hits.length === 0
+        ? "No indexed hit supports this claim. Use an external source if the claim still requires an answer."
+        : "Use the highest-ranked hit's textPreview when it supports the claim. Otherwise call read_document once for that hit; do not repeat find_docs.",
+  });
 }
 
 /** Registers the find_docs MCP tool. */

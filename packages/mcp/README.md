@@ -30,7 +30,7 @@ The default `agent` profile advertises five generic tools plus one source-named 
 - `use_skill` browses stored skills and resolves exact or unambiguous task matches into complete instructions, provenance, and read-only artifacts.
 - `answer_<source>_docs` runs the same planner against one named indexed source.
 
-`plan_context` and each advertised source facade carry `anthropic/alwaysLoad`. Every tool publishes a concrete output schema. Source facades return the planner's selected evidence directly, so their output stays inside one retrieval budget.
+`plan_context` and the primary source facade carry `anthropic/alwaysLoad`; additional advanced-profile facades remain discoverable without forced preload. Every tool publishes a concrete output schema and explicit next-action guidance. Source facades return the planner's selected evidence directly, so their output stays inside one retrieval budget.
 
 The `advanced` profile adds `find_scopes` and may advertise up to 12 configured source facades. Select it with `atlas mcp --tool-profile advanced` or `ATLAS_MCP_TOOL_PROFILE=advanced` for the HTTP server. The default profile advertises one configured source facade.
 

@@ -49,6 +49,7 @@ export async function createCodexExecutor(input: {
   readonly agentCwd?: string;
   readonly useGlobal?: boolean;
   readonly snapshotGlobalCorpus?: boolean;
+  readonly snapshotCorpusPath?: string;
   readonly competitiveTools?: boolean;
 }): Promise<CodexExecutorHandle> {
   const workDir = await mkdtemp(join(tmpdir(), "atlas-luna-eval-"));
@@ -62,7 +63,13 @@ export async function createCodexExecutor(input: {
     );
   const config =
     input.snapshotGlobalCorpus === true
-      ? await snapshotGlobalCorpus({ workDir, repoId: input.dataset.repoId })
+      ? await snapshotGlobalCorpus({
+          workDir,
+          repoId: input.dataset.repoId,
+          ...(input.snapshotCorpusPath === undefined
+            ? {}
+            : { sourcePath: input.snapshotCorpusPath }),
+        })
       : await resolveEvalConfig({
           cli: "bun run cli",
           useGlobal: input.useGlobal === true,

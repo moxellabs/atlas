@@ -129,15 +129,15 @@ function parseTask(
 	};
 }
 
-function parseRouting(
-	value: unknown,
-	taskId: string,
-): AgentRoutingExpectation {
+function parseRouting(value: unknown, taskId: string): AgentRoutingExpectation {
 	if (
 		!isRecord(value) ||
-		!isStringArray(value.firstAtlasTools) ||
-		value.firstAtlasTools.length === 0 ||
-		!isPositiveInteger(value.maxAtlasCalls) ||
+    !isStringArray(value.firstTools) ||
+    value.firstTools.length === 0 ||
+    value.firstTools.some((tool) => !tool.includes(":")) ||
+    !Number.isInteger(value.maxAtlasCalls) ||
+    typeof value.maxAtlasCalls !== "number" ||
+    value.maxAtlasCalls < 0 ||
 		!["required", "forbidden", "allowed"].includes(
 			String(value.externalFallback),
 		) ||
@@ -147,7 +147,7 @@ function parseRouting(
 		throw new Error(`Invalid routing expectation for task ${taskId}`);
 	}
 	return {
-		firstAtlasTools: value.firstAtlasTools,
+    firstTools: value.firstTools,
 		maxAtlasCalls: value.maxAtlasCalls,
 		externalFallback: value.externalFallback as
 			| "required"

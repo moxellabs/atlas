@@ -202,7 +202,7 @@ describe("MCP server registration and in-memory protocol", () => {
       },
       _meta: { "anthropic/alwaysLoad": true },
     });
-    expect(facade?.description).toMatch(/Answer immediately.*session.*append/);
+    expect(facade?.description).toMatch(/answer immediately.*session.*append/i);
     expect(facade?.outputSchema).toMatchObject({ type: "object" });
     const result = await client.callTool({
       name: "answer_atlas_docs",
@@ -317,11 +317,15 @@ describe("MCP server registration and in-memory protocol", () => {
     expect(refreshedTools.map((tool) => tool.name)).toContain(
       "answer_guide_docs",
     );
-    for (const tool of refreshedTools.filter((candidate) =>
+    const sourceAnswerTools = refreshedTools.filter((candidate) =>
       candidate.name.startsWith("answer_"),
-    )) {
-      expect(tool._meta).toEqual({ "anthropic/alwaysLoad": true });
-    }
+    );
+    expect(sourceAnswerTools[0]?._meta).toEqual({
+      "anthropic/alwaysLoad": true,
+    });
+    expect(
+      sourceAnswerTools.slice(1).every((tool) => tool._meta === undefined),
+    ).toBe(true);
     expect(
       (await client.listResources()).resources.map((resource) => resource.name),
     ).toContain("atlas-source-guide");

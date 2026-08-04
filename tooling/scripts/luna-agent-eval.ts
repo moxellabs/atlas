@@ -33,12 +33,19 @@ const agentCwd =
   args.workspace === undefined ? undefined : resolve(cwd, args.workspace);
 const useGlobal = args.global === "true";
 const snapshotGlobalCorpus = args["snapshot-global-corpus"] === "true";
+const snapshotCorpusPath =
+  args["snapshot-corpus"] === undefined
+    ? undefined
+    : resolve(cwd, args["snapshot-corpus"]);
 const competitiveTools = args["competitive-tools"] === "true";
 
 if (useGlobal && snapshotGlobalCorpus) {
   throw new Error(
     "--global and --snapshot-global-corpus are mutually exclusive.",
   );
+}
+if (snapshotCorpusPath !== undefined && !snapshotGlobalCorpus) {
+  throw new Error("--snapshot-corpus requires --snapshot-global-corpus.");
 }
 if (requireAtlasAdoption && (!snapshotGlobalCorpus || agentCwd !== undefined)) {
   throw new Error(
@@ -109,6 +116,7 @@ const handle = await createCodexExecutor({
   ...(agentCwd === undefined ? {} : { agentCwd }),
   ...(useGlobal ? { useGlobal: true } : {}),
   ...(snapshotGlobalCorpus ? { snapshotGlobalCorpus: true } : {}),
+  ...(snapshotCorpusPath === undefined ? {} : { snapshotCorpusPath }),
   ...(competitiveTools ? { competitiveTools: true } : {}),
 });
 const corpusProvenance =

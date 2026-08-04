@@ -172,7 +172,7 @@ export function registerUseSkillTool(
     USE_SKILL_TOOL,
     {
       title: `Use ${title} skill`,
-      description: `Browse stored ${title} skills, resolve an exact skill ID, title, or alias such as $${prefix}-add-cli-command, or find one for a natural-language task. Exact and unambiguous task matches return agent-ready instructions, provenance, and read-only artifacts.`,
+      description: `Call once with task only to resolve a natural-language procedure, or with skill only when an exact ID, title, or alias such as $${prefix}-add-cli-command is already known. Exact and unambiguous matches return complete agent-ready instructions, provenance, and read-only artifacts; do not call again after status resolved.`,
       inputSchema: useSkillInputSchema,
       outputSchema: useSkillOutputSchema,
       annotations: {

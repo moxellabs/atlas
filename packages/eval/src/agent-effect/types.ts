@@ -21,8 +21,8 @@ export interface AgentEffectCriterion {
   readonly evidencePaths: readonly string[];
 }
 export interface AgentRoutingExpectation {
-  /** Accepted first successful Atlas tools for this task. */
-  readonly firstAtlasTools: readonly string[];
+  /** Accepted first successful evidence calls, encoded as "<source>:<name>". */
+  readonly firstTools: readonly string[];
   /** Maximum successful Atlas evidence calls before the final answer. */
   readonly maxAtlasCalls: number;
   /** Whether successful non-Atlas evidence is required, forbidden, or unrestricted. */

@@ -18,7 +18,7 @@
       "category": "broad-answer",
       "prompt": "Explain how Atlas turns indexed repository documentation into an answer-ready context packet. Include the main runtime boundary and cite the repository documentation you used.",
       "routing": {
-        "firstAtlasTools": ["answer_atlas_docs", "plan_context"],
+        "firstTools": ["atlas:answer_atlas_docs", "atlas:plan_context"],
         "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },
@@ -59,7 +59,7 @@
       "category": "exact-retrieval",
       "prompt": "Find the precise documented rule for when an agent should use plan_context instead of find_docs. Quote or closely paraphrase that rule and cite its repository path.",
       "routing": {
-        "firstAtlasTools": ["find_docs"],
+        "firstTools": ["atlas:find_docs"],
         "maxAtlasCalls": 2,
         "externalFallback": "forbidden"
       },
@@ -100,7 +100,7 @@
       "category": "follow-up",
       "prompt": "A prior answer established that Atlas artifacts are read-only but did not explain how stale source coverage is reported. Retrieve only the missing stale-coverage behavior, then answer with a citation.",
       "routing": {
-        "firstAtlasTools": ["find_docs"],
+        "firstTools": ["atlas:find_docs"],
         "maxAtlasCalls": 2,
         "externalFallback": "forbidden"
       },
@@ -141,7 +141,7 @@
       "category": "ambiguity",
       "prompt": "How does Atlas handle configuration? Distinguish the likely configuration scopes before answering, and cite the evidence packet used.",
       "routing": {
-        "firstAtlasTools": ["plan_context"],
+        "firstTools": ["atlas:plan_context"],
         "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },
@@ -173,7 +173,7 @@
       "category": "related-context",
       "prompt": "Starting from the retrieval surface documentation for plan_context, identify the directly related document that explains ingestion and build flow. Use the stable hit you retrieve rather than restarting with multiple broad searches.",
       "routing": {
-        "firstAtlasTools": ["find_docs"],
+        "firstTools": ["atlas:find_docs"],
         "maxAtlasCalls": 2,
         "externalFallback": "forbidden"
       },
@@ -211,7 +211,7 @@
       "category": "module",
       "prompt": "Explain the responsibilities and boundaries of packages/mcp as a module. Keep the answer within one coherent evidence budget and cite the relevant module documentation.",
       "routing": {
-        "firstAtlasTools": ["plan_context"],
+        "firstTools": ["atlas:plan_context"],
         "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },
@@ -252,7 +252,7 @@
       "category": "skill",
       "prompt": "Prepare the repository-approved procedure for adding a new Atlas CLI command. Return the complete skill instructions and identify any bundled references or scripts.",
       "routing": {
-        "firstAtlasTools": ["use_skill"],
+        "firstTools": ["atlas:use_skill"],
         "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },
@@ -284,8 +284,8 @@
       "category": "fallback",
       "prompt": "What was the closing price of the Nikkei 225 on August 3, 2026? Verify the answer with a current external source and do not claim that repository documentation contains it.",
       "routing": {
-        "firstAtlasTools": ["answer_atlas_docs", "plan_context"],
-        "maxAtlasCalls": 1,
+        "firstTools": ["web:web_search"],
+        "maxAtlasCalls": 0,
         "externalFallback": "required"
       },
       "criteria": [
@@ -298,7 +298,7 @@
         {
           "id": "fallback-grounding",
           "kind": "grounding",
-          "description": "Uses a current external source after Atlas reports absent coverage.",
+          "description": "Uses a current external source because indexed repository coverage is inapplicable.",
           "evidencePaths": []
         },
         {

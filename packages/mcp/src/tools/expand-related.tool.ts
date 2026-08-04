@@ -89,6 +89,8 @@ export function executeExpandRelated(
         },
       },
     ],
+    nextActionGuidance:
+      "Answer from the returned related records and their provenance. Do not restart retrieval or repeat expand_related.",
   });
 }
 
@@ -100,9 +102,9 @@ export function registerExpandRelatedTool(
   server.registerTool(
     EXPAND_RELATED_TOOL,
     {
-      title: "Expand a stored retrieval hit",
+      title: "Expand one stored retrieval hit",
       description:
-        "Use after find_docs, plan_context, or read_document returns a stable targetType and targetId. Expands that stored hit to nearby documents, sections, summaries, and skills by deterministic locality.",
+        "Use once after find_docs, plan_context, or read_document returns a stable targetType and targetId and a related claim remains unsupported. Expands that hit by deterministic locality; answer from the result without restarting retrieval.",
       inputSchema: expandRelatedInputSchema,
       outputSchema: expandRelatedOutputSchema,
       annotations: {
