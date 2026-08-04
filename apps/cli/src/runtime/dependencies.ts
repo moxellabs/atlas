@@ -9,12 +9,7 @@ import {
   resolveAtlasConfigTarget,
   resolveIdentityProfile,
 } from "@atlas/config";
-import {
-  computeSourceDiff,
-  createIndexerServices,
-  type IndexerDependencies,
-} from "@atlas/indexer";
-import type { AtlasSourceDiffProvider } from "@atlas/mcp";
+import { createIndexerServices } from "@atlas/indexer";
 import {
   classifyQuery,
   createRetrievalStore,
@@ -56,7 +51,7 @@ export async function buildCliDependencies(
   }
   const db = openStore({ path: config.config.corpusDbPath, migrate: true });
   const retrievalStore = createRetrievalStore(db);
-  const { deps: indexerDeps, service: indexer } = createIndexerServices({
+  const { service: indexer } = createIndexerServices({
     config,
     db,
   });
@@ -66,7 +61,6 @@ export async function buildCliDependencies(
     config,
     db,
     indexer,
-    sourceDiffProvider: createSourceDiffProvider(indexerDeps),
     repoCache,
     retrieval: {
       classifyQuery,
@@ -114,39 +108,6 @@ export async function buildCliDependencies(
     },
     close(): void {
       db.close();
-    },
-  };
-}
-
-/** Creates source diff support for MCP runtimes without coupling MCP to indexer internals. */
-export function createSourceDiffProvider(
-  indexerDeps: IndexerDependencies,
-): AtlasSourceDiffProvider {
-  return {
-    async diff(request) {
-      const repo = indexerDeps.resolveRepo(request.repoId);
-      const diff = await computeSourceDiff(
-        repo,
-        indexerDeps,
-        request.fromRevision,
-        request.toRevision,
-      );
-      return {
-        repoId: diff.repoId,
-        fromRevision: request.fromRevision,
-        toRevision: request.toRevision,
-        changes: diff.changes,
-        relevantChanges: diff.relevantChanges,
-        relevantDocPaths: diff.relevantDocPaths,
-        topologySensitivePaths: diff.topologySensitivePaths,
-        packageManifestPaths: diff.packageManifestPaths,
-        ...(diff.fullRebuildRequired === undefined
-          ? {}
-          : { fullRebuildRequired: diff.fullRebuildRequired }),
-        ...(diff.fullRebuildReason === undefined
-          ? {}
-          : { fullRebuildReason: diff.fullRebuildReason }),
-      };
     },
   };
 }

@@ -55,11 +55,11 @@ describe("MCP server registration and in-memory protocol", () => {
         "list_skills",
         "get_skill",
         "use_skill",
-        "get_freshness",
-        "what_changed",
       ]),
     );
     expect(atlasServer.tools).toContain("answer_atlas_docs");
+    expect(atlasServer.tools).not.toContain("get_freshness");
+    expect(atlasServer.tools).not.toContain("what_changed");
     expect(atlasServer.resources).toContain("atlas-document");
     expect(atlasServer.resources).toContain("atlas-summary");
     expect(atlasServer.resources).toContain("atlas-skill-artifact");

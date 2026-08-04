@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { PassThrough } from "node:stream";
-import type { AtlasConfig } from "@atlas/config";
+import {
+  type AtlasConfig,
+  DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
+} from "@atlas/config";
 import type { CliCommandContext } from "../runtime/types";
 import { parseRepoRef, resolveRepoIdentity } from "./repo-identity";
 
@@ -22,6 +25,12 @@ function configWithEnterpriseDefault(): AtlasConfig {
     corpusDbPath: "/tmp/atlas-cache/corpus.db",
     logLevel: "warn",
     server: { transport: "stdio" },
+    lifecycle: {
+      repositoryRefresh: {
+        enabled: false,
+        intervalMs: DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
+      },
+    },
     docs: { metadata: { rules: [], profiles: {} } },
     repos: [],
     hosts: [

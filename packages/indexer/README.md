@@ -14,10 +14,12 @@ This package connects config, source adapters, topology, compiler, tokenizer, an
 - Collects affected documents and skills.
 - Rebuilds canonical docs, chunks, summaries, and skills.
 - Persists artifacts and manifest state transactionally.
+- Runs TTL-gated background reconciliation with shared repository locks and last-known-good recovery.
 
 ## Public API
 
 - Service factory: `createIndexerServices`
+- Lifecycle service: `RepositoryLifecycleService`
 - Entry points: `syncRepo`, `syncAll`, `buildRepo`, `buildAll`
 - Planning/rebuild/persistence helpers
 - Reports, options, diagnostics, recovery metadata, and structured indexer errors

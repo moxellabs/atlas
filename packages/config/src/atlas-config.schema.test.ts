@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  atlasConfigSchema,
 	canonicalizeRepoId,
 	parseCanonicalRepoId,
 	repoIdSchema,
+  DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
 	repoPathSegments,
 } from "./atlas-config.schema";
 
@@ -97,6 +99,37 @@ describe("host config", () => {
 		});
 		expect(parsed.identity?.root).toBe(".acme/knowledge");
 	});
+  test("defaults and validates repository refresh lifecycle settings", () => {
+    expect(
+      atlasConfigSchema.parse(config()).lifecycle.repositoryRefresh,
+    ).toEqual({
+      enabled: true,
+      intervalMs: DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
+    });
+    expect(
+      atlasConfigSchema.parse({
+        ...config(),
+        lifecycle: { repositoryRefresh: { enabled: false } },
+      }).lifecycle.repositoryRefresh,
+    ).toEqual({
+      enabled: false,
+      intervalMs: DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
+    });
+    expect(
+      atlasConfigSchema.safeParse({
+        ...config(),
+        lifecycle: { repositoryRefresh: { intervalMs: 999 } },
+      }).success,
+    ).toBe(false);
+    expect(
+      atlasConfigSchema.safeParse({
+        ...config(),
+        lifecycle: {
+          repositoryRefresh: { intervalMs: 24 * 60 * 60 * 1_000 + 1 },
+        },
+      }).success,
+    ).toBe(false);
+  });
 
 	test("rejects old whiteLabel artifactRoot", async () => {
 		const { atlasConfigSchema } = await import("./atlas-config.schema");

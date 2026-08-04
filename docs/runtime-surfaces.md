@@ -61,7 +61,7 @@ Expected behavior matrix:
 
 ## HTTP Server
 
-`apps/server` composes Elysia routes over explicit dependencies. It serves health/version metadata, repository mutation, search, context planning, document reads, skills, inspect views, sync/build operations, OpenAPI, and `/mcp`.
+`apps/server` composes Elysia routes over explicit dependencies. It serves health/version metadata, repository mutation, search, context planning, document reads, skills, inspect views, sync/build operations, OpenAPI, and `/mcp`. Loopback mode also owns the configured nonblocking repository freshness lifecycle. Authenticated remote read-only mode serves an immutable corpus snapshot and does not start source reconciliation.
 
 The server is treated as a private runtime app, not a published library package. Its package metadata exposes source entrypoints for local smoke validation: `.` maps to `src/app.ts`, and `./start-server` maps to `src/start-server.ts`. Distribution smoke checks validate `createApp` without binding a long-lived process.
 
@@ -71,7 +71,7 @@ Local browser CORS allows `http://localhost`, `http://127.0.0.1`, and `http://[:
 
 ## MCP
 
-`packages/mcp` exposes tools, resources, and prompts over stdio or Streamable HTTP transports. The server mounts Streamable HTTP at `/mcp` when enabled. MCP operations read from local store and retrieval services. MCP context planning reads from the compiled local corpus; source diffs are available only when a runtime explicitly provides a source diff provider. MCP does not perform sync/build or remote source acquisition on normal retrieval tool calls.
+`packages/mcp` exposes tools, resources, and prompts over stdio or Streamable HTTP transports. The server mounts Streamable HTTP at `/mcp` when enabled. MCP operations read from local store and retrieval services. `plan_context` can include state produced by the host runtime's background lifecycle, but the request itself never performs sync, build, or remote source acquisition.
 
 MCP initialization advertises a bounded catalog of indexed repositories and a deterministic `plan_context__<source>` tool for each advertised source. Source aliases, topics, coverage, freshness, and source-relative provenance let capable clients choose Atlas without prompt injection or hidden instructions. `neutral` is the default advertising policy. `prefer-local` adds explicit covered-query-first guidance while preserving fallback for evidence Atlas does not have.
 

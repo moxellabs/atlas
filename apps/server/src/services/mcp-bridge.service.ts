@@ -1,3 +1,4 @@
+import type { RepositoryRefreshStateProvider } from "@atlas/core";
 import {
   createAtlasMcpServer,
   createWebStandardStreamableHttpTransport,
@@ -6,7 +7,6 @@ import type {
   AtlasMcpIdentity,
   AtlasMcpExposurePolicy,
   AtlasMcpServer,
-  AtlasSourceDiffProvider,
   AtlasMcpDiscoveryPolicy,
 } from "@atlas/mcp";
 import type { AtlasStoreClient } from "@atlas/store";
@@ -32,7 +32,9 @@ export class McpBridgeService {
   private catalogServer: AtlasMcpServer | undefined;
   private readonly sessions = new Map<string, McpBridgeSession>();
   private readonly db: AtlasStoreClient;
-  private readonly sourceDiffProvider?: AtlasSourceDiffProvider | undefined;
+  private readonly repositoryRefreshStateProvider?:
+    | RepositoryRefreshStateProvider
+    | undefined;
   private readonly identity?: AtlasMcpIdentity | undefined;
   private initializationTail: Promise<void> = Promise.resolve();
   private readonly discoveryPolicy: AtlasMcpDiscoveryPolicy;
@@ -41,13 +43,13 @@ export class McpBridgeService {
 
   constructor(
     db: AtlasStoreClient,
-    sourceDiffProvider?: AtlasSourceDiffProvider | undefined,
+    repositoryRefreshStateProvider?: RepositoryRefreshStateProvider | undefined,
     identity?: AtlasMcpIdentity | undefined,
     discoveryPolicy: AtlasMcpDiscoveryPolicy = "neutral",
     exposurePolicy: AtlasMcpExposurePolicy = "full",
   ) {
     this.db = db;
-    this.sourceDiffProvider = sourceDiffProvider;
+    this.repositoryRefreshStateProvider = repositoryRefreshStateProvider;
     this.identity = identity;
     this.discoveryPolicy = discoveryPolicy;
     this.exposurePolicy = exposurePolicy;
@@ -70,7 +72,7 @@ export class McpBridgeService {
       return jsonRpcErrorResponse(503, -32000, "MCP bridge is closed");
     }
     try {
-      this.refreshDiscoverySurfaces();
+      this.refreshDiscovery();
       await this.sweepIdleSessions(Date.now());
 
       const sessionId = request.headers.get("mcp-session-id");
@@ -182,13 +184,15 @@ export class McpBridgeService {
       ...(this.identity === undefined ? {} : { identity: this.identity }),
       discoveryPolicy: this.discoveryPolicy,
       exposurePolicy: this.exposurePolicy,
-      ...(this.sourceDiffProvider === undefined
+      ...(this.repositoryRefreshStateProvider === undefined
         ? {}
-        : { sourceDiffProvider: this.sourceDiffProvider }),
+        : {
+            repositoryRefreshStateProvider: this.repositoryRefreshStateProvider,
+          }),
     });
   }
 
-  private refreshDiscoverySurfaces(): void {
+  refreshDiscovery(): void {
     this.catalogServer?.refreshDiscovery();
     for (const session of this.sessions.values()) {
       session.server.refreshDiscovery();

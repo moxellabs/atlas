@@ -20,6 +20,7 @@ order: 230
 - Plan noop, full, incremental, targeted, and deletion builds.
 - Compile docs, tokenize chunks, build summaries, and persist results.
 - Produce reports, diagnostics, recovery state, freshness state, and timings.
+- Run nonblocking, TTL-gated repository reconciliation for local runtime hosts.
 
 ## Data Flow
 
@@ -31,7 +32,7 @@ The indexer is the orchestrator for source-to-corpus work. It loads configured r
 - Sync may fast-forward a compatible manifest when source changed but no docs, skills, topology-sensitive paths, package manifests, or unsafe diffs affected the corpus.
 - Build plans should explain whether work is noop, full, incremental, targeted, or deletion-only.
 - Failed builds should preserve the last good corpus and report recovery metadata.
-- Reports should include timings and diagnostics that can be rendered by CLI, server, tests, and MCP freshness tools.
+- Reports and lifecycle state should include timings, diagnostics, bounded changed paths, and last-known-good recovery data for CLI, server, tests, and `plan_context`.
 
 ## Boundaries
 
@@ -39,7 +40,7 @@ Indexer coordinates package services. It should not duplicate source adapter int
 
 ## Tests
 
-Primary sync/build integration coverage lives in `packages/indexer/src/indexer.test.ts`.
+Primary sync/build integration coverage lives in `packages/indexer/src/indexer.test.ts`. Lifecycle scheduling, locking, recovery, and persistence are covered in `packages/indexer/src/lifecycle/repository-lifecycle.service.test.ts`.
 
 ```bash
 bun --cwd packages/indexer run typecheck
