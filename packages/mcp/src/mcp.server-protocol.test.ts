@@ -211,7 +211,9 @@ describe("MCP server registration and in-memory protocol", () => {
       },
       _meta: { "anthropic/alwaysLoad": true },
     });
-    expect(facade?.description).toMatch(/answer immediately.*session.*append/i);
+    expect(facade?.description).toMatch(
+      /single strongest evidence passage.*session.*append/i,
+    );
     expect(facade?.outputSchema).toMatchObject({ type: "object" });
     const result = await client.callTool({
       name: "answer_atlas_docs",
@@ -222,7 +224,7 @@ describe("MCP server registration and in-memory protocol", () => {
     const structuredContent = result.structuredContent as {
       context: { evidence: unknown[] };
     };
-    expect(structuredContent.context.evidence.length).toBeLessThanOrEqual(2);
+    expect(structuredContent.context.evidence).toHaveLength(1);
     expect(result.structuredContent).toMatchObject({
       coverage: { status: "sufficient" },
       nextAction: "answer_locally",

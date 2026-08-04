@@ -190,7 +190,7 @@ export function registerSourcePlanContextTool(
       name,
       {
         title: `Answer from ${source.title} documentation`,
-        description: `Use first for questions about ${source.title}. Returns one token-budgeted, deduplicated evidence packet from the ${source.fresh ? "fresh" : "stale"} indexed corpus with source-relative citations. When nextAction is answer_locally, answer immediately without another retrieval call. Aliases: ${source.aliases.slice(0, 5).join(", ")}. Topics: ${source.topics.slice(0, 12).join(", ")}.`,
+        description: `Use first for questions about ${source.title}. Returns the single strongest evidence passage from the ${source.fresh ? "fresh" : "stale"} indexed corpus with source-relative citations. When nextAction is answer_locally, answer only from that passage without another retrieval call. Aliases: ${source.aliases.slice(0, 5).join(", ")}. Topics: ${source.topics.slice(0, 12).join(", ")}.`,
         inputSchema: sourcePlanContextInputSchema,
         outputSchema: planContextOutputSchema,
         annotations: {
@@ -212,7 +212,7 @@ export function registerSourcePlanContextTool(
               budgetTokens: 2_000,
               candidateLimit: 40,
               summaryLimit: 0,
-              expansionLimit: 2,
+              expansionLimit: 1,
             },
             dependencies,
           ),
