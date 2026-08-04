@@ -8,13 +8,11 @@ The tools module implements callable MCP operations over the local corpus.
 - Read outlines and sections.
 - Expand related material.
 - Explain modules.
-- List, fetch, and invoke portable skills.
-- Report freshness.
+- Browse, rank, and resolve portable skills.
 - Plan context.
-- Report changed documents.
 
 ## Invariants
 
 Tools should validate inputs, call retrieval/store dependencies, return structured JSON-compatible results, and preserve provenance.
 
-`use_skill` is the portable agent-facing skill invocation tool. It resolves `$atlas-*` aliases, returns source-backed instructions, and serves bundled scripts or references as read-only artifacts without executing them.
+`use_skill` is the portable agent-facing skill tool. With no skill or task it returns a compact scoped list. Exact IDs, titles, and `$atlas-*` aliases return complete source-backed instructions. Natural-language tasks resolve only when one deterministic lexical match is complete and clearly ahead; otherwise the tool returns compact candidates. Bundled scripts and references remain read-only artifacts, and Atlas never executes them.

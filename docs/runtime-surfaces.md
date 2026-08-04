@@ -116,7 +116,7 @@ atlas agent install cursor --scope workspace \
 
 Use exactly one of `--auth-token-env` or `--auth-token-file`. The generated client configuration stores only the environment-variable name or token-file path, never the bearer value. Remote URLs must use HTTPS. The bridge mirrors the remote server's tools, resources, prompts, capabilities, and change notifications; it fails closed if `prefer-local` was requested but the remote server does not advertise that policy.
 
-First-party skills imported from public artifacts are available through `list_skills` and `use_skill`. After importing Atlas itself, first-party skills such as `document-codebase` and `skill-creator` appear with Atlas-prefixed invocation aliases. `use_skill` serves their instructions, references, scripts, templates, checklists, and agent profiles as read-only artifacts.
+First-party skills imported from public artifacts are available through `use_skill`. Call it without a skill or task to browse, with an ID/title/alias for exact resolution, or with a natural-language task for deterministic matching. After importing Atlas itself, first-party skills such as `document-codebase` and `skill-creator` appear with Atlas-prefixed invocation aliases. Resolved results include instructions, references, scripts, templates, checklists, and agent profiles as read-only artifacts.
 
 ## OpenAPI
 
@@ -188,4 +188,4 @@ Maintainer committed artifact path is identity root directly: `<repo>/.moxel/atl
 
 ## First-Party Skills And Public Docs
 
-MCP exposes `list_skills` to enumerate imported public skill docs and `use_skill` to read skill instructions and artifacts. Atlas publishes `document-codebase` for source-truth documentation work and `skill-creator` for approval-gated skill creation. CLI, HTTP, OpenAPI, and MCP surfaces all read local corpus state from public artifacts rather than remote source at query time.
+MCP exposes `use_skill` to browse imported public skill docs, resolve exact skills, match natural-language tasks, and read instructions and artifacts. Atlas publishes `document-codebase` for source-truth documentation work and `skill-creator` for approval-gated skill creation. CLI, HTTP, OpenAPI, and MCP surfaces all read local corpus state from public artifacts rather than remote source at query time.
