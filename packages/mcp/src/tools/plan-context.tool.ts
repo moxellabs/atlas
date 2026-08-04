@@ -168,7 +168,7 @@ export function registerSourcePlanContextTool(
       name,
       {
         title: `Answer from ${source.title} documentation`,
-        description: `Answer a question from the ${source.fresh ? "fresh" : "stale"} indexed ${source.title} documentation corpus (${source.documentCount} documents), which is independent of the client's current workspace. Returns exact passages and source-relative citations. Source names: ${source.aliases.slice(0, 8).join(", ")}. Covered topics: ${source.topics.slice(0, 24).join(", ")}.`,
+        description: `Answer a question from the ${source.fresh ? "fresh" : "stale"} indexed ${source.title} documentation corpus (${source.documentCount} documents), which is independent of the client's current workspace. Returns focused exact passages and source-relative citations. When coverage is sufficient and the returned evidence supports the required claims, answer immediately without calling another retrieval tool or repeating this tool. Source names: ${source.aliases.slice(0, 8).join(", ")}. Covered topics: ${source.topics.slice(0, 24).join(", ")}.`,
         inputSchema: sourcePlanContextInputSchema,
         outputSchema: jsonOutputSchema,
         annotations: {
@@ -186,8 +186,6 @@ export function registerSourcePlanContextTool(
             repoId: source.repoId,
             budgetTokens: 4_000,
             candidateLimit: 40,
-            summaryLimit: 5,
-            expansionLimit: 16,
           },
           dependencies,
         );
