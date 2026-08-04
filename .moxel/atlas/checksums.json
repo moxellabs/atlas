@@ -4,17 +4,17 @@
   "files": [
     {
       "path": "corpus.db",
-      "sha256": "926dd953e27841732abe274864ff02b1b40f5f586ff8d058c0d028a812a1ad60",
-      "sizeBytes": 17190912
+      "sha256": "1bc72e56c507bc9db9b2b9ccab030cd2dbe4e7efe340029f9c4acc476baa389f",
+      "sizeBytes": 17223680
     },
     {
       "path": "docs.index.json",
-      "sha256": "8c568baae17702fc8e9583f2c0023cc50ef74cacdce70b216d078f642c8e5eaa",
+      "sha256": "355a23d74ec0b405092c91d9a7c1c578f22ce1afdeff10777bc6ece10b4cf919",
       "sizeBytes": 8866
     },
     {
       "path": "manifest.json",
-      "sha256": "8a872b880f0387ba74b858faf1c1566b8a97499d4019dde493eeca6f7d0aa352",
+      "sha256": "07ba004f75796eb409c2e06887f5e381b4360664619d82a704078a34d9039a1b",
       "sizeBytes": 630
     }
   ]
