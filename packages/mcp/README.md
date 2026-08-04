@@ -17,7 +17,7 @@ This package registers ATLAS tools, resources, prompts, metadata, and transports
 
 Default MCP identity remains `atlas-mcp`, Atlas resource names, and `$atlas-*` skill aliases. Explicit identity knobs are `--atlas-mcp-name`, `ATLAS_MCP_NAME`, optional `ATLAS_MCP_TITLE`, and config `identity.mcp.name`, `identity.mcp.title`, `identity.mcp.resourcePrefix`.
 
-Identity changes server metadata, resource display names, and skill aliases. Generic MCP tool names remain stable (`find_docs`, `read_outline`, `read_section`, `plan_context`, `list_skills`, `use_skill`). The `atlas://` URI scheme remains stable.
+Identity changes server metadata, resource display names, and skill aliases. Generic MCP tool names remain stable (`find_docs`, `read_outline`, `read_section`, `plan_context`, `use_skill`). The `atlas://` URI scheme remains stable.
 
 ## Implemented Tools
 
@@ -27,9 +27,7 @@ Identity changes server metadata, resource display names, and skill aliases. Gen
 - `read_section`
 - `expand_related`
 - `explain_module`
-- `list_skills`
-- `get_skill`
-- `use_skill`
+- `use_skill` - browses stored skills, resolves exact IDs/titles/aliases, or finds an unambiguous skill for a natural-language task; resolved results include instructions, provenance, and read-only artifacts
 - `plan_context` - returns answer-ready evidence, source freshness, bounded recent changed paths for diff questions, human-readable scope labels, warnings, omissions, and next actions. When coverage is sufficient and the evidence supports the required claims, callers should answer without another retrieval call.
 
 ## Implemented Resources

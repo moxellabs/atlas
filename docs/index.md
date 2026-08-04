@@ -76,4 +76,4 @@ Active public docs are docs-site source content. Historical/internal docs are no
 
 - [Document Codebase Skill](../skills/document-codebase/SKILL.md) helps agents document codebases from source truth.
 - [Skill Creator Skill](../skills/skill-creator/SKILL.md) helps agents recommend and create approved Atlas skills.
-- [Runtime Surfaces](runtime-surfaces.md) explains `list_skills`, `use_skill`, `document-codebase`, and `skill-creator` access.
+- [Runtime Surfaces](runtime-surfaces.md) explains `use_skill`, `document-codebase`, and `skill-creator` access.

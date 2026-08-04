@@ -545,7 +545,6 @@ repos:
               "read_outline",
               "read_section",
               "plan_context",
-              "list_skills",
               "use_skill",
             ],
             resources: ["acme-document"],

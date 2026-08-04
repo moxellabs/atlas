@@ -15,6 +15,7 @@ import {
   docId,
   repoId,
   sectionId,
+  skillId,
 } from "./mcp.test-fixtures";
 import { answerFromLocalDocsPrompt } from "./prompts/answer-from-local-docs.prompt";
 import { compareDocsPrompt } from "./prompts/compare-docs.prompt";
@@ -43,21 +44,17 @@ describe("MCP server registration and in-memory protocol", () => {
     expect(compareDocsPrompt.text).toContain("provenance");
 
     const atlasServer = createAtlasMcpServer({ db: store });
-    expect(atlasServer.tools).toEqual(
-      expect.arrayContaining([
-        "plan_context",
-        "find_scopes",
-        "find_docs",
-        "read_outline",
-        "read_section",
-        "expand_related",
-        "explain_module",
-        "list_skills",
-        "get_skill",
-        "use_skill",
-      ]),
-    );
-    expect(atlasServer.tools).toContain("answer_atlas_docs");
+    expect(atlasServer.tools).toEqual([
+      "plan_context",
+      "find_scopes",
+      "find_docs",
+      "read_outline",
+      "read_section",
+      "expand_related",
+      "explain_module",
+      "use_skill",
+      "answer_atlas_docs",
+    ]);
     expect(atlasServer.tools).not.toContain("get_freshness");
     expect(atlasServer.tools).not.toContain("what_changed");
     expect(atlasServer.resources).toContain("atlas-document");
@@ -142,6 +139,29 @@ describe("MCP server registration and in-memory protocol", () => {
     expect(result.structuredContent).toMatchObject({
       document: expect.objectContaining({ docId }),
       outline: [expect.objectContaining({ sectionId })],
+    });
+
+    const listedSkills = await client.callTool({
+      name: "use_skill",
+      arguments: { repoId },
+    });
+    expect(listedSkills.structuredContent).toMatchObject({
+      status: "listed",
+      total: 1,
+      skills: [expect.objectContaining({ skillId })],
+    });
+
+    const resolvedSkill = await client.callTool({
+      name: "use_skill",
+      arguments: { skill: "$atlas-session-skill", repoId },
+    });
+    expect(resolvedSkill.structuredContent).toMatchObject({
+      status: "resolved",
+      resolution: { method: "exact" },
+      skill: expect.objectContaining({ skillId }),
+      instructions: expect.objectContaining({
+        markdown: expect.stringContaining("Rotate session tokens"),
+      }),
     });
   });
 

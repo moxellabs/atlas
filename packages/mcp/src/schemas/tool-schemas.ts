@@ -53,16 +53,6 @@ const docPurposeSchema = z.enum([
 ]);
 const docVisibilitySchema = z.enum(["public", "internal"]);
 
-/** Shared scope filter schema for store-backed tools. */
-export const scopeFilterSchema = z
-  .object({
-    repoId: repoIdSchema,
-    packageId: z.string().trim().min(1).optional(),
-    moduleId: z.string().trim().min(1).optional(),
-    skillId: z.string().trim().min(1).optional(),
-  })
-  .strict();
-
 /** Input schema for find_scopes. */
 export const findScopesInputSchema = z
   .object({
@@ -123,23 +113,26 @@ export const readSectionInputSchema = z
     },
   );
 
-/** Input schema for list_skills. */
-export const listSkillsInputSchema = scopeFilterSchema
-  .extend({ limit: limitSchema })
-  .strict();
-
-/** Input schema for get_skill. */
-export const getSkillInputSchema = z
-  .object({ skillId: z.string().trim().min(1) })
-  .strict();
-
-/** Input schema for use_skill. */
+/** Input schema for browsing or resolving a stored skill. */
 export const useSkillInputSchema = z
   .object({
-    nameOrAlias: z.string().trim().min(1),
+    skill: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe("Exact skill ID, title, or invocation alias."),
+    task: z
+      .string()
+      .trim()
+      .min(1)
+      .optional()
+      .describe("Natural-language task used to rank stored skills."),
     repoId: repoIdSchema,
-    task: z.string().trim().min(1).optional(),
+    packageId: z.string().trim().min(1).optional(),
+    moduleId: z.string().trim().min(1).optional(),
     agent: z.string().trim().min(1).optional(),
+    limit: limitSchema,
   })
   .strict();
 
@@ -184,8 +177,6 @@ export type FindScopesInput = z.infer<typeof findScopesInputSchema>;
 export type FindDocsInput = z.infer<typeof findDocsInputSchema>;
 export type ReadOutlineInput = z.infer<typeof readOutlineInputSchema>;
 export type ReadSectionInput = z.infer<typeof readSectionInputSchema>;
-export type ListSkillsInput = z.infer<typeof listSkillsInputSchema>;
-export type GetSkillInput = z.infer<typeof getSkillInputSchema>;
 export type UseSkillInput = z.infer<typeof useSkillInputSchema>;
 export type ExpandRelatedInput = z.infer<typeof expandRelatedInputSchema>;
 export type ExplainModuleInput = z.infer<typeof explainModuleInputSchema>;

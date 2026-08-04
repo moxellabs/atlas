@@ -42,8 +42,6 @@ export type {
   ExplainModuleInput,
   FindDocsInput,
   FindScopesInput,
-  GetSkillInput,
-  ListSkillsInput,
   PlanContextToolInput,
   ReadOutlineInput,
   ReadSectionInput,
@@ -54,16 +52,13 @@ export {
   explainModuleInputSchema,
   findDocsInputSchema,
   findScopesInputSchema,
-  getSkillInputSchema,
   jsonOutputSchema,
   limitSchema,
-  listSkillsInputSchema,
   planContextInputSchema,
   querySchema,
   readOutlineInputSchema,
   readSectionInputSchema,
   repoIdSchema,
-  scopeFilterSchema,
   useSkillInputSchema,
 } from "./schemas/tool-schemas";
 export { createAtlasMcpServer } from "./server/create-mcp-server";
@@ -102,16 +97,6 @@ export {
   FIND_SCOPES_TOOL,
   registerFindScopesTool,
 } from "./tools/find-scopes.tool";
-export {
-  executeGetSkill,
-  GET_SKILL_TOOL,
-  registerGetSkillTool,
-} from "./tools/get-skill.tool";
-export {
-  executeListSkills,
-  LIST_SKILLS_TOOL,
-  registerListSkillsTool,
-} from "./tools/list-skills.tool";
 export {
   executePlanContext,
   PLAN_CONTEXT_TOOL,

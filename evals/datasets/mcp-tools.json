@@ -305,7 +305,6 @@
           "source truth"
         ],
         "tools": [
-          "list_skills",
           "use_skill"
         ]
       },

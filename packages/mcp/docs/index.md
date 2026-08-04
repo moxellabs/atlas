@@ -25,11 +25,11 @@ order: 240
 
 Default identity remains `atlas-mcp`, Atlas resource names, and `$atlas-*` skill aliases. Explicit identity knobs are `--atlas-mcp-name`, `ATLAS_MCP_NAME`, optional `ATLAS_MCP_TITLE`, and config `identity.mcp.name`, `identity.mcp.title`, `identity.mcp.resourcePrefix`.
 
-Identity changes server metadata, resource display names, and skill aliases. Generic MCP tool names remain stable (`find_docs`, `read_outline`, `read_section`, `plan_context`, `list_skills`, `use_skill`). The `atlas://` URI scheme remains stable.
+Identity changes server metadata, resource display names, and skill aliases. Generic MCP tool names remain stable (`find_docs`, `read_outline`, `read_section`, `plan_context`, `use_skill`). The `atlas://` URI scheme remains stable.
 
 ## Protocol Surface
 
-Tools expose query, scope, document, skill, and context-planning operations with explicit schemas: `find_scopes`, `find_docs`, `read_outline`, `read_section`, `expand_related`, `explain_module`, `list_skills`, `get_skill`, `use_skill`, and `plan_context`. `plan_context` includes local corpus freshness and, for diff questions, bounded changed-path state supplied by the runtime lifecycle service. Resources expose persisted corpus artifacts by stable identifiers: manifest, repo, package, module, document, skill, skill artifact, and summary. Prompts compose common grounding workflows such as onboarding, module explanation, local-doc answers, doc comparison, and skill usage explanation.
+Tools expose query, scope, document, skill, and context-planning operations with explicit schemas: `find_scopes`, `find_docs`, `read_outline`, `read_section`, `expand_related`, `explain_module`, `use_skill`, and `plan_context`. `use_skill` browses scoped skills, resolves exact IDs/titles/aliases, and returns complete instructions for deterministic task matches. `plan_context` includes local corpus freshness and, for diff questions, bounded changed-path state supplied by the runtime lifecycle service. Resources expose persisted corpus artifacts by stable identifiers: manifest, repo, package, module, document, skill, skill artifact, and summary. Prompts compose common grounding workflows such as onboarding, module explanation, local-doc answers, doc comparison, and skill usage explanation.
 
 Transports are runtime adapters. Stdio and Streamable HTTP setup should stay protocol-focused and should receive explicit streams or HTTP primitives from the host runtime.
 
