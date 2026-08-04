@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { agentEffectDatasetDigest } from "./dataset";
 import {
+  aggregateAgentEffect,
   assertAgentToolRouting,
   assertHermeticAtlasDiscovery,
   runAgentEffectEvaluation,
@@ -234,9 +235,16 @@ describe("agent evaluation runs", () => {
             protocolErrors: 0,
           },
         }),
-        judgePair: async () => ({
+        judgePair: async ({ task }) => ({
           baseline: { criteria: [], unsupportedClaimCount: 0 },
-          treatment: { criteria: [], unsupportedClaimCount: 0 },
+          treatment: {
+            criteria: task.criteria.map((criterion) => ({
+              id: criterion.id,
+              passed: true,
+              reason: "grounded",
+            })),
+            unsupportedClaimCount: 0,
+          },
         }),
       },
     });
@@ -244,12 +252,55 @@ describe("agent evaluation runs", () => {
     expect(snapshot.metrics.routing).toEqual({
       evaluatedRuns: 2,
       firstToolSelectionRate: 1,
+      groundingRate: 1,
       budgetComplianceRate: 1,
       fallbackPrecisionRate: 1,
       redundantCallRate: 0,
     });
     expect(() =>
       assertAgentToolRouting(routingDataset, snapshot),
+    ).not.toThrow();
+    const externalDataset: AgentEffectDataset = {
+      ...routingDataset,
+      tasks: routingDataset.tasks.map((task) => ({
+        ...task,
+        routing: {
+          firstTools: ["web:web_search"],
+          maxAtlasCalls: 0,
+          externalFallback: "required" as const,
+        },
+      })),
+    };
+    const externalPairs = snapshot.pairs.map((pair) => ({
+      ...pair,
+      treatment: {
+        ...pair.treatment,
+        mcp: {
+          protocolErrors: 0,
+          calls: [
+            {
+              kind: "web_search" as const,
+              name: "web_search",
+              source: "web" as const,
+              ok: true,
+            },
+          ],
+        },
+      },
+    }));
+    const externalSnapshot = {
+      ...snapshot,
+      pairs: externalPairs,
+      metrics: aggregateAgentEffect(externalDataset, externalPairs),
+    };
+    expect(externalSnapshot.metrics.routing).toMatchObject({
+      firstToolSelectionRate: 1,
+      groundingRate: 1,
+      budgetComplianceRate: 1,
+      fallbackPrecisionRate: 1,
+    });
+    expect(() =>
+      assertAgentToolRouting(externalDataset, externalSnapshot),
     ).not.toThrow();
     const first = snapshot.pairs[0]!;
     const redundant = {

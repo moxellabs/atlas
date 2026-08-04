@@ -150,6 +150,7 @@ export interface AgentEffectMetrics {
   readonly routing: {
     readonly evaluatedRuns: number;
     readonly firstToolSelectionRate: number;
+    readonly groundingRate: number;
     readonly budgetComplianceRate: number;
     readonly fallbackPrecisionRate: number;
     readonly redundantCallRate: number;

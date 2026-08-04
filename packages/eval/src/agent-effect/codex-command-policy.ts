@@ -202,5 +202,9 @@ function shellEnvironmentSet(cwd: string): string {
 }
 
 function agentPrompt(task: AgentEffectTask): string {
-  return `Task:\n${task.prompt}\n\nReturn only the required JSON object. Cite source-relative paths for factual statements. Do not invent commands, files, or behavior; when evidence is unavailable, say so plainly.`;
+  const citationInstruction =
+    task.routing?.externalFallback === "required"
+      ? "Cite absolute external URLs for factual statements."
+      : "Cite repository-relative source paths for factual statements.";
+  return `Task:\n${task.prompt}\n\nReturn only the required JSON object. ${citationInstruction} Do not invent commands, files, or behavior; when evidence is unavailable, say so plainly.`;
 }

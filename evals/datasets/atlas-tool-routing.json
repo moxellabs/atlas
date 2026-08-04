@@ -141,7 +141,7 @@
       "category": "ambiguity",
       "prompt": "How does Atlas handle configuration? Distinguish the likely configuration scopes before answering, and cite the evidence packet used.",
       "routing": {
-        "firstTools": ["atlas:plan_context"],
+        "firstTools": ["atlas:answer_atlas_docs", "atlas:plan_context"],
         "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },
@@ -211,7 +211,7 @@
       "category": "module",
       "prompt": "Explain the responsibilities and boundaries of packages/mcp as a module. Keep the answer within one coherent evidence budget and cite the relevant module documentation.",
       "routing": {
-        "firstTools": ["atlas:plan_context"],
+        "firstTools": ["atlas:answer_atlas_docs", "atlas:plan_context"],
         "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },

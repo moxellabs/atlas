@@ -116,12 +116,32 @@ export function aggregateAgentEffect(
   );
   const routingByTask = new Map(
     dataset.tasks.flatMap((task) =>
-      task.routing === undefined ? [] : [[task.id, task.routing] as const],
+      task.routing === undefined
+        ? []
+        : [
+            [
+              task.id,
+              {
+                expectation: task.routing,
+                groundingCriterionIds: task.criteria
+                  .filter((criterion) => criterion.kind === "grounding")
+                  .map((criterion) => criterion.id),
+              },
+            ] as const,
+          ],
     ),
   );
-  const routingRuns = treatment.flatMap(({ run }) => {
-    const expectation = routingByTask.get(run.taskId);
-    return expectation === undefined ? [] : [{ run, expectation }];
+  const routingRuns = pairs.flatMap((pair) => {
+    const routing = routingByTask.get(pair.taskId);
+    return routing === undefined
+      ? []
+      : [
+          {
+            run: pair.treatment,
+            judged: pair.judge.treatment,
+            ...routing,
+          },
+        ];
   });
   return {
     pairs: pairs.length,
@@ -166,6 +186,11 @@ export function aggregateAgentEffect(
           expectation.firstTools.includes(evidenceCallKey(first))
         );
       }),
+      groundingRate: rate(
+        routingRuns,
+        ({ judged, expectation, groundingCriterionIds }) =>
+          routingAnswerGrounded(judged, expectation, groundingCriterionIds),
+      ),
       budgetComplianceRate: rate(
         routingRuns,
         ({ run, expectation }) =>
@@ -243,11 +268,12 @@ export function assertHermeticAtlasDiscovery(
   }
 }
 
-/** Enforces dataset-authored first-tool, call-budget, fallback, and redundancy contracts. */
+/** Enforces dataset-authored routing, grounding, call-budget, fallback, and redundancy contracts. */
 export function assertAgentToolRouting(
   dataset: AgentEffectDataset,
   snapshot: AgentEffectSnapshot,
 ): void {
+  const tasks = new Map(dataset.tasks.map((task) => [task.id, task]));
   const expectations = new Map(
     dataset.tasks.flatMap((task) =>
       task.routing === undefined ? [] : [[task.id, task.routing] as const],
@@ -266,6 +292,17 @@ export function assertAgentToolRouting(
     const first = calls[0];
     const atlasCalls = successfulAtlasCalls(run);
     const usedExternal = calls.some((call) => call.source !== "atlas");
+    const task = tasks.get(pair.taskId);
+    const verdicts = new Map(
+      pair.judge.treatment.criteria.map((criterion) => [
+        criterion.id,
+        criterion,
+      ]),
+    );
+    const failedCriteria =
+      task?.criteria
+        .filter((criterion) => verdicts.get(criterion.id)?.passed !== true)
+        .map((criterion) => criterion.id) ?? [];
     const reasons: string[] = [];
     if (run.status !== "completed") reasons.push(`status=${run.status}`);
     if ((run.mcp?.protocolErrors ?? 0) !== 0) reasons.push("protocol-errors");
@@ -289,6 +326,17 @@ export function assertAgentToolRouting(
     if (hasRedundantAtlasCalls(run, expectation.allowRepeatedAtlasTools)) {
       reasons.push("redundant-atlas-call");
     }
+    if (failedCriteria.length > 0) {
+      reasons.push(`failed-criteria=${failedCriteria.join("+")}`);
+    }
+    if (
+      expectation.externalFallback !== "required" &&
+      pair.judge.treatment.unsupportedClaimCount > 0
+    ) {
+      reasons.push(
+        `unsupported-claims=${pair.judge.treatment.unsupportedClaimCount}`,
+      );
+    }
     return reasons.length === 0
       ? []
       : [`${pair.taskId}:${pair.trial}[${reasons.join(",")}]`];
@@ -297,6 +345,7 @@ export function assertAgentToolRouting(
   if (
     metrics.evaluatedRuns === 0 ||
     metrics.firstToolSelectionRate !== 1 ||
+    metrics.groundingRate !== 1 ||
     metrics.budgetComplianceRate !== 1 ||
     metrics.fallbackPrecisionRate !== 1 ||
     metrics.redundantCallRate !== 0 ||
@@ -323,6 +372,22 @@ function hasRedundantAtlasCalls(
 
 function evidenceCallKey(call: NonNullable<AgentRun["mcp"]>["calls"][number]) {
   return `${call.source}:${call.name}`;
+}
+
+function routingAnswerGrounded(
+  judged: JudgedAnswer,
+  expectation: NonNullable<AgentEffectDataset["tasks"][number]["routing"]>,
+  groundingCriterionIds: readonly string[],
+): boolean {
+  if (groundingCriterionIds.length === 0) return false;
+  const verdicts = new Map(
+    judged.criteria.map((criterion) => [criterion.id, criterion.passed]),
+  );
+  return (
+    groundingCriterionIds.every((criterionId) => verdicts.get(criterionId)) &&
+    (expectation.externalFallback === "required" ||
+      judged.unsupportedClaimCount === 0)
+  );
 }
 
 function successfulEvidenceCalls(run: AgentRun) {

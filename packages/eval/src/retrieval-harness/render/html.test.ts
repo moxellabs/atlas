@@ -146,6 +146,7 @@ describe("retrieval report rendering", () => {
         routing: {
           evaluatedRuns: 0,
           firstToolSelectionRate: 0,
+          groundingRate: 0,
           budgetComplianceRate: 0,
           fallbackPrecisionRate: 0,
           redundantCallRate: 0,

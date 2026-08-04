@@ -392,9 +392,9 @@ export const useSkillOutputSchema = z
   })
   .strict();
 
-const relatedDocumentSchema = presentedDocumentSchema.omit({
-  provenance: true,
-});
+const relatedDocumentSchema = presentedDocumentSchema
+  .omit({ provenance: true })
+  .extend({ description: z.string().optional() });
 const relatedSectionSchema = sectionPreviewSchema.extend({ docId: z.string() });
 const relatedChunkSchema = z
   .object({

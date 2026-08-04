@@ -110,16 +110,14 @@ function buildPlanContextResult(
           ? "partial"
           : "sufficient";
   const nextAction =
-    coverage === "sufficient"
-      ? "answer_locally"
-      : coverage === "partial"
-        ? "refine_locally"
-        : "web_fallback";
+    coverage === "absent" || coverage === "stale"
+      ? "web_fallback"
+      : "answer_locally";
   const nextActionGuidance =
-    nextAction === "answer_locally"
-      ? "Answer directly from context.evidence and cite provenance paths. Do not call another retrieval tool unless a required claim is unsupported."
-      : nextAction === "refine_locally"
-        ? "Coverage is partial. Call find_docs once for only the unsupported claim, then answer."
+    coverage === "partial"
+      ? "Answer from context.evidence while stating the scope ambiguity and likely candidates. Do not call another retrieval tool."
+      : nextAction === "answer_locally"
+        ? "Answer directly from context.evidence and cite provenance paths. Do not call another retrieval tool unless a required claim is unsupported."
         : "Indexed coverage is absent or stale. Use an external source, cite it, and do not attribute the answer to Atlas.";
   const citations = uniqueCitations(selected);
   return planContextOutputSchema.parse({

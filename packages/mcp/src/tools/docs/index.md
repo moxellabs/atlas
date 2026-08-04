@@ -7,7 +7,7 @@ The tools module implements callable MCP operations over the local corpus.
 - Plan broad, ambiguous, comparative, and module-scoped context under one evidence budget.
 - Find precise document, section, chunk, or skill hits.
 - Read a document outline or one exact section.
-- Expand related material from stable result IDs.
+- Expand related material from stable result IDs, using an optional missing-claim query for semantic ranking.
 - Browse, rank, and resolve portable skills.
 - Expose scope inference only in the advanced profile.
 

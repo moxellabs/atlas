@@ -503,7 +503,10 @@ describe("MCP tool contracts", () => {
 
   test("expands related context from document, section, chunk, and summary anchors", () => {
     const { store } = fixture;
-    const dependencies = { db: store };
+    const dependencies = {
+      db: store,
+      retrievalStore: createRetrievalStore(store),
+    };
 
     const expanded = executeExpandRelated(
       { targetType: "document", targetId: docId, limit: 3 },
@@ -530,6 +533,30 @@ describe("MCP tool contracts", () => {
         skills: expect.arrayContaining([expect.objectContaining({ skillId })]),
       },
       nextActionGuidance: expect.stringContaining("Do not restart retrieval"),
+    });
+    expect(
+      executeExpandRelated(
+        {
+          targetType: "document",
+          targetId: docId,
+          query: "session renewal before expiration",
+          limit: 2,
+        },
+        dependencies,
+      ),
+    ).toMatchObject({
+      related: {
+        documents: [
+          expect.objectContaining({
+            docId: relatedDocId,
+            path: "packages/auth/docs/session-renewal.md",
+          }),
+        ],
+        summaries: [
+          expect.objectContaining({ targetId: relatedDocId }),
+          expect.anything(),
+        ],
+      },
     });
     expect(
       executeExpandRelated(

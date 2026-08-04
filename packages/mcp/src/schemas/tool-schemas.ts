@@ -142,6 +142,11 @@ export const expandRelatedInputSchema = z
   .object({
     targetType: z.enum(["document", "section", "chunk", "skill", "summary"]),
     targetId: z.string().trim().min(1),
+    query: querySchema
+      .optional()
+      .describe(
+        "Optional missing related claim used to rank documents around the stable anchor.",
+      ),
     limit: limitSchema,
   })
   .strict();

@@ -26,11 +26,11 @@ The default `agent` profile advertises five generic tools plus one source-named 
 - `plan_context` builds one token-budgeted, deduplicated evidence packet. It accepts exact repository, package, and module constraints and reports freshness, coverage, citations, omissions, and the next action.
 - `find_docs` retrieves precise document, section, chunk, or skill hits for exact locations and partial-answer follow-ups.
 - `read_document` returns a document outline or one exact section selected by `sectionId` or heading path.
-- `expand_related` follows a stable retrieved ID to nearby documents, sections, summaries, and skills.
+- `expand_related` follows a stable retrieved ID to nearby documents, sections, summaries, and skills. An optional `query` ranks related documents for the one missing claim.
 - `use_skill` browses stored skills and resolves exact or unambiguous task matches into complete instructions, provenance, and read-only artifacts.
 - `answer_<source>_docs` runs the same planner against one named indexed source.
 
-`plan_context` and the primary source facade carry `anthropic/alwaysLoad`; additional advanced-profile facades remain discoverable without forced preload. Every tool publishes a concrete output schema and explicit next-action guidance. Source facades return the planner's selected evidence directly, so their output stays inside one retrieval budget.
+`plan_context` and the primary source facade carry `anthropic/alwaysLoad`; additional advanced-profile facades remain discoverable without forced preload. Every tool publishes a concrete output schema and explicit next-action guidance. Server instructions route questions through tools before addressable MCP resources, which are not a search surface. Source facades return the planner's selected evidence directly, so their output stays inside one retrieval budget.
 
 The `advanced` profile adds `find_scopes` and may advertise up to 12 configured source facades. Select it with `atlas mcp --tool-profile advanced` or `ATLAS_MCP_TOOL_PROFILE=advanced` for the HTTP server. The default profile advertises one configured source facade.
 

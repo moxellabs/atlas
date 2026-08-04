@@ -1,4 +1,4 @@
-import { provenanceFromDocument } from "@atlas/retrieval";
+import { findDocs, provenanceFromDocument } from "@atlas/retrieval";
 import {
   ChunkRepository,
   DocRepository,
@@ -22,7 +22,7 @@ import {
   type ExpandRelatedInput,
 } from "../schemas/tool-schemas";
 import { listSummaries } from "../store-mappers";
-import type { AtlasMcpDependencies, McpJsonObject } from "../types";
+import type { AtlasRetrievalMcpDependencies, McpJsonObject } from "../types";
 
 export const EXPAND_RELATED_TOOL = "expand_related";
 
@@ -41,7 +41,7 @@ interface ResolvedAnchor {
 /** Expands one stored hit into deterministic nearby ATLAS context. */
 export function executeExpandRelated(
   input: ExpandRelatedInput,
-  dependencies: AtlasMcpDependencies,
+  dependencies: AtlasRetrievalMcpDependencies,
 ): McpJsonObject {
   const parsed = expandRelatedInputSchema.parse(input);
   const limit = parsed.limit ?? 5;
@@ -55,7 +55,7 @@ export function executeExpandRelated(
   const relatedDocuments =
     anchorScope === undefined
       ? []
-      : relatedDocumentsFor(dependencies.db, anchorScope, limit);
+      : relatedDocumentsFor(dependencies, anchorScope, limit, parsed.query);
   const sections =
     anchorDocument === undefined
       ? []
@@ -73,17 +73,23 @@ export function executeExpandRelated(
         anchor,
         relatedDocuments,
         limit,
+        parsed.query !== undefined,
       ),
       skills: relatedSkills(dependencies.db, anchorScope, limit),
     },
     diagnostics: [
       {
         stage: "expand_related",
-        message: "Expanded related context by document locality.",
+        message:
+          parsed.query === undefined
+            ? "Expanded related context by document locality."
+            : "Expanded related context by the missing claim and document locality.",
         metadata: {
           targetType: parsed.targetType,
           targetId: parsed.targetId,
           limit,
+          strategy:
+            parsed.query === undefined ? "locality" : "query-and-locality",
           relatedDocuments: relatedDocuments.length,
           relatedSections: Math.min(sections.length, limit),
         },
@@ -97,14 +103,14 @@ export function executeExpandRelated(
 /** Registers the expand_related MCP tool. */
 export function registerExpandRelatedTool(
   server: McpServer,
-  dependencies: AtlasMcpDependencies,
+  dependencies: AtlasRetrievalMcpDependencies,
 ): void {
   server.registerTool(
     EXPAND_RELATED_TOOL,
     {
       title: "Expand one stored retrieval hit",
       description:
-        "Use once after find_docs, plan_context, or read_document returns a stable targetType and targetId and a related claim remains unsupported. Expands that hit by deterministic locality; answer from the result without restarting retrieval.",
+        "Use once after find_docs, plan_context, or read_document returns a stable targetType and targetId and a related claim remains unsupported. Pass the missing claim in query to rank related documents around that anchor; omit query for scope locality. Answer from the result without restarting retrieval.",
       inputSchema: expandRelatedInputSchema,
       outputSchema: expandRelatedOutputSchema,
       annotations: {
@@ -208,11 +214,13 @@ function scopeDocumentFromAnchor(
 }
 
 function relatedDocumentsFor(
-  db: StoreDatabase,
+  dependencies: AtlasRetrievalMcpDependencies,
   anchor: DocumentRecord,
   limit: number,
+  query: string | undefined,
 ): DocumentRecord[] {
-  return new DocRepository(db)
+  const repository = new DocRepository(dependencies.db);
+  const local = repository
     .listByRepo(anchor.repoId)
     .filter((document) => document.docId !== anchor.docId)
     .map((document) => ({ document, rank: localityRank(anchor, document) }))
@@ -222,8 +230,27 @@ function relatedDocumentsFor(
         left.rank - right.rank ||
         left.document.path.localeCompare(right.document.path),
     )
-    .slice(0, limit)
     .map((entry) => entry.document);
+  if (query === undefined) return local.slice(0, limit);
+
+  const seen = new Set([anchor.docId]);
+  const ranked = findDocs({
+    store: dependencies.retrievalStore,
+    query,
+    repoId: anchor.repoId,
+    limit: Math.min(100, Math.max(12, limit * 4)),
+  }).hits.flatMap((hit) => {
+    const docId = hit.provenance.docId;
+    if (seen.has(docId)) return [];
+    const document = repository.get(docId);
+    if (document === undefined) return [];
+    seen.add(docId);
+    return [document];
+  });
+  return [
+    ...ranked,
+    ...local.filter((document) => !seen.has(document.docId)),
+  ].slice(0, limit);
 }
 
 function localityRank(
@@ -250,11 +277,18 @@ function relatedSummaries(
   anchor: ResolvedAnchor,
   documents: readonly DocumentRecord[],
   limit: number,
+  preferRelatedDocuments: boolean,
 ): SummaryRecord[] {
   const summaries = new Map<string, SummaryRecord>();
   const add = (summary: SummaryRecord) =>
     summaries.set(summary.summaryId, summary);
+  const addRelatedDocuments = () => {
+    for (const document of documents) {
+      listSummaries(db, "document", document.docId).forEach(add);
+    }
+  };
 
+  if (preferRelatedDocuments) addRelatedDocuments();
   if (anchor.summary !== undefined) {
     add(anchor.summary);
   }
@@ -268,9 +302,7 @@ function relatedSummaries(
     }
     listSummaries(db, "repo", anchor.document.repoId).forEach(add);
   }
-  for (const document of documents) {
-    listSummaries(db, "document", document.docId).forEach(add);
-  }
+  if (!preferRelatedDocuments) addRelatedDocuments();
 
   return [...summaries.values()].slice(0, limit);
 }
@@ -326,6 +358,7 @@ function presentDocument(document: DocumentRecord): McpJsonObject {
     packageId: document.packageId,
     moduleId: document.moduleId,
     skillId: document.skillId,
+    description: document.description,
   };
 }
 
