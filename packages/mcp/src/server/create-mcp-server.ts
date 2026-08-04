@@ -116,8 +116,10 @@ export function createAtlasMcpServer(
     identity: metadata,
     retrievalStore: createRetrievalStore(dependencies.db),
   };
-  const exposeAggregates = dependencies.exposurePolicy !== "bounded-remote";
-  const resourceNames = exposeAggregates
+  const exposeResources =
+    dependencies.exposurePolicy !== "bounded-remote" &&
+    dependencies.toolProfile === "advanced";
+  const resourceNames = exposeResources
     ? DEFAULT_RESOURCE_NAMES.map((name) =>
         name.startsWith("atlas-")
           ? `${metadata.resourcePrefix}-${name.slice("atlas-".length)}`
@@ -153,7 +155,7 @@ export function createAtlasMcpServer(
   const staticToolCount = toolNames.length;
   const staticResourceCount = allResourceNames.length;
   const registerSourceSurfaces = (nextCatalog: IndexedSourceCatalog) => {
-    if (exposeAggregates) {
+    if (exposeResources) {
       for (const source of nextCatalog.sources) {
         const resource = registerIndexedSourceResource(
           server,
@@ -185,7 +187,7 @@ export function createAtlasMcpServer(
     metadata: { tools: [...toolNames] },
   });
 
-  if (exposeAggregates)
+  if (exposeResources)
     registerResources(server, effectiveDependencies, metadata);
   diagnostics.push({
     stage: "resource",

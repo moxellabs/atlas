@@ -30,13 +30,13 @@ The default `agent` profile advertises five generic tools plus one source-named 
 - `use_skill` browses stored skills and resolves exact or unambiguous task matches into complete instructions, provenance, and read-only artifacts.
 - `answer_<source>_docs` runs the same planner against one named indexed source.
 
-`plan_context` and the primary source facade carry `anthropic/alwaysLoad`; additional advanced-profile facades remain discoverable without forced preload. Every tool publishes a concrete output schema and explicit next-action guidance. Server instructions route questions through tools before addressable MCP resources, which are not a search surface. Source facades return the planner's selected evidence directly, so their output stays inside one retrieval budget.
+`plan_context` and the primary source facade carry `anthropic/alwaysLoad`; additional advanced-profile facades remain discoverable without forced preload. Every tool publishes a concrete output schema and explicit next-action guidance. Source facades return the planner's selected evidence directly, so their output stays inside one retrieval budget.
 
-The `advanced` profile adds `find_scopes` and may advertise up to 12 configured source facades. Select it with `atlas mcp --tool-profile advanced` or `ATLAS_MCP_TOOL_PROFILE=advanced` for the HTTP server. The default profile advertises one configured source facade.
+The `advanced` profile adds `find_scopes`, may advertise up to 12 configured source facades, and exposes the addressable resources below for explicit inspection after a retrieval tool returns a stable identifier. Select it with `atlas mcp --tool-profile advanced` or `ATLAS_MCP_TOOL_PROFILE=advanced` for the HTTP server. The default profile advertises one configured source facade and no resources, preventing clients from treating resource traversal as a substitute search graph.
 
 ## Implemented Resources
 
-- `atlas://manifest` with local store-derived indexed repository coverage; agents should call plan_context before answering indexed-repository questions and Atlas performs no remote fetch for this discovery payload
+- `atlas://manifest` with local store-derived indexed repository coverage for explicit advanced-profile inspection; Atlas performs no remote fetch for this payload
 - `atlas://repo/{repoId}` with package, module, document, skill, summary, manifest, and freshness context
 - `atlas://package/{packageId}` with package-scoped modules, documents, skills, summaries, and repo context
 - `atlas://module/{moduleId}` with module-scoped documents, skills, summaries, package, and repo context

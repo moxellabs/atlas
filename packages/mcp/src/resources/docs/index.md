@@ -10,7 +10,7 @@ The resources module exposes addressable Atlas corpus resources.
 
 ## Manifest Discovery Contract
 
-`atlas://manifest` is the MCP discovery resource for local indexed repository coverage. Agents should read it before answering repository-specific questions; call plan_context before answering indexed-repository questions.
+`atlas://manifest` is an advanced-profile inspection resource for local indexed repository coverage. Normal agent retrieval starts with `answer_<source>_docs`, `plan_context`, or the task-specific generic tool rather than traversing resources.
 
 Manifest coverage is derived only from local store records. It reports compact repo IDs, indexed revisions, compiler versions, freshness, and package/module/document counts without fetching remote content or exposing credentials.
 

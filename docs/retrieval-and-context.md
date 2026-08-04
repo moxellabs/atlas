@@ -1,6 +1,6 @@
 ---
 title: Retrieval And Context Planning
-description: Learn how Atlas searches, ranks, filters, and plans retrieval context from local public artifacts.
+description: Learn how Atlas turns indexed repository documentation into answer-ready context packets through scoped, ranked retrieval.
 audience: [consumer, contributor, maintainer]
 purpose: [guide, reference]
 visibility: public
@@ -10,6 +10,7 @@ order: 40
 # Retrieval And Context Planning
 
 Atlas retrieval is scope-aware. It uses topology, summaries, search records, ranking signals, and token budgets to return useful evidence without flattening the documentation corpus.
+At query time, Atlas turns indexed repository documentation into an answer-ready context packet entirely from the persisted local corpus: it classifies the query, infers likely scopes, gathers and ranks evidence, and selects summaries, sections, or chunks under one token budget. This retrieval boundary does not sync repositories, rebuild artifacts, or fetch remote sources; source acquisition and indexing are separate runtime operations described in [Architecture](./architecture.md).
 
 ## Retrieval Pipeline
 

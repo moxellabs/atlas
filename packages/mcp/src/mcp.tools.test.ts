@@ -914,6 +914,7 @@ describe("MCP tool contracts", () => {
         title: "Acme Knowledge MCP",
         resourcePrefix: "acme",
       },
+      toolProfile: "advanced",
     });
     expect(
       server.diagnostics.find((diagnostic) => diagnostic.stage === "server")

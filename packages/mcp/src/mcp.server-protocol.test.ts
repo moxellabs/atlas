@@ -54,10 +54,19 @@ describe("MCP server registration and in-memory protocol", () => {
     ]);
     expect(atlasServer.tools).not.toContain("get_freshness");
     expect(atlasServer.tools).not.toContain("what_changed");
-    expect(atlasServer.resources).toContain("atlas-document");
-    expect(atlasServer.resources).toContain("atlas-summary");
-    expect(atlasServer.resources).toContain("atlas-skill-artifact");
-    expect(atlasServer.resources).toContain("atlas-source-atlas");
+    expect(atlasServer.resources).toEqual([]);
+    const advancedServer = createAtlasMcpServer({
+      db: store,
+      toolProfile: "advanced",
+    });
+    expect(advancedServer.resources).toEqual(
+      expect.arrayContaining([
+        "atlas-document",
+        "atlas-summary",
+        "atlas-skill-artifact",
+        "atlas-source-atlas",
+      ]),
+    );
     expect(atlasServer.prompts).toEqual([
       "answer_from_local_docs",
       "onboard_to_module",
@@ -230,8 +239,6 @@ describe("MCP server registration and in-memory protocol", () => {
       },
       citations: expect.arrayContaining([expect.objectContaining({ repoId })]),
     });
-    const manifest = await client.readResource({ uri: "atlas://manifest" });
-    expect(manifest.contents).toHaveLength(1);
   });
 
   test("bounds source facades by profile and configured repository order", () => {
