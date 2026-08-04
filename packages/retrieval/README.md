@@ -10,9 +10,9 @@ This package classifies user queries, infers likely scopes, gathers candidates f
 - Infers repo/package/module/skill scopes from stored metadata.
 - Uses a required `RetrievalStore` read port created once per runtime, so planner calls do not allocate repository wrappers.
 - Ranks candidates by lexical score, authority, locality, query-kind fit, token efficiency, and redundancy.
-- Selects summaries first when appropriate, then expands into sections/chunks/skills under budget.
+- Selects summaries first when appropriate, then expands into sections/chunks/skills under budget. Natural-language exact lookups prefer section text and can keep two distinct headings from one document; path and location queries remain path-first.
 - Returns explicit ambiguity and omission information.
-- Builds an answer-ready `contextPacket` with selected evidence, human-readable scope labels, provenance, warnings, omitted-item reasons, and recommended next actions so MCP agents need fewer follow-up calls.
+- Builds an answer-ready `contextPacket` with selected evidence, human-readable scope labels, provenance, warnings, omitted-item reasons, and recommended next actions. A high-confidence, unambiguous plan tells callers to answer from the returned evidence and retrieve more only when a required claim is unsupported.
 
 ## Public API
 

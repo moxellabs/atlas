@@ -11,8 +11,7 @@ describe("classifyQuery", () => {
     expect(
       classifyQuery("where is packages/auth/docs/session.md?"),
     ).toMatchObject({
-      kind: "exact-lookup",
-      confidence: "high",
+      kind: "location",
     });
     expect(classifyQuery("packages/auth/docs/session.md")).toMatchObject({
       kind: "exact-lookup",
