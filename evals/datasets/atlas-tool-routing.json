@@ -261,19 +261,19 @@
           "id": "skill-completion",
           "kind": "completion",
           "description": "Returns the complete add-CLI-command procedure and bundled artifacts.",
-          "evidencePaths": ["apps/cli/skills/add-cli-command/SKILL.md"]
+          "evidencePaths": ["apps/cli/docs/skills/add-cli-command/SKILL.md"]
         },
         {
           "id": "skill-grounding",
           "kind": "grounding",
           "description": "Uses the stored procedural skill rather than reconstructing a procedure from loose documents.",
-          "evidencePaths": ["apps/cli/skills/add-cli-command/SKILL.md"]
+          "evidencePaths": ["apps/cli/docs/skills/add-cli-command/SKILL.md"]
         },
         {
           "id": "skill-citation",
           "kind": "citation",
           "description": "Cites the stored skill source path.",
-          "evidencePaths": ["apps/cli/skills/add-cli-command/SKILL.md"]
+          "evidencePaths": ["apps/cli/docs/skills/add-cli-command/SKILL.md"]
         }
       ]
     },
