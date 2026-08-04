@@ -24,7 +24,7 @@ Atlas retrieval is scope-aware. It uses topology, summaries, search records, ran
 
 - CLI: `atlas inspect retrieval`, `atlas list docs`, `atlas list sections`, and related inspection commands.
 - HTTP: search, context, document outline, document section, skill, and inspect routes.
-- MCP: `find_scopes`, `find_docs`, `read_outline`, `read_section`, `expand_related`, `explain_module`, `get_freshness`, `plan_context`, and `what_changed`.
+- MCP: `find_scopes`, `find_docs`, `read_outline`, `read_section`, `expand_related`, `explain_module`, `plan_context`, `list_skills`, `get_skill`, and `use_skill`. `plan_context` carries freshness state and bounded recent changed paths for diff questions.
 
 ## Token Budgets And Omissions
 

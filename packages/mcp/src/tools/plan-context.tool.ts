@@ -1,4 +1,5 @@
-import { planContext } from "@atlas/retrieval";
+import type { RepositoryRefreshState } from "@atlas/core";
+import { classifyQuery, planContext } from "@atlas/retrieval";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
@@ -73,9 +74,25 @@ function buildPlanContextResult(
       coverage.freshness,
     ]),
   );
-  const stale = selected.some(
-    (entry) => freshnessByRepo.get(entry.provenance.repoId)?.stale === true,
+  const refreshStateByRepo = new Map(
+    [...new Set(selected.map((entry) => entry.provenance.repoId))].map(
+      (repoId) => [
+        repoId,
+        dependencies.repositoryRefreshStateProvider?.getRepositoryRefreshState(
+          repoId,
+        ),
+      ],
+    ),
   );
+  const stale = selected.some((entry) => {
+    const repoId = entry.provenance.repoId;
+    const refreshStatus = refreshStateByRepo.get(repoId)?.status;
+    if (refreshStatus === "fresh") return false;
+    if (refreshStatus === "stale" || refreshStatus === "refresh_failed") {
+      return true;
+    }
+    return freshnessByRepo.get(repoId)?.stale === true;
+  });
   const coverage =
     selected.length === 0
       ? "absent"
@@ -95,11 +112,18 @@ function buildPlanContextResult(
     query: parsed.query,
     coverage: {
       status: coverage,
-      selectedSources: uniqueSelectedSources(selected, freshnessByRepo),
+      selectedSources: uniqueSelectedSources(
+        selected,
+        freshnessByRepo,
+        refreshStateByRepo,
+      ),
     },
     nextAction,
     context: plan.contextPacket,
     citations,
+    ...(classifyQuery(parsed.query).kind === "diff"
+      ? { recentChanges: recentRepositoryChanges(refreshStateByRepo) }
+      : {}),
     ...(parsed.detail === "debug" ? { debug: plan } : {}),
   };
 }
@@ -188,14 +212,51 @@ function uniqueSelectedSources(
     string,
     { readonly fresh: boolean; readonly stale: boolean }
   >,
+  refreshStateByRepo: ReadonlyMap<string, RepositoryRefreshState | undefined>,
 ) {
   return [...new Set(selected.map((entry) => entry.provenance.repoId))].map(
-    (repoId) => ({
+    (repoId) => {
+      const freshness = freshnessByRepo.get(repoId);
+      const refresh = refreshStateByRepo.get(repoId);
+      const refreshStatus = refresh?.status;
+      const fresh =
+        refreshStatus === "fresh"
+          ? true
+          : refreshStatus === "stale" || refreshStatus === "refresh_failed"
+            ? false
+            : (freshness?.fresh ?? false);
+      return {
       repoId,
-      fresh: freshnessByRepo.get(repoId)?.fresh ?? false,
-      stale: freshnessByRepo.get(repoId)?.stale ?? true,
-    }),
+        fresh,
+        stale: !fresh,
+        repositoryRefresh:
+          refresh === undefined
+            ? {
+                status: freshness?.stale === false ? "fresh" : "stale",
+                changedPaths: [],
+              }
+            : refresh,
+      };
+    },
   );
+}
+
+function recentRepositoryChanges(
+  refreshStateByRepo: ReadonlyMap<string, RepositoryRefreshState | undefined>,
+) {
+  return [...refreshStateByRepo.entries()]
+    .filter((entry): entry is [string, NonNullable<(typeof entry)[1]>] => {
+      const state = entry[1];
+      return state !== undefined && state.changedPaths.length > 0;
+    })
+    .map(([repoId, state]) => ({
+      repoId,
+      status: state.status,
+      changedPaths: [...state.changedPaths],
+      ...(state.lastCheckedAt === undefined
+        ? {}
+        : { lastCheckedAt: state.lastCheckedAt }),
+    }));
 }
 
 function selectExactPassages(

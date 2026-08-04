@@ -29,7 +29,7 @@ Identity changes server metadata, resource display names, and skill aliases. Gen
 
 ## Protocol Surface
 
-Tools expose query, scope, document, freshness, skill, context-planning, and diff operations with explicit schemas: `find_scopes`, `find_docs`, `read_outline`, `read_section`, `expand_related`, `explain_module`, `list_skills`, `get_skill`, `use_skill`, `get_freshness`, `plan_context`, and `what_changed`. Resources expose persisted corpus artifacts by stable identifiers: manifest, repo, package, module, document, skill, skill artifact, and summary. Prompts compose common grounding workflows such as onboarding, module explanation, local-doc answers, doc comparison, and skill usage explanation.
+Tools expose query, scope, document, skill, and context-planning operations with explicit schemas: `find_scopes`, `find_docs`, `read_outline`, `read_section`, `expand_related`, `explain_module`, `list_skills`, `get_skill`, `use_skill`, and `plan_context`. `plan_context` includes local corpus freshness and, for diff questions, bounded changed-path state supplied by the runtime lifecycle service. Resources expose persisted corpus artifacts by stable identifiers: manifest, repo, package, module, document, skill, skill artifact, and summary. Prompts compose common grounding workflows such as onboarding, module explanation, local-doc answers, doc comparison, and skill usage explanation.
 
 Transports are runtime adapters. Stdio and Streamable HTTP setup should stay protocol-focused and should receive explicit streams or HTTP primitives from the host runtime.
 
@@ -38,7 +38,7 @@ Transports are runtime adapters. Stdio and Streamable HTTP setup should stay pro
 - Tool inputs should remain small, explicit, and JSON-compatible.
 - MCP responses should include provenance and diagnostics where they help agents verify source truth.
 - Normal retrieval, context-planning, skill, and resource calls read local store/retrieval dependencies only.
-- Source diffs are available only through an explicit runtime-provided diff provider; MCP tools must not trigger sync/build or remote source acquisition.
+- Runtime lifecycle state may be included in `plan_context`, but an MCP tool call must not trigger sync, build, or remote source acquisition.
 - Missing dependencies or resources should fail as structured MCP errors.
 - Skill resolution should return read-only source artifacts; installation into agent-specific directories is a CLI concern.
 

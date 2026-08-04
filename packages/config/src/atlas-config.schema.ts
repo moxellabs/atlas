@@ -350,6 +350,33 @@ export const atlasIdentityConfigSchema = z.object({
 	root: nonEmptyTrimmedString.optional(),
 	mcp: atlasMcpIdentityConfigSchema.optional(),
 });
+export const DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+
+export const atlasRepositoryRefreshConfigSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    intervalMs: z
+      .number()
+      .int()
+      .min(1_000)
+      .max(24 * 60 * 60 * 1_000)
+      .default(DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS),
+  })
+  .default({
+    enabled: true,
+    intervalMs: DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
+  });
+
+export const atlasLifecycleConfigSchema = z
+  .object({
+    repositoryRefresh: atlasRepositoryRefreshConfigSchema,
+  })
+  .default({
+    repositoryRefresh: {
+      enabled: true,
+      intervalMs: DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
+    },
+  });
 
 export const atlasConfigSchema = z
 	.object({
@@ -358,6 +385,7 @@ export const atlasConfigSchema = z
 		corpusDbPath: nonEmptyTrimmedString,
 		logLevel: logLevelSchema,
 		server: atlasServerConfigSchema,
+    lifecycle: atlasLifecycleConfigSchema,
 		hosts: z.array(atlasHostConfigSchema).default([
 			{
 				name: "github.com",
@@ -409,6 +437,10 @@ export const atlasConfigSchema = z
 export type AtlasConfig = z.infer<typeof atlasConfigSchema>;
 export type AtlasHostConfig = z.infer<typeof atlasHostConfigSchema>;
 export type AtlasServerConfig = z.infer<typeof atlasServerConfigSchema>;
+export type AtlasLifecycleConfig = z.infer<typeof atlasLifecycleConfigSchema>;
+export type AtlasRepositoryRefreshConfig = z.infer<
+  typeof atlasRepositoryRefreshConfigSchema
+>;
 export type AtlasRepoConfig = z.infer<typeof atlasRepoConfigSchema>;
 export type AtlasGitRepoSourceConfig = z.infer<
 	typeof atlasGitRepoSourceConfigSchema

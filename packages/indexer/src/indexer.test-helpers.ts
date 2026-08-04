@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   type ResolvedAtlasConfig,
+  DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
   resolveRuntimeRepoConfigs,
 } from "@atlas/config";
 import { createDocId, createModuleId, createPackageId } from "@atlas/core";
@@ -162,6 +163,12 @@ export function createTestResolvedConfig(
     corpusDbPath: join(fixture.localPath, "..", "atlas.db"),
     logLevel: "info",
     server: { transport: "http", host: "127.0.0.1", port: 3000 },
+    lifecycle: {
+      repositoryRefresh: {
+        enabled: false,
+        intervalMs: DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
+      },
+    },
     hosts: [
       {
         name: "github.com",

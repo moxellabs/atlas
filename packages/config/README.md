@@ -10,19 +10,20 @@ This package validates user config files, merges defaults and env overrides, res
 - Supports explicit `--config` and `ATLAS_CONFIG` paths.
 - Normalizes cache, corpus DB, local Git cache, and CA cert paths.
 - Validates local Git and GHES repo source config shapes.
+- Validates repository refresh lifecycle enablement and interval bounds.
 - Resolves GHES bearer tokens from configured env vars, standard GitHub env vars, or GitHub CLI credentials without exposing secrets in config files.
 
 ## Public API
 
-- Schemas: `atlasConfigSchema`, repo/source/workspace/topology schemas, env schema.
+- Schemas: `atlasConfigSchema`, lifecycle, repo/source/workspace/topology, and env schemas.
 - Loaders: `loadConfig`, `resolveAtlasConfig`, `loadEnv`.
-- Defaults: `buildDefaultConfig`, `buildDefaultCorpusDbPath`, server defaults.
+- Defaults: `buildDefaultConfig`, `buildDefaultCorpusDbPath`, server defaults, and the 15-minute repository refresh interval.
 - Errors: structured config/env read, parse, path, and validation errors.
 
 ## Relevant Env
 
 | Variable | Purpose |
-|---|---|
+| --------------------- | -------------------------------------------- |
 | `ATLAS_CONFIG` | Explicit config path |
 | `ATLAS_CACHE_DIR` | Override configured cache directory |
 | `ATLAS_LOG_LEVEL` | Override configured log level |

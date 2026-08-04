@@ -160,13 +160,6 @@ export const explainModuleInputSchema = z
   })
   .strict();
 
-/** Input schema for get_freshness. */
-export const getFreshnessInputSchema = z
-  .object({
-    repoId: repoIdSchema,
-  })
-  .strict();
-
 /** Input schema for plan_context. */
 export const planContextInputSchema = z
   .object({
@@ -184,15 +177,6 @@ export const planContextInputSchema = z
   })
   .strict();
 
-/** Input schema for what_changed. */
-export const whatChangedInputSchema = z
-  .object({
-    repoId: z.string().trim().min(1),
-    fromRevision: z.string().trim().min(1).optional(),
-    toRevision: z.string().trim().min(1).optional(),
-  })
-  .strict();
-
 /** Loose object output schema used by SDK registration while contract tests assert exact shapes. */
 export const jsonOutputSchema = z.object({}).passthrough();
 
@@ -205,11 +189,9 @@ export type GetSkillInput = z.infer<typeof getSkillInputSchema>;
 export type UseSkillInput = z.infer<typeof useSkillInputSchema>;
 export type ExpandRelatedInput = z.infer<typeof expandRelatedInputSchema>;
 export type ExplainModuleInput = z.infer<typeof explainModuleInputSchema>;
-export type GetFreshnessInput = z.infer<typeof getFreshnessInputSchema>;
 export type PlanContextToolInput = Omit<
   z.input<typeof planContextInputSchema>,
   "detail"
 > & {
   detail?: "agent" | "debug";
 };
-export type WhatChangedInput = z.infer<typeof whatChangedInputSchema>;

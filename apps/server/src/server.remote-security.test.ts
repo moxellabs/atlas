@@ -250,6 +250,7 @@ describe("server remote security", () => {
     );
     try {
       expect(dependencies.ownedDbDir).toBeString();
+      expect(dependencies.lifecycle).toBeUndefined();
       new RepoRepository(store).upsert({
         repoId: "github.com/private/late-write",
         mode: "local-git",

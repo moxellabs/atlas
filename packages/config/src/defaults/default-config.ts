@@ -1,4 +1,8 @@
-import type { AtlasConfig, AtlasHostConfig } from "../atlas-config.schema";
+import {
+  DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
+  type AtlasConfig,
+  type AtlasHostConfig,
+} from "../atlas-config.schema";
 
 export const DEFAULT_MOXEL_ATLAS_HOME = "~/.moxel/atlas";
 export const DEFAULT_MOXEL_ATLAS_CONFIG_RELATIVE_PATH = "config.yaml";
@@ -30,6 +34,12 @@ export const buildDefaultConfig = (
 	server: {
 		transport: "stdio",
 	},
+  lifecycle: {
+    repositoryRefresh: {
+      enabled: true,
+      intervalMs: DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
+    },
+  },
 	hosts: [defaultGithubHostConfig()],
 	docs: { metadata: { rules: [], profiles: {} } },
 	repos: [],

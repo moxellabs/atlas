@@ -441,29 +441,35 @@ repos:
       stderr: stderr as unknown as NodeJS.WriteStream,
       env: {},
     };
-    const sourceDiffProvider = {
-      async diff() {
-        throw new Error("unused");
+    const lifecycle = {
+      start() {
+        lifecycleStarted = true;
       },
-    };
+      async close() {
+        lifecycleClosed = true;
+      },
+    } as never;
     const transport: { onclose?: () => void } = {};
     let connectedTransport: unknown;
+    let lifecycleStarted = false;
+    let lifecycleClosed = false;
+    let serverReceivedRefreshStateProvider = false;
     let closed = false;
-    let serverReceivedSourceDiffProvider = false;
 
     const result = await runMcpCommandWithDependencies(
       context,
       {
         db: {} as never,
-        sourceDiffProvider,
+        config: { env: {}, config: {} } as never,
+        indexer: {} as never,
         close() {
           closed = true;
         },
       },
       {
         createServer(deps) {
-          serverReceivedSourceDiffProvider =
-            deps.sourceDiffProvider === sourceDiffProvider;
+          serverReceivedRefreshStateProvider =
+            deps.repositoryRefreshStateProvider === lifecycle;
           return {
             tools: ["find_docs"],
             resources: ["atlas-document"],
@@ -477,6 +483,9 @@ repos:
               },
             },
           } as never;
+        },
+        createLifecycle() {
+          return lifecycle;
         },
         createTransport(nextContext) {
           expect(nextContext.stdin).toBe(context.stdin);
@@ -495,7 +504,9 @@ repos:
       },
     });
     expect(connectedTransport).toBe(transport);
-    expect(serverReceivedSourceDiffProvider).toBe(true);
+    expect(serverReceivedRefreshStateProvider).toBe(true);
+    expect(lifecycleStarted).toBe(true);
+    expect(lifecycleClosed).toBe(true);
     expect(closed).toBe(true);
     expect(stdoutText).toBe("");
     expect(stderrText).toBe("");
@@ -523,7 +534,7 @@ repos:
     };
     const result = await runMcpCommandWithDependencies(
       context,
-      { db: {} as never, sourceDiffProvider: {} as never, close() {} },
+      { db: {} as never, close() {} },
       {
         createServer(_deps, identity, discoveryPolicy) {
           receivedIdentity = identity;
@@ -578,7 +589,6 @@ repos:
       context,
       {
         db: {} as never,
-        sourceDiffProvider: {} as never,
         config: {
           env: { ATLAS_MCP_RESOURCE_PREFIX: "acme" },
           config: {},

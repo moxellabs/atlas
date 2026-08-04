@@ -30,9 +30,7 @@ Identity changes server metadata, resource display names, and skill aliases. Gen
 - `list_skills`
 - `get_skill`
 - `use_skill`
-- `get_freshness`
-- `plan_context` - returns selected evidence, human-readable scope labels, warnings, omissions, and next actions for answer-ready local context
-- `what_changed`
+- `plan_context` - returns selected evidence, source freshness, bounded recent changed paths for diff questions, human-readable scope labels, warnings, omissions, and next actions
 
 ## Implemented Resources
 

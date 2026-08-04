@@ -9,7 +9,6 @@ import {
 import { createRetrievalStore } from "@atlas/retrieval";
 import {
   DocRepository,
-  RepoRepository,
   SectionRepository,
   SkillRepository,
 } from "@atlas/store";
@@ -35,7 +34,6 @@ import { executeExpandRelated } from "./tools/expand-related.tool";
 import { executeExplainModule } from "./tools/explain-module.tool";
 import { executeFindDocs } from "./tools/find-docs.tool";
 import { executeFindScopes } from "./tools/find-scopes.tool";
-import { executeGetFreshness } from "./tools/get-freshness.tool";
 import { executeGetSkill } from "./tools/get-skill.tool";
 import { executeListSkills } from "./tools/list-skills.tool";
 import { executePlanContext } from "./tools/plan-context.tool";
@@ -43,7 +41,6 @@ import { executeReadOutline } from "./tools/read-outline.tool";
 import { executeReadSection } from "./tools/read-section.tool";
 import { executeUseSkill } from "./tools/use-skill.tool";
 import { documentResource } from "./resources/document.resource";
-import { executeWhatChanged } from "./tools/what-changed.tool";
 
 describe("MCP tool contracts", () => {
   let fixture: McpTestFixture;
@@ -133,6 +130,62 @@ describe("MCP tool contracts", () => {
         ]),
         recommendedNextActions: expect.any(Array),
       },
+    });
+  });
+  test("folds lifecycle freshness and bounded recent changes into plan_context", () => {
+    const { store } = fixture;
+    const plannedContext = executePlanContext(
+      {
+        query: "what changed in the session rotation docs?",
+        repoId,
+        budgetTokens: 200,
+      },
+      {
+        db: store,
+        retrievalStore: createRetrievalStore(store),
+        repositoryRefreshStateProvider: {
+          getRepositoryRefreshState(requestedRepoId) {
+            return requestedRepoId === repoId
+              ? {
+                  repoId,
+                  status: "refresh_failed",
+                  lastCheckedAt: "2026-08-03T00:00:00.000Z",
+                  lastSuccessfulRefreshAt: "2026-08-02T00:00:00.000Z",
+                  sourceRevision: "rev-2",
+                  indexedRevision: "rev-1",
+                  changedPaths: ["packages/auth/docs/session.md"],
+                  error: { message: "remote unavailable" },
+                }
+              : undefined;
+          },
+        },
+      },
+    );
+
+    expect(plannedContext).toMatchObject({
+      coverage: {
+        status: "stale",
+        selectedSources: [
+          expect.objectContaining({
+            repoId,
+            fresh: false,
+            stale: true,
+            repositoryRefresh: expect.objectContaining({
+              status: "refresh_failed",
+              sourceRevision: "rev-2",
+              indexedRevision: "rev-1",
+            }),
+          }),
+        ],
+      },
+      recentChanges: [
+        {
+          repoId,
+          status: "refresh_failed",
+          changedPaths: ["packages/auth/docs/session.md"],
+          lastCheckedAt: "2026-08-03T00:00:00.000Z",
+        },
+      ],
     });
   });
 
@@ -249,113 +302,6 @@ describe("MCP tool contracts", () => {
       status: "not_found",
       recommendedNextActions: expect.any(Array),
     });
-  });
-
-  test("executes source-backed change inspection when a diff provider is configured", async () => {
-    const { store } = fixture;
-    const result = await executeWhatChanged(
-      { repoId, fromRevision: "rev_0" },
-      {
-        db: store,
-        sourceDiffProvider: {
-          async diff(request) {
-            return {
-              repoId: request.repoId,
-              fromRevision: request.fromRevision,
-              toRevision: request.toRevision,
-              changes: [
-                {
-                  rawKind: "modified",
-                  normalizedKind: "modified",
-                  path: "packages/auth/docs/session.md",
-                },
-              ],
-              relevantChanges: [
-                {
-                  rawKind: "modified",
-                  normalizedKind: "modified",
-                  path: "packages/auth/docs/session.md",
-                },
-              ],
-              relevantDocPaths: ["packages/auth/docs/session.md"],
-              topologySensitivePaths: [],
-              packageManifestPaths: [],
-            };
-          },
-        },
-      },
-    );
-    expect(result).toMatchObject({
-      repo: expect.objectContaining({ repoId, revision: "rev_1" }),
-      manifest: expect.objectContaining({ indexedRevision: "rev_1" }),
-      requestedRange: { fromRevision: "rev_0", toRevision: "rev_1" },
-      sourceDiff: expect.objectContaining({
-        available: true,
-        fromRevision: "rev_0",
-        toRevision: "rev_1",
-        relevantDocPaths: ["packages/auth/docs/session.md"],
-        changedIndexedDocuments: [expect.objectContaining({ docId })],
-      }),
-    });
-    expect(result.indexedDocuments).toEqual(
-      expect.arrayContaining([expect.objectContaining({ docId })]),
-    );
-  });
-
-  test("reports unavailable source diffs for embedded MCP runtimes without a provider", async () => {
-    const { store } = fixture;
-    expect(await executeWhatChanged({ repoId }, { db: store })).toMatchObject({
-      requestedRange: { fromRevision: "rev_1", toRevision: "rev_1" },
-      sourceDiff: {
-        available: false,
-        fromRevision: "rev_1",
-        toRevision: "rev_1",
-        reason: "No source diff provider is configured for this MCP runtime.",
-      },
-    });
-  });
-
-  test("reports local freshness for all repos, filtered repos, and stale revisions", () => {
-    const { store } = fixture;
-    expect(executeGetFreshness({}, { db: store })).toMatchObject({
-      freshness: [
-        expect.objectContaining({
-          repoId,
-          repoRevision: "rev_1",
-          indexedRevision: "rev_1",
-          fresh: true,
-          stale: false,
-          lastSyncAt: expect.any(String),
-          manifest: expect.objectContaining({
-            repoId,
-            indexedRevision: "rev_1",
-          }),
-        }),
-      ],
-    });
-    expect(executeGetFreshness({ repoId }, { db: store })).toMatchObject({
-      freshness: [expect.objectContaining({ repoId, fresh: true })],
-    });
-
-    new RepoRepository(store).upsert({
-      repoId,
-      mode: "local-git",
-      revision: "rev_2",
-    });
-    expect(executeGetFreshness({ repoId }, { db: store })).toMatchObject({
-      freshness: [
-        expect.objectContaining({
-          repoId,
-          repoRevision: "rev_2",
-          indexedRevision: "rev_1",
-          fresh: false,
-          stale: true,
-        }),
-      ],
-    });
-    expect(() =>
-      executeGetFreshness({ repoId: "missing_repo" }, { db: store }),
-    ).toThrow("Repository was not found.");
   });
 
   test("expands related context from document, section, chunk, and summary anchors", () => {

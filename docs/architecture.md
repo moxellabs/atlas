@@ -55,7 +55,7 @@ Atlas stores documentation as scoped artifacts:
 Source ingestion and retrieval are intentionally separated:
 
 1. Config is loaded by `@atlas/config`.
-2. `@atlas/indexer` selects a source adapter and syncs source revision state.
+2. `@atlas/indexer` selects a source adapter and syncs source revision state, either through an explicit operation or the host runtime's TTL-gated lifecycle service.
 3. `@atlas/topology` discovers packages/modules and classifies docs or skills by path.
 4. `@atlas/compiler` parses Markdown into canonical documents, sections, outlines, summaries, and skill records.
 5. `@atlas/tokenizer` creates token-counted chunks with stable provenance.
@@ -64,6 +64,8 @@ Source ingestion and retrieval are intentionally separated:
 8. CLI, server, and MCP surfaces present those results to humans or agents.
 
 Retrieval never reads directly from remote source repositories. Builds never depend on agent-specific protocol behavior.
+
+Local stdio MCP and loopback HTTP hosts own background lifecycle scheduling. The indexer owns sync, transactional rebuild, lock, and last-known-good semantics. MCP only reads the resulting state while planning an answer.
 
 ## Extension Points
 

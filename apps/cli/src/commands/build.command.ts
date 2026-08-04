@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   type AtlasConfig,
+  DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
   defaultGithubHostConfig,
   resolveRuntimeRepoConfigs,
 } from "@atlas/config";
@@ -41,11 +42,7 @@ import {
 import { loadDependenciesFromGlobal } from "./dependencies";
 import { gitOutput, readGitRoot } from "./git";
 import { resolveRepoIdentity } from "./repo-identity";
-import {
-	buildFailureLines,
-	reportExitCode,
-	reportLines,
-} from "./reports";
+import { buildFailureLines, reportExitCode, reportLines } from "./reports";
 import { renderSuccess } from "./render";
 
 const REPO_METADATA_FILE = "atlas.repo.json";
@@ -172,9 +169,7 @@ export async function runBuildCommand(
 	);
 }
 
-function parseBuildCommandInput(
-	context: CliCommandContext,
-): BuildCommandInput {
+function parseBuildCommandInput(context: CliCommandContext): BuildCommandInput {
 	const docIds = readStringListOption(context, "docId");
 	const parsed = {
 		repoId: readStringOption(context, "repo"),
@@ -234,11 +229,14 @@ async function resolveBuildTarget(
 ): Promise<BuildTargetResolution | undefined> {
 	if (repoLocal !== undefined || deps === undefined) return undefined;
 	try {
-		return await resolveRepoIdentity(context, { intent: "target", config: deps.config.config,
+    return await resolveRepoIdentity(context, {
+      intent: "target",
+      config: deps.config.config,
 			...(input.repoId === undefined ? {} : { explicit: input.repoId }),
 			command: "build",
 			nonInteractive: readBooleanOption(context, "nonInteractive"),
-			allowSingleConfigured: input.selectorCount > 0, });
+      allowSingleConfigured: input.selectorCount > 0,
+    });
 	} catch (error) {
 		if (input.selectorCount > 0 || input.repoId !== undefined) throw error;
 		if (
@@ -365,6 +363,12 @@ async function runRepoLocalBuild(
 			corpusDbPath: dbPath,
 			logLevel: "warn",
 			server: { transport: "stdio" },
+      lifecycle: {
+        repositoryRefresh: {
+          enabled: false,
+          intervalMs: DEFAULT_REPOSITORY_REFRESH_INTERVAL_MS,
+        },
+      },
 			hosts: [defaultGithubHostConfig()],
 			docs: { metadata: { rules: [], profiles: {} } },
 			repos: [
@@ -577,5 +581,3 @@ async function findRepoArtifactMetadata(
 		metadata,
 	};
 }
-
-
