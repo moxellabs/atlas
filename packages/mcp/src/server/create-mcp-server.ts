@@ -40,11 +40,6 @@ import {
   FIND_SCOPES_TOOL,
   registerFindScopesTool,
 } from "../tools/find-scopes.tool";
-import { GET_SKILL_TOOL, registerGetSkillTool } from "../tools/get-skill.tool";
-import {
-  LIST_SKILLS_TOOL,
-  registerListSkillsTool,
-} from "../tools/list-skills.tool";
 import {
   PLAN_CONTEXT_TOOL,
   registerPlanContextTool,
@@ -78,8 +73,6 @@ const TOOL_NAMES = [
   READ_SECTION_TOOL,
   EXPAND_RELATED_TOOL,
   EXPLAIN_MODULE_TOOL,
-  LIST_SKILLS_TOOL,
-  GET_SKILL_TOOL,
   USE_SKILL_TOOL,
 ] as const;
 const BOUNDED_REMOTE_TOOL_NAMES = [
@@ -257,8 +250,6 @@ function registerTools(
     registerReadSectionTool(server, dependencies);
     registerExpandRelatedTool(server, dependencies);
     registerExplainModuleTool(server, dependencies);
-    registerListSkillsTool(server, dependencies);
-    registerGetSkillTool(server, dependencies);
     registerUseSkillTool(server, dependencies);
   }
   return planTool;

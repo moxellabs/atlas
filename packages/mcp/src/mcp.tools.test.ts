@@ -21,6 +21,7 @@ import {
   documentSummaryId,
   moduleId,
   relatedDocId,
+  packageId,
   repoId,
   sectionId,
   skillId,
@@ -29,13 +30,12 @@ import { createAtlasMcpServer } from "./server/create-mcp-server";
 import {
   findScopesInputSchema,
   readSectionInputSchema,
+  useSkillInputSchema,
 } from "./schemas/tool-schemas";
 import { executeExpandRelated } from "./tools/expand-related.tool";
 import { executeExplainModule } from "./tools/explain-module.tool";
 import { executeFindDocs } from "./tools/find-docs.tool";
 import { executeFindScopes } from "./tools/find-scopes.tool";
-import { executeGetSkill } from "./tools/get-skill.tool";
-import { executeListSkills } from "./tools/list-skills.tool";
 import { executePlanContext } from "./tools/plan-context.tool";
 import { executeReadOutline } from "./tools/read-outline.tool";
 import { executeReadSection } from "./tools/read-section.tool";
@@ -58,6 +58,16 @@ describe("MCP tool contracts", () => {
     expect(publicMcp.executeUseSkill).toBeFunction();
     expect(publicMcp.registerUseSkillTool).toBeFunction();
     expect(publicMcp.useSkillInputSchema).toBeDefined();
+    for (const removedExport of [
+      "LIST_SKILLS_TOOL",
+      "GET_SKILL_TOOL",
+      "executeListSkills",
+      "executeGetSkill",
+      "listSkillsInputSchema",
+      "getSkillInputSchema",
+    ]) {
+      expect(removedExport in publicMcp).toBe(false);
+    }
     expect(publicMcp.skillArtifactResource).toBeDefined();
   });
 
@@ -76,6 +86,10 @@ describe("MCP tool contracts", () => {
       query: "session rotation",
       visibility: ["internal"],
     });
+    expect(useSkillInputSchema.parse({})).toEqual({});
+    expect(() =>
+      useSkillInputSchema.parse({ nameOrAlias: "$atlas-session" }),
+    ).toThrow();
   });
 
   test("executes retrieval-backed tool contracts", () => {
@@ -243,7 +257,7 @@ describe("MCP tool contracts", () => {
     }
   });
 
-  test("executes store-backed read and skill tools", () => {
+  test("executes store-backed read tools", () => {
     const { store } = fixture;
     const dependencies = { db: store };
 
@@ -259,7 +273,16 @@ describe("MCP tool contracts", () => {
         text: "Rotate session tokens by calling rotateSessionToken during renewal.",
       }),
     });
-    expect(executeListSkills({ repoId }, dependencies)).toMatchObject({
+  });
+
+  test("browses and resolves skills through one tool", () => {
+    const { store } = fixture;
+    const dependencies = { db: store };
+
+    const listed = executeUseSkill({ repoId }, dependencies);
+    expect(listed).toMatchObject({
+      status: "listed",
+      total: 1,
       skills: [
         expect.objectContaining({
           skillId,
@@ -280,19 +303,14 @@ describe("MCP tool contracts", () => {
         }),
       ],
     });
-    expect(executeGetSkill({ skillId }, dependencies)).toMatchObject({
-      skill: expect.objectContaining({
-        skillId,
-        topics: ["session"],
-        aliases: ["session rotation"],
-        tokenCount: 18,
-      }),
-      provenance: expect.objectContaining({ docId, skillId }),
-    });
+    const compactSkill = (listed.skills as Record<string, unknown>[])[0];
+    expect(compactSkill).not.toHaveProperty("headings");
+    expect(compactSkill).not.toHaveProperty("keySections");
+
     expect(
       executeUseSkill(
         {
-          nameOrAlias: "$atlas-session-skill",
+          skill: "$atlas-session-skill",
           repoId,
           task: "rotate tokens",
           agent: "openai",
@@ -300,10 +318,15 @@ describe("MCP tool contracts", () => {
         dependencies,
       ),
     ).toMatchObject({
-      status: "ok",
+      status: "resolved",
+      resolution: { method: "exact" },
+      requestedSkill: "$atlas-session-skill",
       task: "rotate tokens",
       skill: expect.objectContaining({
         skillId,
+        topics: ["session"],
+        aliases: ["session rotation"],
+        tokenCount: 18,
         invocationAliases: expect.arrayContaining(["$atlas-session-skill"]),
       }),
       instructions: expect.objectContaining({
@@ -329,15 +352,97 @@ describe("MCP tool contracts", () => {
       selectedAgentProfile: expect.objectContaining({
         path: "agents/openai.yaml",
       }),
+      summaries: expect.any(Array),
       freshness: expect.objectContaining({ repoId, fresh: true }),
       provenance: expect.objectContaining({ docId, skillId }),
+      diagnostics: [expect.objectContaining({ stage: "execution-policy" })],
+    });
+
+    expect(
+      executeUseSkill(
+        { task: "I need to rotate session tokens", repoId },
+        dependencies,
+      ),
+    ).toMatchObject({
+      status: "resolved",
+      resolution: {
+        method: "task",
+        score: expect.any(Number),
+        matchedTerms: ["rotate", "session", "token"],
+      },
+      skill: expect.objectContaining({ skillId }),
     });
     expect(
-      executeUseSkill({ nameOrAlias: "$atlas-missing", repoId }, dependencies),
+      executeUseSkill({ skill: "$atlas-missing", repoId }, dependencies),
     ).toMatchObject({
       status: "not_found",
       recommendedNextActions: expect.any(Array),
     });
+    expect(
+      executeUseSkill({ repoId, moduleId: "missing-module" }, dependencies),
+    ).toMatchObject({ status: "listed", total: 0, skills: [] });
+  });
+
+  test("returns deterministic candidates for ambiguous skill tasks", () => {
+    const { store } = fixture;
+    const repository = new SkillRepository(store);
+    for (const suffix of ["alpha", "beta"]) {
+      const path = `skills/deployment-audit-${suffix}/SKILL.md`;
+      const competingSkillId = createSkillId({
+        repoId,
+        packageId,
+        moduleId,
+        path,
+      });
+      repository.upsert({
+        node: {
+          skillId: competingSkillId,
+          repoId,
+          packageId,
+          moduleId,
+          path,
+          title: `Deployment Audit ${suffix}`,
+          sourceDocPath: path,
+          topics: ["deployment", "policy"],
+          aliases: [`deployment audit ${suffix}`],
+          tokenCount: 12,
+          diagnostics: [],
+        },
+        sourceDocId: docId,
+        description: "Audit deployment policy.",
+        headings: [["Deployment", "Policy"]],
+        keySections: ["Audit deployment policy."],
+        topics: ["deployment", "policy"],
+        aliases: [`deployment audit ${suffix}`],
+        tokenCount: 12,
+        artifacts: [],
+      });
+    }
+
+    const result = executeUseSkill(
+      { task: "audit deployment policy", repoId },
+      { db: store },
+    );
+    expect(result).toMatchObject({
+      status: "ambiguous",
+      task: "audit deployment policy",
+      candidates: [
+        expect.objectContaining({
+          sourceDocPath: "skills/deployment-audit-alpha/SKILL.md",
+          match: {
+            score: expect.any(Number),
+            matchedTerms: ["audit", "deployment", "policy"],
+          },
+        }),
+        expect.objectContaining({
+          sourceDocPath: "skills/deployment-audit-beta/SKILL.md",
+        }),
+      ],
+      diagnostics: [expect.objectContaining({ stage: "resolution" })],
+    });
+    expect(
+      (result.candidates as Record<string, unknown>[])[0],
+    ).not.toHaveProperty("instructions");
   });
 
   test("expands related context from document, section, chunk, and summary anchors", () => {
@@ -459,7 +564,7 @@ describe("MCP tool contracts", () => {
     ).toThrow("Module was not found.");
   });
 
-  test("list_skills and use_skill expose first-party skill artifacts", () => {
+  test("use_skill exposes first-party skill artifacts", () => {
     const { store } = fixture;
     const documentCodebaseDocId = createDocId({
       repoId,
@@ -651,7 +756,7 @@ describe("MCP tool contracts", () => {
       ],
     });
 
-    const listResult = executeListSkills({ repoId }, { db: store });
+    const listResult = executeUseSkill({ repoId }, { db: store });
     const skills = listResult.skills as Array<{
       sourceDocPath: string;
       title: string;
@@ -680,11 +785,11 @@ describe("MCP tool contracts", () => {
     });
 
     const useResult = executeUseSkill(
-      { nameOrAlias: "$atlas-document-codebase", repoId },
+      { skill: "$atlas-document-codebase", repoId },
       { db: store },
     );
     expect(useResult).toMatchObject({
-      status: "ok",
+      status: "resolved",
       instructions: {
         sourceDocumentPath: "skills/document-codebase/SKILL.md",
       },
@@ -704,11 +809,11 @@ describe("MCP tool contracts", () => {
     ).toMatchObject({ execution: "served-only" });
 
     const skillCreatorUseResult = executeUseSkill(
-      { nameOrAlias: "$atlas-skill-creator", repoId },
+      { skill: "$atlas-skill-creator", repoId },
       { db: store },
     );
     expect(skillCreatorUseResult).toMatchObject({
-      status: "ok",
+      status: "resolved",
       instructions: {
         sourceDocumentPath: "skills/skill-creator/SKILL.md",
       },
@@ -756,12 +861,11 @@ describe("MCP tool contracts", () => {
         "read_outline",
         "read_section",
         "plan_context",
-        "list_skills",
         "use_skill",
       ]),
     );
     const skill = (
-      executeListSkills(
+      executeUseSkill(
         { repoId },
         { db: store, identity: { resourcePrefix: "acme" } },
       ).skills as { invocationAliases: string[] }[]
@@ -771,9 +875,9 @@ describe("MCP tool contracts", () => {
     );
     expect(
       executeUseSkill(
-        { nameOrAlias: "$acme-session-skill", repoId },
+        { skill: "$acme-session-skill", repoId },
         { db: store, identity: { resourcePrefix: "acme" } },
       ),
-    ).toMatchObject({ status: "ok" });
+    ).toMatchObject({ status: "resolved" });
   });
 });

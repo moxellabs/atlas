@@ -279,7 +279,7 @@ MCP resources and skill alias generation that currently include `atlas` must use
 Given MCP brand prefix acme
 When tools/list and resources/list are requested
 Then resources include acme-document and acme-summary
-And list_skills returns aliases such as $acme-session-skill
+And use_skill browse results return aliases such as $acme-session-skill
 And default Atlas mode still returns atlas-document and $atlas-session-skill
 ```
 
@@ -288,8 +288,7 @@ And default Atlas mode still returns atlas-document and $atlas-session-skill
 - `packages/mcp/src/server/create-mcp-server.ts` — Generate resource name list from profile.
 - `packages/mcp/src/resources/*.resource.ts` — Convert static names to factory or registration-time prefixing.
 - `packages/mcp/src/resources/resource-utils.ts` — Support effective resource names without changing URI semantics unless required.
-- `packages/mcp/src/tools/list-skills.tool.ts` — Generate brand-prefixed aliases.
-- `packages/mcp/src/tools/use-skill.tool.ts` — Resolve brand-prefixed aliases and maintain default aliases where compatibility requires.
+- `packages/mcp/src/tools/use-skill.tool.ts` — Generate and resolve brand-prefixed aliases while preserving default aliases where compatibility requires.
 - `packages/mcp/src/prompts/*.prompt.ts` — Replace ATLAS/tool guidance where it names `atlas-*` aliases; keep generic tool names stable.
 
 ### FR-9: Expose explicit white-label flags and env/config keys
@@ -473,8 +472,7 @@ Then they find flag/env/config examples, precedence, invalid path examples, and 
 | `packages/mcp/src/server/create-mcp-server.ts` | Modify | FR-7, FR-8 | Register MCP with effective metadata/resources/prompts. |
 | `packages/mcp/src/resources/*.resource.ts` | Modify | FR-8 | Convert static Atlas-prefixed names to brand-aware names. |
 | `packages/mcp/src/resources/resource-utils.ts` | Modify | FR-8 | Support resource registration name overrides. |
-| `packages/mcp/src/tools/list-skills.tool.ts` | Modify | FR-8 | Emit brand-prefixed skill aliases. |
-| `packages/mcp/src/tools/use-skill.tool.ts` | Modify | FR-8 | Resolve brand-prefixed skill aliases. |
+| `packages/mcp/src/tools/use-skill.tool.ts` | Modify | FR-8 | Emit and resolve brand-prefixed skill aliases. |
 | `packages/mcp/src/prompts/*.prompt.ts` | Modify | FR-7, FR-8 | Use effective MCP names where prompts mention Atlas surfaces. |
 | `apps/cli/src/commands/mcp.command.ts` | Modify | FR-7, FR-9 | Pass CLI MCP name/title/prefix options. |
 | `apps/server/src/services/mcp-bridge.service.ts` | Modify | FR-7 | Construct per-session MCP server with effective identity. |

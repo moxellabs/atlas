@@ -93,7 +93,7 @@ Atlas publishes public first-party skills through the self-indexed artifact:
 - `document-codebase` helps agents inventory source truth and create or update durable codebase documentation.
 - `skill-creator` researches Atlas docs, source structure, and existing skills; recommends candidate skills; discusses and specifies them with follow-up questions; and creates only explicitly approved assets after exact skill names and target paths are approved.
 
-After importing the public artifact, MCP `list_skills` and `use_skill` expose first-party skills with Atlas invocation aliases and read-only supporting artifacts.
+After importing the public artifact, MCP `use_skill` can browse and resolve first-party skills with Atlas invocation aliases and read-only supporting artifacts.
 
 After changing public skills, maintainers must refresh and verify the committed artifact:
 
