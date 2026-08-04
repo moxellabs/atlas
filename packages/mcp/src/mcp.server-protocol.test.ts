@@ -45,12 +45,12 @@ describe("MCP server registration and in-memory protocol", () => {
 
     const atlasServer = createAtlasMcpServer({ db: store });
     expect(atlasServer.tools).toEqual([
+      "answer_atlas_docs",
       "plan_context",
       "find_docs",
       "read_document",
       "expand_related",
       "use_skill",
-      "answer_atlas_docs",
     ]);
     expect(atlasServer.tools).not.toContain("get_freshness");
     expect(atlasServer.tools).not.toContain("what_changed");
@@ -88,9 +88,9 @@ describe("MCP server registration and in-memory protocol", () => {
     });
 
     expect(atlasServer.tools).toEqual([
+      "answer_atlas_docs",
       "plan_context",
       "find_docs",
-      "answer_atlas_docs",
     ]);
     expect(atlasServer.resources).toEqual([]);
     const advanced = createAtlasMcpServer({
@@ -99,10 +99,10 @@ describe("MCP server registration and in-memory protocol", () => {
       toolProfile: "advanced",
     });
     expect(advanced.tools).toEqual([
+      "answer_atlas_docs",
       "plan_context",
       "find_scopes",
       "find_docs",
-      "answer_atlas_docs",
     ]);
     expect(advanced.resources).toEqual([]);
   });

@@ -141,7 +141,6 @@ export function createAtlasMcpServer(
     },
   );
 
-  const genericPlanTool = registerTools(server, effectiveDependencies, catalog);
   const dynamicTools = new Map<
     string,
     ReturnType<typeof registerSourcePlanContextTool>
@@ -150,9 +149,9 @@ export function createAtlasMcpServer(
     string,
     ReturnType<typeof registerIndexedSourceResource>
   >();
-  const toolNames: string[] = [...staticToolNames(dependencies)];
+  const staticTools = [...staticToolNames(dependencies)];
+  const toolNames: string[] = [];
   const allResourceNames: string[] = [...resourceNames];
-  const staticToolCount = toolNames.length;
   const staticResourceCount = allResourceNames.length;
   const registerSourceSurfaces = (nextCatalog: IndexedSourceCatalog) => {
     if (exposeResources) {
@@ -181,6 +180,8 @@ export function createAtlasMcpServer(
     }
   };
   registerSourceSurfaces(catalog);
+  const genericPlanTool = registerTools(server, effectiveDependencies, catalog);
+  toolNames.push(...staticTools);
   diagnostics.push({
     stage: "tool",
     message: `Registered ${toolNames.length} MCP tools.`,
@@ -222,7 +223,7 @@ export function createAtlasMcpServer(
         registered.handle.remove();
       dynamicTools.clear();
       dynamicResources.clear();
-      toolNames.splice(staticToolCount);
+      toolNames.splice(0, toolNames.length, ...staticTools);
       allResourceNames.splice(staticResourceCount);
       catalog = nextCatalog;
       genericPlanTool.update({
