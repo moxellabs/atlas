@@ -8,6 +8,8 @@ import {
   sessionModuleId,
   type SeededRetrievalFixture,
 } from "../retrieval.test-fixtures";
+import type { RankedHit } from "../types";
+import { expandSections } from "./expand-sections";
 import { planContext } from "./plan-context";
 
 describe("planContext", () => {
@@ -79,7 +81,7 @@ describe("planContext", () => {
     expect(plan.confidence).not.toBe("low");
   });
 
-  test("uses path candidates for exact lookup and preserves omitted budget decisions", () => {
+  test("uses path candidates for location lookup and preserves omitted budget decisions", () => {
     const plan = planContext({
       store: fixture!.retrievalStore,
       repoId,
@@ -89,10 +91,59 @@ describe("planContext", () => {
       expansionLimit: 2,
     });
 
-    expect(plan.classification.kind).toBe("exact-lookup");
+    expect(plan.classification.kind).toBe("location");
     expect(plan.rankedHits[0]?.source).toBe("path");
     expect(plan.usedTokens).toBeLessThanOrEqual(24);
     expect(plan.omitted.length).toBeGreaterThan(0);
+  });
+
+  test("returns answer-ready section text for natural-language exact lookups", () => {
+    const plan = planContext({
+      store: fixture!.retrievalStore,
+      repoId,
+      query: "What does `rotateSessionToken` do during renewal?",
+      budgetTokens: 2_000,
+    });
+
+    expect(plan.classification.kind).toBe("exact-lookup");
+    const exactEvidence = plan.contextPacket.evidence.find(
+      (item) => item.targetType === "section",
+    );
+    expect(exactEvidence?.text).toContain("Session > Rotation");
+    expect(exactEvidence?.text).toContain(
+      "Rotate session tokens by calling rotateSessionToken during renewal.",
+    );
+    expect(plan.contextPacket.recommendedNextActions).toEqual([
+      "Answer directly from context.evidence and cite provenance paths. Do not call another retrieval tool unless a required claim is unsupported.",
+    ]);
+  });
+
+  test("keeps distinct evidence headings from the same document", () => {
+    const state = expandSections({
+      rankedHits: [
+        rankedHit("section-rotation", ["Session", "Rotation"], 3),
+        rankedHit("chunk-rotation", ["Session", "Rotation"], 2.9, "chunk"),
+        rankedHit("section-recovery", ["Session", "Recovery"], 2.8),
+      ],
+      queryKind: "usage",
+      query: "How do session rotation and recovery work?",
+      state: {
+        budgetTokens: 200,
+        usedTokens: 0,
+        selected: [],
+        omitted: [],
+        warnings: [],
+      },
+      limit: 3,
+    });
+
+    expect(state.selected.map((item) => item.targetId)).toEqual([
+      "section-rotation",
+      "section-recovery",
+    ]);
+    expect(state.omitted).toEqual([
+      expect.objectContaining({ targetId: "chunk-rotation" }),
+    ]);
   });
 
   test("recovers candidates for natural-language queries with no strict lexical AND match", () => {
@@ -144,3 +195,40 @@ describe("planContext", () => {
     });
   });
 });
+
+function rankedHit(
+  targetId: string,
+  headingPath: readonly string[],
+  score: number,
+  targetType: RankedHit["targetType"] = "section",
+): RankedHit {
+  return {
+    targetType,
+    targetId,
+    authority: "preferred",
+    score,
+    tokenCount: 20,
+    textPreview: `${headingPath.join(" ")} evidence`,
+    provenance: {
+      repoId,
+      docId: sessionDocId,
+      path: "packages/auth/docs/session.md",
+      headingPath: [...headingPath],
+      sourceVersion: "rev_1",
+      authority: "preferred",
+    },
+    source: "lexical",
+    rationale: ["test candidate"],
+    factors: {
+      lexicalScore: 1,
+      authority: 0,
+      locality: 0,
+      queryKind: 0,
+      tokenEfficiency: 0,
+      freshness: 0,
+      evidenceMatch: 0,
+      qualityAdjustment: 0,
+      redundancyPenalty: 0,
+    },
+  };
+}

@@ -250,6 +250,16 @@ function buildContextPacket(planned: PlannedContext): ContextPacket {
 }
 
 function recommendedNextActions(planned: PlannedContext): string[] {
+	const answerReady =
+		planned.confidence === "high" &&
+		planned.ambiguity === undefined &&
+		planned.selected.length > 0;
+	if (answerReady) {
+		return [
+			"Answer directly from context.evidence and cite provenance paths. Do not call another retrieval tool unless a required claim is unsupported.",
+		];
+	}
+
 	const actions: string[] = [];
 	if (planned.ambiguity !== undefined) {
 		actions.push(...planned.ambiguity.recommendedNextActions);
@@ -265,9 +275,7 @@ function recommendedNextActions(planned: PlannedContext): string[] {
 		);
 	}
 	if (actions.length === 0) {
-		actions.push(
-			"Answer from contextPacket.evidence and cite provenance paths.",
-		);
+		actions.push("Answer from context.evidence and cite provenance paths.");
 	}
 	return [...new Set(actions)];
 }

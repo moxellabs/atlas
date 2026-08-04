@@ -140,7 +140,7 @@ export function registerPlanContextTool(
       title: "Answer from indexed documentation",
       description:
         options.description ??
-        "Answer a question about an indexed library, framework, API, or repository. Searches the corpus and returns sufficient, partial, absent, or stale evidence with source-relative citations and the next safe action. Use repoId when the source is known.",
+        "Use this first to answer a question about an indexed library, framework, API, or repository. Searches the corpus and returns sufficient, partial, absent, or stale evidence with source-relative citations and the next safe action. When coverage is sufficient and context.evidence supports the required claims, answer immediately without calling find_docs, read_section, expand_related, web, or filesystem tools. Retrieve more only when a required claim is unsupported. Use repoId when the source is known.",
       inputSchema: planContextInputSchema,
       outputSchema: jsonOutputSchema,
       annotations: {

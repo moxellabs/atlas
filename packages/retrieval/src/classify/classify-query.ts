@@ -97,7 +97,13 @@ export function classifyQuery(query: string): QueryClassification {
     rationale.push("Query looks like a short identifier or symbol.");
   }
 
-  if (scores.has("exact-lookup") && looksLikeNaturalLanguagePathMention(trimmed, scores)) {
+  if (scores.has("exact-lookup") && scores.has("location")) {
+    scores.set("exact-lookup", 1);
+    rationale.push("Preferred explicit location intent over an embedded path signal.");
+  } else if (
+    scores.has("exact-lookup") &&
+    looksLikeNaturalLanguagePathMention(trimmed, scores)
+  ) {
     scores.set("exact-lookup", 1);
     rationale.push("Softened path-like exact lookup signal inside a natural-language query.");
   }

@@ -30,7 +30,7 @@ Identity changes server metadata, resource display names, and skill aliases. Gen
 - `list_skills`
 - `get_skill`
 - `use_skill`
-- `plan_context` - returns selected evidence, source freshness, bounded recent changed paths for diff questions, human-readable scope labels, warnings, omissions, and next actions
+- `plan_context` - returns answer-ready evidence, source freshness, bounded recent changed paths for diff questions, human-readable scope labels, warnings, omissions, and next actions. When coverage is sufficient and the evidence supports the required claims, callers should answer without another retrieval call.
 
 ## Implemented Resources
 

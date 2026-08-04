@@ -132,6 +132,42 @@ describe("MCP tool contracts", () => {
       },
     });
   });
+
+  test("returns terminal answer-ready evidence for generic exact lookups", () => {
+    const { store } = fixture;
+    const plannedContext = executePlanContext(
+      {
+        query: "What does `rotateSessionToken` do during renewal?",
+        repoId,
+        budgetTokens: 2_000,
+      },
+      {
+        db: store,
+        retrievalStore: createRetrievalStore(store),
+      },
+    );
+
+    expect(plannedContext).toMatchObject({
+      coverage: { status: "sufficient" },
+      nextAction: "answer_locally",
+      context: {
+        evidence: expect.arrayContaining([
+          expect.objectContaining({
+            targetType: "section",
+            text: expect.stringContaining(
+              "Rotate session tokens by calling rotateSessionToken during renewal.",
+            ),
+          }),
+        ]),
+        recommendedNextActions: [
+          "Answer directly from context.evidence and cite provenance paths. Do not call another retrieval tool unless a required claim is unsupported.",
+        ],
+      },
+      citations: expect.arrayContaining([
+        expect.objectContaining({ path: "packages/auth/docs/session.md" }),
+      ]),
+    });
+  });
   test("folds lifecycle freshness and bounded recent changes into plan_context", () => {
     const { store } = fixture;
     const plannedContext = executePlanContext(
