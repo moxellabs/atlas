@@ -209,8 +209,10 @@ export function registerSourcePlanContextTool(
             {
               query: input.query,
               scope: { repoId: source.repoId },
-              budgetTokens: 4_000,
+              budgetTokens: 2_000,
               candidateLimit: 40,
+              summaryLimit: 0,
+              expansionLimit: 2,
             },
             dependencies,
           ),

@@ -16,6 +16,14 @@ export const limitSchema = z
   .optional()
   .describe("Maximum number of results.");
 
+const selectionLimitSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(100)
+  .optional()
+  .describe("Maximum selected items; zero disables this selection stage.");
+
 /** Shared repository identifier schema. */
 export const repoIdSchema = z
   .string()
@@ -166,8 +174,8 @@ export const planContextInputSchema = z
       .describe("Exact repository, package, or module constraints."),
     budgetTokens: z.number().int().min(1).max(200_000).default(2_000),
     candidateLimit: limitSchema,
-    summaryLimit: limitSchema,
-    expansionLimit: limitSchema,
+    summaryLimit: selectionLimitSchema,
+    expansionLimit: selectionLimitSchema,
     profile: profileSchema,
     audience: z.array(docAudienceSchema).optional(),
     purpose: z.array(docPurposeSchema).optional(),

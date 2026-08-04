@@ -30,6 +30,7 @@ import { createAtlasMcpServer } from "./server/create-mcp-server";
 import {
   findScopesInputSchema,
   readDocumentInputSchema,
+  planContextInputSchema,
   useSkillInputSchema,
 } from "./schemas/tool-schemas";
 import { executeExpandRelated } from "./tools/expand-related.tool";
@@ -91,6 +92,13 @@ describe("MCP tool contracts", () => {
       query: "session rotation",
       visibility: ["internal"],
     });
+    expect(
+      planContextInputSchema.parse({
+        query: "session rotation",
+        summaryLimit: 0,
+        expansionLimit: 2,
+      }),
+    ).toMatchObject({ summaryLimit: 0, expansionLimit: 2 });
     expect(useSkillInputSchema.parse({})).toEqual({});
     expect(() =>
       useSkillInputSchema.parse({ nameOrAlias: "$atlas-session" }),

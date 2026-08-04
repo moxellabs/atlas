@@ -222,7 +222,7 @@ describe("MCP server registration and in-memory protocol", () => {
     const structuredContent = result.structuredContent as {
       context: { evidence: unknown[] };
     };
-    expect(structuredContent.context.evidence.length).toBeLessThanOrEqual(4);
+    expect(structuredContent.context.evidence.length).toBeLessThanOrEqual(2);
     expect(result.structuredContent).toMatchObject({
       coverage: { status: "sufficient" },
       nextAction: "answer_locally",
