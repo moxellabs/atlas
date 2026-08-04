@@ -91,6 +91,14 @@ Both arms use `gpt-5.6-luna` with high effort. The task prompt never names Atlas
 
 The runner uses ephemeral Codex configuration and never calls `codex mcp add`, modifies user configuration, or runs in CI. Its default consumer workspace is empty. Both arms ignore user/project rules and configuration, receive isolated `HOME`/XDG directories with GitHub tokens cleared, disable account-linked apps, plugins, and browser surfaces, and cannot read outside the per-run workspace. The smoke command exposes the same unauthenticated web, shell, and filesystem capabilities to both arms while preserving those boundaries; `--competitive-tools` enables this mode for custom invocations. The treatment receives a read-only snapshot of the selected indexed repository, and its source-specific Atlas namespace is advertised eagerly rather than hidden behind deferred tool search. Neither arm receives the source checkout or authenticated GitHub access. Successful and failed evidence-capable activity from Atlas, web, shell, filesystem, and GitHub is recorded for both arms. Raw Codex JSONL remains local; committed release snapshots contain bounded final answers, citations, judge outcomes, provenance digests, and trace summaries only.
 
+`evals/datasets/atlas-tool-routing.json` covers broad repository answers, exact retrieval, partial-answer follow-ups, ambiguous scope, related-hit expansion, module explanation, procedural skills, and absent-corpus fallback. Run it with:
+
+```bash
+bun run eval:luna:routing
+```
+
+Each routing case declares accepted first Atlas tools, a maximum successful Atlas-call count, and whether external fallback is required or forbidden. The gate reports first-tool selection, budget compliance, fallback precision, and repeated Atlas-call rate. It fails on protocol errors, wrong first-tool routing, excess retrieval calls, incorrect fallback, or duplicate successful calls to the same Atlas tool.
+
 ## Adding or changing cases
 
 1. Pick the narrowest focused file under `evals/datasets/`, or add a new focused dataset and include it from `evals/mcp-retrieval.dataset.json`.

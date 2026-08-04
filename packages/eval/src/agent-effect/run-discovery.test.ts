@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
 import { agentEffectDatasetDigest } from "./dataset";
-import { assertHermeticAtlasDiscovery, runAgentEffectEvaluation } from "./run";
+import {
+  assertAgentToolRouting,
+  assertHermeticAtlasDiscovery,
+  runAgentEffectEvaluation,
+} from "./run";
 import { dataset } from "./agent-effect.test-fixtures";
 import type { AgentEffectDataset, AgentRun } from "./types";
 
@@ -186,6 +190,93 @@ describe("agent evaluation runs", () => {
     };
     expect(() => assertHermeticAtlasDiscovery(withFallback)).toThrow(
       "failed=task:1",
+    );
+  });
+
+  test("measures and gates first-tool routing budgets and fallback precision", async () => {
+    const routingDataset: AgentEffectDataset = {
+      ...dataset,
+      tasks: dataset.tasks.map((task) => ({
+        ...task,
+        routing: {
+          firstAtlasTools: ["plan_context"],
+          maxAtlasCalls: 1,
+          externalFallback: "forbidden" as const,
+        },
+      })),
+    };
+    const snapshot = await runAgentEffectEvaluation({
+      dataset: routingDataset,
+      releaseId: "local",
+      datasetDigest: agentEffectDatasetDigest(routingDataset),
+      provenance: { evaluatedRevision: "abc123", codexVersion: "codex 1.0" },
+      executor: {
+        runAgent: async ({ arm, task, trial }): Promise<AgentRun> => ({
+          arm,
+          taskId: task.id,
+          trial,
+          startedAt: "2026-01-01T00:00:00.000Z",
+          durationMs: 1,
+          status: "completed",
+          answer: { answer: "Grounded.", citations: [] },
+          mcp: {
+            calls:
+              arm === "treatment"
+                ? [
+                    {
+                      kind: "tool",
+                      name: "plan_context",
+                      source: "atlas",
+                      ok: true,
+                    },
+                  ]
+                : [],
+            protocolErrors: 0,
+          },
+        }),
+        judgePair: async () => ({
+          baseline: { criteria: [], unsupportedClaimCount: 0 },
+          treatment: { criteria: [], unsupportedClaimCount: 0 },
+        }),
+      },
+    });
+
+    expect(snapshot.metrics.routing).toEqual({
+      evaluatedRuns: 2,
+      firstToolSelectionRate: 1,
+      budgetComplianceRate: 1,
+      fallbackPrecisionRate: 1,
+      redundantCallRate: 0,
+    });
+    expect(() =>
+      assertAgentToolRouting(routingDataset, snapshot),
+    ).not.toThrow();
+    const first = snapshot.pairs[0]!;
+    const redundant = {
+      ...snapshot,
+      metrics: {
+        ...snapshot.metrics,
+        routing: { ...snapshot.metrics.routing, redundantCallRate: 0.5 },
+      },
+      pairs: [
+        {
+          ...first,
+          treatment: {
+            ...first.treatment,
+            mcp: {
+              protocolErrors: 0,
+              calls: [
+                ...(first.treatment.mcp?.calls ?? []),
+                ...(first.treatment.mcp?.calls ?? []),
+              ],
+            },
+          },
+        },
+        ...snapshot.pairs.slice(1),
+      ],
+    };
+    expect(() => assertAgentToolRouting(routingDataset, redundant)).toThrow(
+      "redundant-atlas-call",
     );
   });
 });

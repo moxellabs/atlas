@@ -237,8 +237,8 @@ function createConfigBoundServices(
   }).mcpIdentity;
   let mcp: McpBridgeService | undefined;
   const lifecycle =
-        env.remote?.enabled === true
-          ? undefined
+    env.remote?.enabled === true
+      ? undefined
       : new RepositoryLifecycleService({
           config,
           indexer,
@@ -253,6 +253,10 @@ function createConfigBoundServices(
         mcpIdentity,
         env.discoveryPolicy,
         env.remote?.enabled === true ? "bounded-remote" : "full",
+        env.mcpToolProfile,
+        env.remote?.enabled === true
+          ? env.remote.repoAllowlist
+          : config.config.repos.map((repo) => repo.repoId),
       )
     : undefined;
   lifecycle?.start();

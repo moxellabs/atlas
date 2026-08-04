@@ -20,6 +20,16 @@ export interface AgentEffectCriterion {
   readonly description: string;
   readonly evidencePaths: readonly string[];
 }
+export interface AgentRoutingExpectation {
+  /** Accepted first successful Atlas tools for this task. */
+  readonly firstAtlasTools: readonly string[];
+  /** Maximum successful Atlas evidence calls before the final answer. */
+  readonly maxAtlasCalls: number;
+  /** Whether successful non-Atlas evidence is required, forbidden, or unrestricted. */
+  readonly externalFallback: "required" | "forbidden" | "allowed";
+  /** Whether successful calls to the same Atlas tool may repeat. */
+  readonly allowRepeatedAtlasTools?: boolean;
+}
 
 export interface AgentEffectTask {
   readonly id: string;
@@ -28,6 +38,7 @@ export interface AgentEffectTask {
   readonly category: string;
   readonly prompt: string;
   readonly criteria: readonly AgentEffectCriterion[];
+  readonly routing?: AgentRoutingExpectation;
 }
 
 export interface AgentEffectRunnerConfig {
@@ -135,6 +146,13 @@ export interface AgentEffectMetrics {
     readonly fallbackRate: number;
     readonly averageCalls: number;
     readonly protocolErrorRate: number;
+  };
+  readonly routing: {
+    readonly evaluatedRuns: number;
+    readonly firstToolSelectionRate: number;
+    readonly budgetComplianceRate: number;
+    readonly fallbackPrecisionRate: number;
+    readonly redundantCallRate: number;
   };
 }
 

@@ -38,7 +38,7 @@ describe("MCP server registration and in-memory protocol", () => {
     expect(answerFromLocalDocsPrompt.text).toContain("provenance");
     expect(onboardToRepoPrompt.text).toContain("atlas://repo/{repoId}");
     expect(onboardToRepoPrompt.text).toContain("provenance");
-    expect(summarizeModulePrompt.text).toContain("explain_module");
+    expect(summarizeModulePrompt.text).toContain("plan_context");
     expect(summarizeModulePrompt.text).toContain("provenance");
     expect(compareDocsPrompt.text).toContain("find_docs");
     expect(compareDocsPrompt.text).toContain("provenance");
@@ -46,12 +46,9 @@ describe("MCP server registration and in-memory protocol", () => {
     const atlasServer = createAtlasMcpServer({ db: store });
     expect(atlasServer.tools).toEqual([
       "plan_context",
-      "find_scopes",
       "find_docs",
-      "read_outline",
-      "read_section",
+      "read_document",
       "expand_related",
-      "explain_module",
       "use_skill",
       "answer_atlas_docs",
     ]);
@@ -83,11 +80,22 @@ describe("MCP server registration and in-memory protocol", () => {
 
     expect(atlasServer.tools).toEqual([
       "plan_context",
-      "find_scopes",
       "find_docs",
       "answer_atlas_docs",
     ]);
     expect(atlasServer.resources).toEqual([]);
+    const advanced = createAtlasMcpServer({
+      db: store,
+      exposurePolicy: "bounded-remote",
+      toolProfile: "advanced",
+    });
+    expect(advanced.tools).toEqual([
+      "plan_context",
+      "find_scopes",
+      "find_docs",
+      "answer_atlas_docs",
+    ]);
+    expect(advanced.resources).toEqual([]);
   });
 
   test("advertises the generic router for additive client preload", async () => {
@@ -107,10 +115,13 @@ describe("MCP server registration and in-memory protocol", () => {
     expect(client.getInstructions()).not.toContain("before external search");
 
     const tools = await client.listTools();
-    expect(
-      tools.tools.find((tool) => tool.name === "plan_context"),
-    ).toMatchObject({
-      title: "Answer from indexed documentation",
+    expect(tools.tools).toHaveLength(6);
+    for (const tool of tools.tools) {
+      expect(tool.outputSchema).toMatchObject({ type: "object" });
+    }
+    const planTool = tools.tools.find((tool) => tool.name === "plan_context");
+    expect(planTool).toMatchObject({
+      title: "Build answer-ready context",
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -119,6 +130,7 @@ describe("MCP server registration and in-memory protocol", () => {
       },
       _meta: { "anthropic/alwaysLoad": true },
     });
+    expect(planTool?.outputSchema).toMatchObject({ type: "object" });
   });
 
   test("serves successful MCP tool calls through the SDK server", async () => {
@@ -132,11 +144,12 @@ describe("MCP server registration and in-memory protocol", () => {
     fixture.registerCleanup(() => client.close());
 
     const result = await client.callTool({
-      name: "read_outline",
+      name: "read_document",
       arguments: { docId },
     });
 
     expect(result.structuredContent).toMatchObject({
+      status: "outline",
       document: expect.objectContaining({ docId }),
       outline: [expect.objectContaining({ sectionId })],
     });
@@ -181,12 +194,16 @@ describe("MCP server registration and in-memory protocol", () => {
     );
     expect(facade).toMatchObject({
       title: "Answer from atlas documentation",
-      description: expect.stringMatching(
-        /answer immediately without calling another retrieval tool.*session.*append/,
-      ),
-      annotations: expect.objectContaining({ readOnlyHint: true }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
       _meta: { "anthropic/alwaysLoad": true },
     });
+    expect(facade?.description).toMatch(/Answer immediately.*session.*append/);
+    expect(facade?.outputSchema).toMatchObject({ type: "object" });
     const result = await client.callTool({
       name: "answer_atlas_docs",
       arguments: {
@@ -212,20 +229,50 @@ describe("MCP server registration and in-memory protocol", () => {
         ],
       },
       citations: expect.arrayContaining([expect.objectContaining({ repoId })]),
-      exactPassages: expect.arrayContaining([
-        expect.objectContaining({
-          path: "packages/auth/docs/session.md",
-          text: expect.stringContaining("Rotate session tokens"),
-        }),
-      ]),
     });
     const manifest = await client.readResource({ uri: "atlas://manifest" });
     expect(manifest.contents).toHaveLength(1);
   });
 
+  test("bounds source facades by profile and configured repository order", () => {
+    const { store } = fixture;
+    for (const name of ["alpha", "beta"]) {
+      const sourceRepoId = `github.com/example/${name}`;
+      new RepoRepository(store).upsert({
+        repoId: sourceRepoId,
+        mode: "local-git",
+        revision: "rev_2",
+      });
+      new ManifestRepository(store).upsert({
+        repoId: sourceRepoId,
+        indexedRevision: "rev_2",
+        compilerVersion: "compiler-v1",
+      });
+    }
+    const configured = ["github.com/example/beta", "github.com/example/alpha"];
+    const defaultServer = createAtlasMcpServer({
+      db: store,
+      sourceFacadeRepoIds: configured,
+    });
+    expect(
+      defaultServer.tools.filter((tool) => tool.startsWith("answer_")),
+    ).toEqual(["answer_beta_docs"]);
+
+    const advancedServer = createAtlasMcpServer({
+      db: store,
+      toolProfile: "advanced",
+      sourceFacadeRepoIds: configured,
+    });
+    expect(
+      advancedServer.tools.filter((tool) => tool.startsWith("answer_")),
+    ).toEqual(["answer_beta_docs", "answer_alpha_docs"]);
+  });
   test("refreshes source-bound discovery and notifies connected clients", async () => {
     const { store } = fixture;
-    const atlasServer = createAtlasMcpServer({ db: store });
+    const atlasServer = createAtlasMcpServer({
+      db: store,
+      toolProfile: "advanced",
+    });
     fixture.registerCleanup(() => atlasServer.server.close());
     const client = new Client(
       { name: "atlas-refresh-test-client", version: "0.0.0" },
@@ -266,9 +313,15 @@ describe("MCP server registration and in-memory protocol", () => {
 
     expect(atlasServer.refreshDiscovery()).toBeTrue();
     await Promise.all([toolListChanged.promise, resourceListChanged.promise]);
-    expect((await client.listTools()).tools.map((tool) => tool.name)).toContain(
+    const refreshedTools = (await client.listTools()).tools;
+    expect(refreshedTools.map((tool) => tool.name)).toContain(
       "answer_guide_docs",
     );
+    for (const tool of refreshedTools.filter((candidate) =>
+      candidate.name.startsWith("answer_"),
+    )) {
+      expect(tool._meta).toEqual({ "anthropic/alwaysLoad": true });
+    }
     expect(
       (await client.listResources()).resources.map((resource) => resource.name),
     ).toContain("atlas-source-guide");

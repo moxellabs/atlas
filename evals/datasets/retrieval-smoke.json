@@ -104,7 +104,7 @@
         "terms": [
           "find_docs",
           "plan_context",
-          "read_section"
+          "read_document"
         ],
         "tools": [
           "plan_context",

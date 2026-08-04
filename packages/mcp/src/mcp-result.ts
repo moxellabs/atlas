@@ -1,4 +1,8 @@
-import type { CallToolResult, GetPromptResult, ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
+import type {
+  CallToolResult,
+  GetPromptResult,
+  ReadResourceResult,
+} from "@modelcontextprotocol/sdk/types.js";
 
 import type { McpJsonObject } from "./types";
 
@@ -6,32 +10,38 @@ import type { McpJsonObject } from "./types";
 export function toolResult(payload: McpJsonObject): CallToolResult {
   return {
     structuredContent: payload,
-    content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]
+    content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
   };
 }
 
 /** Converts a structured payload into an MCP text resource result. */
-export function resourceResult(uri: string, payload: McpJsonObject): ReadResourceResult {
+export function resourceResult(
+  uri: string,
+  payload: McpJsonObject,
+): ReadResourceResult {
   return {
     contents: [
       {
         uri,
         mimeType: "application/json",
-        text: JSON.stringify(payload, null, 2)
-      }
-    ]
+        text: JSON.stringify(payload, null, 2),
+      },
+    ],
   };
 }
 
 /** Builds a prompt result with one user message. */
-export function promptResult(description: string, text: string): GetPromptResult {
+export function promptResult(
+  description: string,
+  text: string,
+): GetPromptResult {
   return {
     description,
     messages: [
       {
         role: "user",
-        content: { type: "text", text }
-      }
-    ]
+        content: { type: "text", text },
+      },
+    ],
   };
 }

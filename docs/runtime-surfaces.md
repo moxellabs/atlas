@@ -71,9 +71,11 @@ Local browser CORS allows `http://localhost`, `http://127.0.0.1`, and `http://[:
 
 ## MCP
 
-`packages/mcp` exposes tools, resources, and prompts over stdio or Streamable HTTP transports. The server mounts Streamable HTTP at `/mcp` when enabled. MCP operations read from local store and retrieval services. `plan_context` can include state produced by the host runtime's background lifecycle, but the request itself never performs sync, build, or remote source acquisition.
+`packages/mcp` exposes tools, resources, and prompts over stdio or Streamable HTTP. The server mounts Streamable HTTP at `/mcp` when enabled. MCP calls read from local store and retrieval services. `plan_context` may include state from the host runtime's background lifecycle, but the call itself never syncs, builds, or fetches remote source.
 
-MCP initialization advertises a bounded catalog of indexed repositories and a deterministic `plan_context__<source>` tool for each advertised source. Source aliases, topics, coverage, freshness, and source-relative provenance let capable clients choose Atlas without prompt injection or hidden instructions. `neutral` is the default advertising policy. `prefer-local` adds explicit covered-query-first guidance while preserving fallback for evidence Atlas does not have.
+The default `agent` profile advertises `plan_context`, `find_docs`, `read_document`, `expand_related`, `use_skill`, and one configured `answer_<source>_docs` facade. `plan_context` and every advertised source facade carry `anthropic/alwaysLoad`. Source aliases, topics, coverage, freshness, and repository-relative citations let clients route indexed-source questions without hidden instructions.
+
+Use `atlas mcp --tool-profile advanced` for local stdio inspection or set `ATLAS_MCP_TOOL_PROFILE=advanced` on the HTTP server. This adds `find_scopes` and permits up to 12 configured source facades. The default profile keeps one source facade. `neutral` is the default discovery policy; `prefer-local` asks clients to consult matching indexed sources first while preserving fallback for absent, partial, or stale coverage.
 
 ### Agent and IDE integration
 

@@ -20,7 +20,7 @@ Add one shared white-label profile that resolves physical artifact roots, derive
 
 The implementation should separate committed repo artifacts from runtime state. `artifactRoot` controls repo-local and remote artifact paths such as `.moxel/atlas` or `.acme/knowledge`; runtime storage continues to use explicit `cacheDir` and `corpusDbPath` when configured, otherwise derives from white-label runtime defaults.
 
-MCP branding changes server metadata plus Atlas-prefixed resources/skill aliases. Generic tool names stay stable (`find_docs`, `read_outline`, etc.) so existing agents keep working while clients that display MCP server identity show the user's brand.
+MCP branding changes server metadata plus Atlas-prefixed resources and skill aliases. Generic tool names stay stable (`plan_context`, `find_docs`, `read_document`, `expand_related`, and `use_skill`) so clients can keep their routing rules while the displayed MCP server identity uses the configured brand.
 
 ## Components
 

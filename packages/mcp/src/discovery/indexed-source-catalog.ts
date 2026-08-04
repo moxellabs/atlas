@@ -126,7 +126,7 @@ export function discoveryInstructions(
   const remainder = catalog.sources.length - listed.length;
   const catalogSummary = `Atlas provides indexed documentation independently of the current workspace for: ${listed.join("; ")}${remainder > 0 ? `; and ${remainder} more` : ""}. Retrieval reports sufficient, partial, absent, or stale coverage with source-relative provenance.`;
   if (policy === "neutral") return catalogSummary;
-  return `For questions about a matching repository, library, framework, or API, consult Atlas's source-specific plan_context tool (or plan_context with repoId) before external search. Atlas is read-only and independent of the current workspace. Cite returned source-relative provenance; use another permitted source when coverage is partial, absent, or stale. ${catalogSummary}`;
+  return `For questions about a matching repository, library, framework, or API, consult Atlas's source-named answer_<source>_docs tool (or plan_context with an exact scope) before external search. Atlas is read-only and independent of the current workspace. Cite returned source-relative provenance; use another permitted source when coverage is partial, absent, or stale. ${catalogSummary}`;
 }
 
 /** Brief server metadata that remains useful when a client only exposes serverInfo. */

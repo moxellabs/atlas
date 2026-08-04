@@ -2,9 +2,9 @@ import { findScopes } from "@atlas/retrieval";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { toolResult } from "../mcp-result";
+import { findScopesOutputSchema } from "../schemas/tool-output-schemas";
 import {
   findScopesInputSchema,
-  jsonOutputSchema,
   type FindScopesInput,
 } from "../schemas/tool-schemas";
 import type { AtlasRetrievalMcpDependencies, McpJsonObject } from "../types";
@@ -17,8 +17,8 @@ export function executeFindScopes(
   dependencies: AtlasRetrievalMcpDependencies,
 ): McpJsonObject {
   const parsed = findScopesInputSchema.parse(input);
-  return {
-    ...findScopes({
+  return findScopesOutputSchema.parse(
+    findScopes({
       store: dependencies.retrievalStore,
       query: parsed.query,
       ...(parsed.repoId === undefined ? {} : { repoId: parsed.repoId }),
@@ -32,7 +32,7 @@ export function executeFindScopes(
           : { visibility: parsed.visibility }),
       },
     }),
-  };
+  );
 }
 
 /** Registers the find_scopes MCP tool. */
@@ -43,11 +43,11 @@ export function registerFindScopesTool(
   server.registerTool(
     FIND_SCOPES_TOOL,
     {
-      title: "Find ATLAS scopes",
+      title: "Inspect inferred scopes",
       description:
-        "Infer likely repository, package, module, or skill scopes for a query.",
+        "Advanced and debugging tool for inspecting repository, package, module, or skill scope inference. Normal answer flows should use plan_context, which already returns inferred scopes.",
       inputSchema: findScopesInputSchema,
-      outputSchema: jsonOutputSchema,
+      outputSchema: findScopesOutputSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,

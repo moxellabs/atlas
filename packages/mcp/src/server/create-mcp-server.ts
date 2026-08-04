@@ -31,10 +31,6 @@ import {
   EXPAND_RELATED_TOOL,
   registerExpandRelatedTool,
 } from "../tools/expand-related.tool";
-import {
-  EXPLAIN_MODULE_TOOL,
-  registerExplainModuleTool,
-} from "../tools/explain-module.tool";
 import { FIND_DOCS_TOOL, registerFindDocsTool } from "../tools/find-docs.tool";
 import {
   FIND_SCOPES_TOOL,
@@ -46,13 +42,9 @@ import {
   registerSourcePlanContextTool,
 } from "../tools/plan-context.tool";
 import {
-  READ_OUTLINE_TOOL,
-  registerReadOutlineTool,
-} from "../tools/read-outline.tool";
-import {
-  READ_SECTION_TOOL,
-  registerReadSectionTool,
-} from "../tools/read-section.tool";
+  READ_DOCUMENT_TOOL,
+  registerReadDocumentTool,
+} from "../tools/read-document.tool";
 import { USE_SKILL_TOOL, registerUseSkillTool } from "../tools/use-skill.tool";
 import type {
   AtlasMcpDependencies,
@@ -65,17 +57,26 @@ import {
   createAtlasMcpServerMetadata,
 } from "./metadata";
 
-const TOOL_NAMES = [
+const AGENT_TOOL_NAMES = [
+  PLAN_CONTEXT_TOOL,
+  FIND_DOCS_TOOL,
+  READ_DOCUMENT_TOOL,
+  EXPAND_RELATED_TOOL,
+  USE_SKILL_TOOL,
+] as const;
+const ADVANCED_TOOL_NAMES = [
   PLAN_CONTEXT_TOOL,
   FIND_SCOPES_TOOL,
   FIND_DOCS_TOOL,
-  READ_OUTLINE_TOOL,
-  READ_SECTION_TOOL,
+  READ_DOCUMENT_TOOL,
   EXPAND_RELATED_TOOL,
-  EXPLAIN_MODULE_TOOL,
   USE_SKILL_TOOL,
 ] as const;
-const BOUNDED_REMOTE_TOOL_NAMES = [
+const BOUNDED_REMOTE_AGENT_TOOL_NAMES = [
+  PLAN_CONTEXT_TOOL,
+  FIND_DOCS_TOOL,
+] as const;
+const BOUNDED_REMOTE_ADVANCED_TOOL_NAMES = [
   PLAN_CONTEXT_TOOL,
   FIND_SCOPES_TOOL,
   FIND_DOCS_TOOL,
@@ -147,21 +148,13 @@ export function createAtlasMcpServer(
     string,
     ReturnType<typeof registerIndexedSourceResource>
   >();
-  const toolNames: string[] = [
-    ...(exposeAggregates ? TOOL_NAMES : BOUNDED_REMOTE_TOOL_NAMES),
-  ];
+  const toolNames: string[] = [...staticToolNames(dependencies)];
   const allResourceNames: string[] = [...resourceNames];
   const staticToolCount = toolNames.length;
   const staticResourceCount = allResourceNames.length;
   const registerSourceSurfaces = (nextCatalog: IndexedSourceCatalog) => {
-    for (const source of nextCatalog.sources) {
-      const tool = registerSourcePlanContextTool(
-        server,
-        effectiveDependencies,
-        source,
-      );
-      dynamicTools.set(source.repoId, tool);
-      if (exposeAggregates) {
+    if (exposeAggregates) {
+      for (const source of nextCatalog.sources) {
         const resource = registerIndexedSourceResource(
           server,
           metadata.resourcePrefix,
@@ -170,6 +163,15 @@ export function createAtlasMcpServer(
         dynamicResources.set(source.repoId, resource);
         allResourceNames.push(resource.name);
       }
+    }
+    for (const source of selectedSourceFacades(nextCatalog, dependencies)) {
+      const tool = registerSourcePlanContextTool(
+        server,
+        effectiveDependencies,
+        source,
+        { alwaysLoad: true },
+      );
+      dynamicTools.set(source.repoId, tool);
       toolNames.push(tool.name);
     }
   };
@@ -243,13 +245,13 @@ function registerTools(
   const planTool = registerPlanContextTool(server, dependencies, {
     description: genericPlanDescription(catalog),
   });
-  registerFindScopesTool(server, dependencies);
   registerFindDocsTool(server, dependencies);
+  if (dependencies.toolProfile === "advanced") {
+    registerFindScopesTool(server, dependencies);
+  }
   if (dependencies.exposurePolicy !== "bounded-remote") {
-    registerReadOutlineTool(server, dependencies);
-    registerReadSectionTool(server, dependencies);
+    registerReadDocumentTool(server, dependencies);
     registerExpandRelatedTool(server, dependencies);
-    registerExplainModuleTool(server, dependencies);
     registerUseSkillTool(server, dependencies);
   }
   return planTool;
@@ -278,6 +280,45 @@ function registerResources(
   }
 }
 
+function staticToolNames(
+  dependencies: AtlasMcpDependencies,
+): readonly string[] {
+  const advanced = dependencies.toolProfile === "advanced";
+  if (dependencies.exposurePolicy === "bounded-remote") {
+    return advanced
+      ? BOUNDED_REMOTE_ADVANCED_TOOL_NAMES
+      : BOUNDED_REMOTE_AGENT_TOOL_NAMES;
+  }
+  return advanced ? ADVANCED_TOOL_NAMES : AGENT_TOOL_NAMES;
+}
+
+function selectedSourceFacades(
+  catalog: IndexedSourceCatalog,
+  dependencies: AtlasMcpDependencies,
+) {
+  const preferredOrder = new Map(
+    (dependencies.sourceFacadeRepoIds ?? []).map((repoId, index) => [
+      repoId,
+      index,
+    ]),
+  );
+  const ordered = (
+    preferredOrder.size === 0
+      ? [...catalog.sources]
+      : catalog.sources.filter((source) => preferredOrder.has(source.repoId))
+  ).sort((left, right) => {
+    const leftOrder = preferredOrder.get(left.repoId);
+    const rightOrder = preferredOrder.get(right.repoId);
+    if (leftOrder !== undefined || rightOrder !== undefined) {
+      if (leftOrder === undefined) return 1;
+      if (rightOrder === undefined) return -1;
+      return leftOrder - rightOrder;
+    }
+    return left.repoId.localeCompare(right.repoId);
+  });
+  return ordered.slice(0, dependencies.toolProfile === "advanced" ? 12 : 1);
+}
+
 function genericPlanDescription(catalog: IndexedSourceCatalog): string {
   const sourceNames = catalog.sources
     .slice(0, 6)
@@ -285,7 +326,7 @@ function genericPlanDescription(catalog: IndexedSourceCatalog): string {
       (source) => `${source.title} (${source.topics.slice(0, 8).join(", ")})`,
     )
     .join("; ");
-  return `Find and package local evidence for a library, framework, API, or repository question. Returns coverage (sufficient, partial, absent, or stale), citations, and the next safe action. Indexed sources and topics: ${sourceNames || "none"}. Use repoId when the source is known.`;
+  return `Find and package local evidence for a library, framework, API, or repository question. Returns coverage (sufficient, partial, absent, or stale), citations, and the next safe action. Indexed sources and topics: ${sourceNames || "none"}. Use scope.repoId when the source is known.`;
 }
 
 function registerPrompts(server: McpServer): void {

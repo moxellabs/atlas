@@ -39,28 +39,31 @@ export { skillArtifactResource } from "./resources/skill-artifact.resource";
 export { summaryResource } from "./resources/summary.resource";
 export type {
   ExpandRelatedInput,
-  ExplainModuleInput,
   FindDocsInput,
   FindScopesInput,
   PlanContextToolInput,
-  ReadOutlineInput,
-  ReadSectionInput,
+  ReadDocumentInput,
   UseSkillInput,
 } from "./schemas/tool-schemas";
 export {
   expandRelatedInputSchema,
-  explainModuleInputSchema,
   findDocsInputSchema,
   findScopesInputSchema,
-  jsonOutputSchema,
   limitSchema,
   planContextInputSchema,
   querySchema,
-  readOutlineInputSchema,
-  readSectionInputSchema,
+  readDocumentInputSchema,
   repoIdSchema,
   useSkillInputSchema,
 } from "./schemas/tool-schemas";
+export {
+  expandRelatedOutputSchema,
+  findDocsOutputSchema,
+  findScopesOutputSchema,
+  planContextOutputSchema,
+  readDocumentOutputSchema,
+  useSkillOutputSchema,
+} from "./schemas/tool-output-schemas";
 export { createAtlasMcpServer } from "./server/create-mcp-server";
 export {
   ATLAS_MCP_CAPABILITIES,
@@ -83,11 +86,6 @@ export {
   registerExpandRelatedTool,
 } from "./tools/expand-related.tool";
 export {
-  EXPLAIN_MODULE_TOOL,
-  executeExplainModule,
-  registerExplainModuleTool,
-} from "./tools/explain-module.tool";
-export {
   executeFindDocs,
   FIND_DOCS_TOOL,
   registerFindDocsTool,
@@ -104,26 +102,22 @@ export {
   registerSourcePlanContextTool,
 } from "./tools/plan-context.tool";
 export {
-  executeReadOutline,
-  READ_OUTLINE_TOOL,
-  registerReadOutlineTool,
-} from "./tools/read-outline.tool";
-export {
-  executeReadSection,
-  READ_SECTION_TOOL,
-  registerReadSectionTool,
-} from "./tools/read-section.tool";
+  executeReadDocument,
+  READ_DOCUMENT_TOOL,
+  registerReadDocumentTool,
+} from "./tools/read-document.tool";
 export {
   executeUseSkill,
   registerUseSkillTool,
   USE_SKILL_TOOL,
 } from "./tools/use-skill.tool";
-export { ATLAS_MCP_DISCOVERY_POLICIES } from "./types";
+export { ATLAS_MCP_DISCOVERY_POLICIES, ATLAS_MCP_TOOL_PROFILES } from "./types";
 export type { AtlasMcpDiscoveryPolicy } from "./types";
 export type {
   AtlasMcpDependencies,
   AtlasMcpDiagnostic,
   AtlasMcpExposurePolicy,
+  AtlasMcpToolProfile,
   AtlasMcpIdentity,
   AtlasRetrievalMcpDependencies,
   AtlasMcpServer,

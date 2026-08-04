@@ -8,6 +8,7 @@ import type {
   AtlasMcpExposurePolicy,
   AtlasMcpServer,
   AtlasMcpDiscoveryPolicy,
+  AtlasMcpToolProfile,
 } from "@atlas/mcp";
 import type { AtlasStoreClient } from "@atlas/store";
 
@@ -39,6 +40,8 @@ export class McpBridgeService {
   private initializationTail: Promise<void> = Promise.resolve();
   private readonly discoveryPolicy: AtlasMcpDiscoveryPolicy;
   private readonly exposurePolicy: AtlasMcpExposurePolicy;
+  private readonly toolProfile: AtlasMcpToolProfile;
+  private readonly sourceFacadeRepoIds: readonly string[];
   private closed = false;
 
   constructor(
@@ -47,12 +50,16 @@ export class McpBridgeService {
     identity?: AtlasMcpIdentity | undefined,
     discoveryPolicy: AtlasMcpDiscoveryPolicy = "neutral",
     exposurePolicy: AtlasMcpExposurePolicy = "full",
+    toolProfile: AtlasMcpToolProfile = "agent",
+    sourceFacadeRepoIds: readonly string[] = [],
   ) {
     this.db = db;
     this.repositoryRefreshStateProvider = repositoryRefreshStateProvider;
     this.identity = identity;
     this.discoveryPolicy = discoveryPolicy;
     this.exposurePolicy = exposurePolicy;
+    this.toolProfile = toolProfile;
+    this.sourceFacadeRepoIds = sourceFacadeRepoIds;
   }
 
   /**
@@ -183,6 +190,8 @@ export class McpBridgeService {
       db: this.db,
       ...(this.identity === undefined ? {} : { identity: this.identity }),
       discoveryPolicy: this.discoveryPolicy,
+      toolProfile: this.toolProfile,
+      sourceFacadeRepoIds: this.sourceFacadeRepoIds,
       exposurePolicy: this.exposurePolicy,
       ...(this.repositoryRefreshStateProvider === undefined
         ? {}

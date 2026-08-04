@@ -17,18 +17,22 @@ This package registers ATLAS tools, resources, prompts, metadata, and transports
 
 Default MCP identity remains `atlas-mcp`, Atlas resource names, and `$atlas-*` skill aliases. Explicit identity knobs are `--atlas-mcp-name`, `ATLAS_MCP_NAME`, optional `ATLAS_MCP_TITLE`, and config `identity.mcp.name`, `identity.mcp.title`, `identity.mcp.resourcePrefix`.
 
-Identity changes server metadata, resource display names, and skill aliases. Generic MCP tool names remain stable (`find_docs`, `read_outline`, `read_section`, `plan_context`, `use_skill`). The `atlas://` URI scheme remains stable.
+Identity changes server metadata, resource display names, and skill aliases. Generic MCP tool names remain stable. The `atlas://` URI scheme remains stable.
 
-## Implemented Tools
+## Implemented tools
 
-- `find_scopes`
-- `find_docs`
-- `read_outline`
-- `read_section`
-- `expand_related`
-- `explain_module`
-- `use_skill` - browses stored skills, resolves exact IDs/titles/aliases, or finds an unambiguous skill for a natural-language task; resolved results include instructions, provenance, and read-only artifacts
-- `plan_context` - returns answer-ready evidence, source freshness, bounded recent changed paths for diff questions, human-readable scope labels, warnings, omissions, and next actions. When coverage is sufficient and the evidence supports the required claims, callers should answer without another retrieval call.
+The default `agent` profile advertises five generic tools plus one source-named answer facade:
+
+- `plan_context` builds one token-budgeted, deduplicated evidence packet. It accepts exact repository, package, and module constraints and reports freshness, coverage, citations, omissions, and the next action.
+- `find_docs` retrieves precise document, section, chunk, or skill hits for exact locations and partial-answer follow-ups.
+- `read_document` returns a document outline or one exact section selected by `sectionId` or heading path.
+- `expand_related` follows a stable retrieved ID to nearby documents, sections, summaries, and skills.
+- `use_skill` browses stored skills and resolves exact or unambiguous task matches into complete instructions, provenance, and read-only artifacts.
+- `answer_<source>_docs` runs the same planner against one named indexed source.
+
+`plan_context` and each advertised source facade carry `anthropic/alwaysLoad`. Every tool publishes a concrete output schema. Source facades return the planner's selected evidence directly, so their output stays inside one retrieval budget.
+
+The `advanced` profile adds `find_scopes` and may advertise up to 12 configured source facades. Select it with `atlas mcp --tool-profile advanced` or `ATLAS_MCP_TOOL_PROFILE=advanced` for the HTTP server. The default profile advertises one configured source facade.
 
 ## Implemented Resources
 

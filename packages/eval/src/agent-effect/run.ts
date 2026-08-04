@@ -114,6 +114,15 @@ export function aggregateAgentEffect(
   const treatmentWithTrace = treatment.filter(
     ({ run }) => run.mcp !== undefined,
   );
+  const routingByTask = new Map(
+    dataset.tasks.flatMap((task) =>
+      task.routing === undefined ? [] : [[task.id, task.routing] as const],
+    ),
+  );
+  const routingRuns = treatment.flatMap(({ run }) => {
+    const expectation = routingByTask.get(run.taskId);
+    return expectation === undefined ? [] : [{ run, expectation }];
+  });
   return {
     pairs: pairs.length,
     baseline: armMetrics(dataset, baseline),
@@ -147,6 +156,34 @@ export function aggregateAgentEffect(
               (total, { run }) => total + (run.mcp?.protocolErrors ?? 0),
               0,
             ) / treatmentWithTrace.length,
+    },
+    routing: {
+      evaluatedRuns: routingRuns.length,
+      firstToolSelectionRate: rate(routingRuns, ({ run, expectation }) => {
+        const first = successfulEvidenceCalls(run)[0];
+        return (
+          first?.source === "atlas" &&
+          expectation.firstAtlasTools.includes(first.name)
+        );
+      }),
+      budgetComplianceRate: rate(
+        routingRuns,
+        ({ run, expectation }) =>
+          successfulAtlasCalls(run).length <= expectation.maxAtlasCalls,
+      ),
+      fallbackPrecisionRate: rate(routingRuns, ({ run, expectation }) => {
+        const usedExternal = successfulEvidenceCalls(run).some(
+          (call) => call.source !== "atlas",
+        );
+        return expectation.externalFallback === "allowed"
+          ? true
+          : expectation.externalFallback === "required"
+            ? usedExternal
+            : !usedExternal;
+      }),
+      redundantCallRate: rate(routingRuns, ({ run, expectation }) =>
+        hasRedundantAtlasCalls(run, expectation.allowRepeatedAtlasTools),
+      ),
     },
   };
 }
@@ -204,6 +241,84 @@ export function assertHermeticAtlasDiscovery(
       `Atlas discovery gate failed. metrics=${JSON.stringify(targetMetrics)} trials=${nonConsecutiveTasks.join(";") || "ok"} failed=${failedPairs.map((pair) => `${pair.taskId}:${pair.trial}`).join(",") || "none"}.`,
     );
   }
+}
+
+/** Enforces dataset-authored first-tool, call-budget, fallback, and redundancy contracts. */
+export function assertAgentToolRouting(
+  dataset: AgentEffectDataset,
+  snapshot: AgentEffectSnapshot,
+): void {
+  const expectations = new Map(
+    dataset.tasks.flatMap((task) =>
+      task.routing === undefined ? [] : [[task.id, task.routing] as const],
+    ),
+  );
+  if (expectations.size === 0) {
+    throw new Error(
+      "Agent routing gate requires at least one routing expectation.",
+    );
+  }
+  const failures = snapshot.pairs.flatMap((pair) => {
+    const expectation = expectations.get(pair.taskId);
+    if (expectation === undefined) return [];
+    const run = pair.treatment;
+    const calls = successfulEvidenceCalls(run);
+    const first = calls[0];
+    const atlasCalls = successfulAtlasCalls(run);
+    const usedExternal = calls.some((call) => call.source !== "atlas");
+    const reasons: string[] = [];
+    if (run.status !== "completed") reasons.push(`status=${run.status}`);
+    if ((run.mcp?.protocolErrors ?? 0) !== 0) reasons.push("protocol-errors");
+    if (
+      first?.source !== "atlas" ||
+      !expectation.firstAtlasTools.includes(first.name)
+    ) {
+      reasons.push(`first=${first?.source ?? "none"}:${first?.name ?? "none"}`);
+    }
+    if (atlasCalls.length > expectation.maxAtlasCalls) {
+      reasons.push(
+        `atlas-calls=${atlasCalls.length}>${expectation.maxAtlasCalls}`,
+      );
+    }
+    if (
+      (expectation.externalFallback === "required" && !usedExternal) ||
+      (expectation.externalFallback === "forbidden" && usedExternal)
+    ) {
+      reasons.push(`fallback=${usedExternal ? "used" : "not-used"}`);
+    }
+    if (hasRedundantAtlasCalls(run, expectation.allowRepeatedAtlasTools)) {
+      reasons.push("redundant-atlas-call");
+    }
+    return reasons.length === 0
+      ? []
+      : [`${pair.taskId}:${pair.trial}[${reasons.join(",")}]`];
+  });
+  const metrics = snapshot.metrics.routing;
+  if (
+    metrics.evaluatedRuns === 0 ||
+    metrics.firstToolSelectionRate !== 1 ||
+    metrics.budgetComplianceRate !== 1 ||
+    metrics.fallbackPrecisionRate !== 1 ||
+    metrics.redundantCallRate !== 0 ||
+    failures.length > 0
+  ) {
+    throw new Error(
+      `Agent routing gate failed. metrics=${JSON.stringify(metrics)} failed=${failures.join(";") || "none"}.`,
+    );
+  }
+}
+
+function hasRedundantAtlasCalls(
+  run: AgentRun,
+  allowRepeated: boolean | undefined,
+): boolean {
+  if (allowRepeated === true) return false;
+  const seen = new Set<string>();
+  return successfulAtlasCalls(run).some((call) => {
+    if (seen.has(call.name)) return true;
+    seen.add(call.name);
+    return false;
+  });
 }
 
 function successfulEvidenceCalls(run: AgentRun) {

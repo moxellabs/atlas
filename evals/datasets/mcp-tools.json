@@ -61,9 +61,9 @@
       "riskArea": "agent-integration"
     },
     {
-      "id": "mcp-tools-read-section-exact",
+      "id": "mcp-tools-read-document-exact",
       "category": "mcp-tools",
-      "query": "MCP read_section exact section query: read the CLI App Execution Model section for how runCli dispatches commands and returns structured results.",
+      "query": "MCP read_document exact section query: read the CLI App Execution Model section for how runCli dispatches commands and returns structured results.",
       "expected": {
         "pathIncludes": [
           "docs/index.md"
@@ -74,12 +74,12 @@
           "structured"
         ],
         "tools": [
-          "read_section"
+          "read_document"
         ]
       },
       "profile": "contributor",
-      "feature": "mcp-read-section",
-      "scenario": "exact-section-query",
+      "feature": "mcp-read-document",
+      "scenario": "exact-document-section-query",
       "priority": "high",
       "capability": "MCP integration",
       "claim": "Atlas retrieves MCP tool and context-planning evidence for downstream coding agents.",
@@ -103,7 +103,7 @@
         ],
         "tools": [
           "find_docs",
-          "read_section"
+          "read_document"
         ]
       },
       "profile": "contributor",
@@ -132,7 +132,7 @@
         ],
         "tools": [
           "plan_context",
-          "read_section"
+          "read_document"
         ]
       },
       "profile": "agent-integrator",

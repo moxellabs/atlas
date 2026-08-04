@@ -9,6 +9,6 @@ export const onboardToModulePrompt: AtlasPromptDefinition = {
     "Use the provided ATLAS module summaries, outlines, and local sections.",
     "Explain the module purpose, ownership, important documents, common workflows, and likely next files to inspect.",
     "Separate confirmed facts from inferred guidance.",
-    "Cite source paths and headings for claims that depend on local documentation."
-  ].join("\n")
+    "Cite source paths and headings for claims that depend on local documentation.",
+  ].join("\n"),
 };

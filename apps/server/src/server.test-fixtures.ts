@@ -216,6 +216,7 @@ export function createDependencies(
     enableMcp: false,
     enableTelemetry: false,
     discoveryPolicy: "neutral",
+    mcpToolProfile: "agent",
     logRequests: false,
     ...envOverrides,
   };

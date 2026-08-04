@@ -329,6 +329,10 @@ export interface PlanContextInput {
 	query: string;
 	/** Optional repository constraint. */
 	repoId?: string | undefined;
+	/** Optional exact package constraint within the selected repository. */
+	packageId?: string | undefined;
+	/** Optional exact module constraint within the selected package or repository. */
+	moduleId?: string | undefined;
 	/** Maximum context budget in tokens. */
 	budgetTokens: number;
 	/** Optional exact text encoder used when candidate token counts are absent. */

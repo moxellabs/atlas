@@ -143,6 +143,13 @@ describe("retrieval report rendering", () => {
           averageCalls: 0,
           protocolErrorRate: 0,
         },
+        routing: {
+          evaluatedRuns: 0,
+          firstToolSelectionRate: 0,
+          budgetComplianceRate: 0,
+          fallbackPrecisionRate: 0,
+          redundantCallRate: 0,
+        },
       },
       representativeTraces: [],
     };

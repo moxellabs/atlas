@@ -66,13 +66,13 @@ export const findScopesInputSchema = z
   })
   .strict();
 
-/** Input schema for find_docs. */
+/** Input schema for precise document and passage search. */
 export const findDocsInputSchema = z
   .object({
     query: querySchema,
     repoId: repoIdSchema,
     scopeIds: z.array(z.string().trim().min(1)).max(20).optional(),
-    kinds: z
+    documentKinds: z
       .array(
         z.enum([
           "repo-doc",
@@ -84,7 +84,13 @@ export const findDocsInputSchema = z
         ]),
       )
       .max(10)
-      .optional(),
+      .optional()
+      .describe("Document metadata kinds used to filter matching hits."),
+    targetTypes: z
+      .array(z.enum(["document", "section", "chunk", "skill"]))
+      .max(4)
+      .optional()
+      .describe("Stored result types to return."),
     profile: profileSchema,
     audience: z.array(docAudienceSchema).optional(),
     purpose: z.array(docPurposeSchema).optional(),
@@ -93,23 +99,18 @@ export const findDocsInputSchema = z
   })
   .strict();
 
-/** Input schema for read_outline. */
-export const readOutlineInputSchema = z
-  .object({ docId: z.string().trim().min(1) })
-  .strict();
-
-/** Input schema for read_section. */
-export const readSectionInputSchema = z
+/** Input schema for a compact document outline or one exact section. */
+export const readDocumentInputSchema = z
   .object({
     docId: z.string().trim().min(1),
     sectionId: z.string().trim().min(1).optional(),
-    heading: z.array(z.string().trim().min(1)).optional(),
+    heading: z.array(z.string().trim().min(1)).min(1).optional(),
   })
   .strict()
   .refine(
-    (value) => value.sectionId !== undefined || value.heading !== undefined,
+    (value) => !(value.sectionId !== undefined && value.heading !== undefined),
     {
-      message: "Either sectionId or heading is required.",
+      message: "Pass either sectionId or heading, not both.",
     },
   );
 
@@ -145,19 +146,19 @@ export const expandRelatedInputSchema = z
   })
   .strict();
 
-/** Input schema for explain_module. */
-export const explainModuleInputSchema = z
-  .object({
-    moduleId: z.string().trim().min(1),
-    limit: limitSchema,
-  })
-  .strict();
-
 /** Input schema for plan_context. */
 export const planContextInputSchema = z
   .object({
     query: querySchema,
-    repoId: repoIdSchema,
+    scope: z
+      .object({
+        repoId: z.string().trim().min(1).optional(),
+        packageId: z.string().trim().min(1).optional(),
+        moduleId: z.string().trim().min(1).optional(),
+      })
+      .strict()
+      .optional()
+      .describe("Exact repository, package, or module constraints."),
     budgetTokens: z.number().int().min(1).max(200_000).default(2_000),
     candidateLimit: limitSchema,
     summaryLimit: limitSchema,
@@ -170,16 +171,11 @@ export const planContextInputSchema = z
   })
   .strict();
 
-/** Loose object output schema used by SDK registration while contract tests assert exact shapes. */
-export const jsonOutputSchema = z.object({}).passthrough();
-
 export type FindScopesInput = z.infer<typeof findScopesInputSchema>;
 export type FindDocsInput = z.infer<typeof findDocsInputSchema>;
-export type ReadOutlineInput = z.infer<typeof readOutlineInputSchema>;
-export type ReadSectionInput = z.infer<typeof readSectionInputSchema>;
+export type ReadDocumentInput = z.infer<typeof readDocumentInputSchema>;
 export type UseSkillInput = z.infer<typeof useSkillInputSchema>;
 export type ExpandRelatedInput = z.infer<typeof expandRelatedInputSchema>;
-export type ExplainModuleInput = z.infer<typeof explainModuleInputSchema>;
 export type PlanContextToolInput = Omit<
   z.input<typeof planContextInputSchema>,
   "detail"

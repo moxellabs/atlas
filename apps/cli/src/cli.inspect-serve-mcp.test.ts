@@ -517,10 +517,11 @@ repos:
     const stderr = new PassThrough();
     let receivedIdentity: unknown;
     let receivedDiscoveryPolicy: unknown;
+    let receivedToolProfile: unknown;
     const transport: { onclose?: () => void } = {};
     const context: CliCommandContext = {
       positionals: [],
-      options: { discoveryPolicy: "prefer-local" },
+      options: { discoveryPolicy: "prefer-local", toolProfile: "advanced" },
       cwd: process.cwd(),
       output: { json: false, verbose: false, quiet: false },
       mcpName: "acme-knowledge",
@@ -536,17 +537,12 @@ repos:
       context,
       { db: {} as never, close() {} },
       {
-        createServer(_deps, identity, discoveryPolicy) {
+        createServer(_deps, identity, discoveryPolicy, toolProfile) {
           receivedIdentity = identity;
           receivedDiscoveryPolicy = discoveryPolicy;
+          receivedToolProfile = toolProfile;
           return {
-            tools: [
-              "find_docs",
-              "read_outline",
-              "read_section",
-              "plan_context",
-              "use_skill",
-            ],
+            tools: ["find_docs", "read_document", "plan_context", "use_skill"],
             resources: ["acme-document"],
             prompts: [],
             diagnostics: [],
@@ -569,6 +565,7 @@ repos:
       resourcePrefix: "acme",
     });
     expect(receivedDiscoveryPolicy).toBe("prefer-local");
+    expect(receivedToolProfile).toBe("advanced");
   });
 
   test("mcp identity honors ATLAS_MCP_RESOURCE_PREFIX from loaded config env", async () => {
@@ -590,7 +587,7 @@ repos:
         db: {} as never,
         config: {
           env: { ATLAS_MCP_RESOURCE_PREFIX: "acme" },
-          config: {},
+          config: { repos: [] },
         } as never,
         close() {},
       },
@@ -615,5 +612,32 @@ repos:
       },
     );
     expect(receivedIdentity).toMatchObject({ resourcePrefix: "acme" });
+  });
+
+  test("mcp rejects unknown tool profiles before transport startup", async () => {
+    const context: CliCommandContext = {
+      positionals: [],
+      options: { toolProfile: "wide" },
+      cwd: process.cwd(),
+      output: { json: false, verbose: false, quiet: false },
+      stdin: new PassThrough() as unknown as NodeJS.ReadStream,
+      stdout: new PassThrough() as unknown as NodeJS.WriteStream,
+      stderr: new PassThrough() as unknown as NodeJS.WriteStream,
+      env: {},
+    };
+    await expect(
+      runMcpCommandWithDependencies(
+        context,
+        { db: {} as never, close() {} },
+        {
+          createServer() {
+            throw new Error("server must not start");
+          },
+          createTransport() {
+            throw new Error("transport must not start");
+          },
+        },
+      ),
+    ).rejects.toThrow("Invalid MCP tool profile: wide");
   });
 });

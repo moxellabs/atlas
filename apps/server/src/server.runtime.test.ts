@@ -28,19 +28,23 @@ describe("server runtime", () => {
       port: 3000,
       enableUi: false,
       enableMcp: true,
+      mcpToolProfile: "agent",
     });
     expect(
       loadServerEnv({
         ATLAS_HOST: "0.0.0.0",
         ATLAS_PORT: "40789",
         ATLAS_ENABLE_UI: "false",
+        ATLAS_MCP_TOOL_PROFILE: "advanced",
       }),
     ).toMatchObject({
       host: "0.0.0.0",
       port: 40789,
       enableUi: false,
+      mcpToolProfile: "advanced",
     });
     expect(() => loadServerEnv({ ATLAS_PORT: "99999" })).toThrow();
+    expect(() => loadServerEnv({ ATLAS_MCP_TOOL_PROFILE: "wide" })).toThrow();
     expect(
       loadServerEnv({
         ATLAS_REMOTE_AUTH_TOKEN: "x".repeat(32),

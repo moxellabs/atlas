@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 1,
+  "name": "Atlas autonomous MCP tool routing",
+  "description": "Measures first-tool selection, bounded retrieval, fallback precision, and duplicate-call avoidance across the default Atlas MCP surface.",
+  "repoId": "github.com/moxellabs/atlas",
+  "runner": {
+    "model": "gpt-5.4",
+    "reasoningEffort": "high",
+    "trialsPerTask": 1,
+    "agentTimeoutMs": 480000,
+    "judgeTimeoutMs": 180000
+  },
+  "tasks": [
+    {
+      "id": "broad-repository-answer",
+      "sourceCaseId": "routing-broad",
+      "title": "Broad repository question",
+      "category": "broad-answer",
+      "prompt": "Explain how Atlas turns indexed repository documentation into an answer-ready context packet. Include the main runtime boundary and cite the repository documentation you used.",
+      "routing": {
+        "firstAtlasTools": ["answer_atlas_docs", "plan_context"],
+        "maxAtlasCalls": 1,
+        "externalFallback": "forbidden"
+      },
+      "criteria": [
+        {
+          "id": "broad-completion",
+          "kind": "completion",
+          "description": "Explains the retrieval-to-context flow and runtime boundary.",
+          "evidencePaths": [
+            "docs/architecture.md",
+            "docs/retrieval-and-context.md"
+          ]
+        },
+        {
+          "id": "broad-grounding",
+          "kind": "grounding",
+          "description": "Claims are supported by indexed Atlas documentation.",
+          "evidencePaths": [
+            "docs/architecture.md",
+            "docs/retrieval-and-context.md"
+          ]
+        },
+        {
+          "id": "broad-citation",
+          "kind": "citation",
+          "description": "Cites at least one relevant repository-relative documentation path.",
+          "evidencePaths": [
+            "docs/architecture.md",
+            "docs/retrieval-and-context.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "exact-passage-lookup",
+      "sourceCaseId": "routing-exact",
+      "title": "Exact passage retrieval",
+      "category": "exact-retrieval",
+      "prompt": "Find the precise documented rule for when an agent should use plan_context instead of find_docs. Quote or closely paraphrase that rule and cite its repository path.",
+      "routing": {
+        "firstAtlasTools": ["find_docs"],
+        "maxAtlasCalls": 2,
+        "externalFallback": "forbidden"
+      },
+      "criteria": [
+        {
+          "id": "exact-completion",
+          "kind": "completion",
+          "description": "States the documented division between broad answer preparation and precise retrieval.",
+          "evidencePaths": [
+            "docs/runtime-surfaces.md",
+            "packages/mcp/README.md"
+          ]
+        },
+        {
+          "id": "exact-grounding",
+          "kind": "grounding",
+          "description": "The rule is grounded in an indexed passage rather than inferred from tool names.",
+          "evidencePaths": [
+            "docs/runtime-surfaces.md",
+            "packages/mcp/README.md"
+          ]
+        },
+        {
+          "id": "exact-citation",
+          "kind": "citation",
+          "description": "Cites the exact repository-relative source path.",
+          "evidencePaths": [
+            "docs/runtime-surfaces.md",
+            "packages/mcp/README.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "partial-answer-followup",
+      "sourceCaseId": "routing-partial",
+      "title": "Partial-answer follow-up",
+      "category": "follow-up",
+      "prompt": "A prior answer established that Atlas artifacts are read-only but did not explain how stale source coverage is reported. Retrieve only the missing stale-coverage behavior, then answer with a citation.",
+      "routing": {
+        "firstAtlasTools": ["find_docs"],
+        "maxAtlasCalls": 2,
+        "externalFallback": "forbidden"
+      },
+      "criteria": [
+        {
+          "id": "partial-completion",
+          "kind": "completion",
+          "description": "Answers only the missing stale-coverage behavior.",
+          "evidencePaths": [
+            "docs/retrieval-and-context.md",
+            "docs/runtime-surfaces.md"
+          ]
+        },
+        {
+          "id": "partial-grounding",
+          "kind": "grounding",
+          "description": "Staleness behavior is supported by indexed documentation.",
+          "evidencePaths": [
+            "docs/retrieval-and-context.md",
+            "docs/runtime-surfaces.md"
+          ]
+        },
+        {
+          "id": "partial-citation",
+          "kind": "citation",
+          "description": "Cites the path containing stale-coverage behavior.",
+          "evidencePaths": [
+            "docs/retrieval-and-context.md",
+            "docs/runtime-surfaces.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ambiguous-scope-question",
+      "sourceCaseId": "routing-ambiguity",
+      "title": "Ambiguous scope question",
+      "category": "ambiguity",
+      "prompt": "How does Atlas handle configuration? Distinguish the likely configuration scopes before answering, and cite the evidence packet used.",
+      "routing": {
+        "firstAtlasTools": ["plan_context"],
+        "maxAtlasCalls": 1,
+        "externalFallback": "forbidden"
+      },
+      "criteria": [
+        {
+          "id": "ambiguity-completion",
+          "kind": "completion",
+          "description": "Distinguishes repository configuration from runtime or MCP identity configuration.",
+          "evidencePaths": ["docs/configuration.md", "docs/runtime-surfaces.md"]
+        },
+        {
+          "id": "ambiguity-grounding",
+          "kind": "grounding",
+          "description": "Uses indexed scope-aware evidence instead of guessing one meaning.",
+          "evidencePaths": ["docs/configuration.md", "docs/runtime-surfaces.md"]
+        },
+        {
+          "id": "ambiguity-citation",
+          "kind": "citation",
+          "description": "Cites relevant configuration documentation.",
+          "evidencePaths": ["docs/configuration.md", "docs/runtime-surfaces.md"]
+        }
+      ]
+    },
+    {
+      "id": "known-hit-expansion",
+      "sourceCaseId": "routing-expansion",
+      "title": "Known-hit expansion",
+      "category": "related-context",
+      "prompt": "Starting from the retrieval surface documentation for plan_context, identify the directly related document that explains ingestion and build flow. Use the stable hit you retrieve rather than restarting with multiple broad searches.",
+      "routing": {
+        "firstAtlasTools": ["find_docs"],
+        "maxAtlasCalls": 2,
+        "externalFallback": "forbidden"
+      },
+      "criteria": [
+        {
+          "id": "expansion-completion",
+          "kind": "completion",
+          "description": "Identifies and explains the related ingestion/build-flow document.",
+          "evidencePaths": [
+            "docs/retrieval-and-context.md",
+            "docs/ingestion-build-flow.md"
+          ]
+        },
+        {
+          "id": "expansion-grounding",
+          "kind": "grounding",
+          "description": "Uses a retrieved hit and related-context evidence without redundant broad retrieval.",
+          "evidencePaths": [
+            "docs/retrieval-and-context.md",
+            "docs/ingestion-build-flow.md"
+          ]
+        },
+        {
+          "id": "expansion-citation",
+          "kind": "citation",
+          "description": "Cites the related ingestion/build-flow path.",
+          "evidencePaths": ["docs/ingestion-build-flow.md"]
+        }
+      ]
+    },
+    {
+      "id": "module-explanation",
+      "sourceCaseId": "routing-module",
+      "title": "Module explanation through planner",
+      "category": "module",
+      "prompt": "Explain the responsibilities and boundaries of packages/mcp as a module. Keep the answer within one coherent evidence budget and cite the relevant module documentation.",
+      "routing": {
+        "firstAtlasTools": ["plan_context"],
+        "maxAtlasCalls": 1,
+        "externalFallback": "forbidden"
+      },
+      "criteria": [
+        {
+          "id": "module-completion",
+          "kind": "completion",
+          "description": "Explains packages/mcp responsibilities and boundaries.",
+          "evidencePaths": [
+            "packages/mcp/README.md",
+            "packages/mcp/docs/index.md"
+          ]
+        },
+        {
+          "id": "module-grounding",
+          "kind": "grounding",
+          "description": "Uses a planner evidence packet rather than a fixed module helper.",
+          "evidencePaths": [
+            "packages/mcp/README.md",
+            "packages/mcp/docs/index.md"
+          ]
+        },
+        {
+          "id": "module-citation",
+          "kind": "citation",
+          "description": "Cites MCP package documentation.",
+          "evidencePaths": [
+            "packages/mcp/README.md",
+            "packages/mcp/docs/index.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "procedural-skill-request",
+      "sourceCaseId": "routing-skill",
+      "title": "Procedural skill request",
+      "category": "skill",
+      "prompt": "Prepare the repository-approved procedure for adding a new Atlas CLI command. Return the complete skill instructions and identify any bundled references or scripts.",
+      "routing": {
+        "firstAtlasTools": ["use_skill"],
+        "maxAtlasCalls": 1,
+        "externalFallback": "forbidden"
+      },
+      "criteria": [
+        {
+          "id": "skill-completion",
+          "kind": "completion",
+          "description": "Returns the complete add-CLI-command procedure and bundled artifacts.",
+          "evidencePaths": ["apps/cli/skills/add-cli-command/SKILL.md"]
+        },
+        {
+          "id": "skill-grounding",
+          "kind": "grounding",
+          "description": "Uses the stored procedural skill rather than reconstructing a procedure from loose documents.",
+          "evidencePaths": ["apps/cli/skills/add-cli-command/SKILL.md"]
+        },
+        {
+          "id": "skill-citation",
+          "kind": "citation",
+          "description": "Cites the stored skill source path.",
+          "evidencePaths": ["apps/cli/skills/add-cli-command/SKILL.md"]
+        }
+      ]
+    },
+    {
+      "id": "absent-corpus-fallback",
+      "sourceCaseId": "routing-fallback",
+      "title": "Absent corpus fallback",
+      "category": "fallback",
+      "prompt": "What was the closing price of the Nikkei 225 on August 3, 2026? Verify the answer with a current external source and do not claim that repository documentation contains it.",
+      "routing": {
+        "firstAtlasTools": ["answer_atlas_docs", "plan_context"],
+        "maxAtlasCalls": 1,
+        "externalFallback": "required"
+      },
+      "criteria": [
+        {
+          "id": "fallback-completion",
+          "kind": "completion",
+          "description": "Reports the verified closing price or clearly states that the market close is not yet available.",
+          "evidencePaths": []
+        },
+        {
+          "id": "fallback-grounding",
+          "kind": "grounding",
+          "description": "Uses a current external source after Atlas reports absent coverage.",
+          "evidencePaths": []
+        },
+        {
+          "id": "fallback-citation",
+          "kind": "citation",
+          "description": "Cites the external market source and does not cite Atlas repository paths.",
+          "evidencePaths": []
+        }
+      ]
+    }
+  ]
+}

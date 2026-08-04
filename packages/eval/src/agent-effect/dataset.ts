@@ -6,6 +6,7 @@ import {
 	type AgentEffectDataset,
 	type AgentEffectTask,
 	type RubricCriterionKind,
+	type AgentRoutingExpectation,
 } from "./types";
 
 const criterionKinds = new Set<RubricCriterionKind>([
@@ -121,7 +122,40 @@ function parseTask(
 		title: value.title,
 		category: value.category,
 		prompt: value.prompt,
+		...(value.routing === undefined
+			? {}
+			: { routing: parseRouting(value.routing, value.id) }),
 		criteria,
+	};
+}
+
+function parseRouting(
+	value: unknown,
+	taskId: string,
+): AgentRoutingExpectation {
+	if (
+		!isRecord(value) ||
+		!isStringArray(value.firstAtlasTools) ||
+		value.firstAtlasTools.length === 0 ||
+		!isPositiveInteger(value.maxAtlasCalls) ||
+		!["required", "forbidden", "allowed"].includes(
+			String(value.externalFallback),
+		) ||
+		(value.allowRepeatedAtlasTools !== undefined &&
+			typeof value.allowRepeatedAtlasTools !== "boolean")
+	) {
+		throw new Error(`Invalid routing expectation for task ${taskId}`);
+	}
+	return {
+		firstAtlasTools: value.firstAtlasTools,
+		maxAtlasCalls: value.maxAtlasCalls,
+		externalFallback: value.externalFallback as
+			| "required"
+			| "forbidden"
+			| "allowed",
+		...(value.allowRepeatedAtlasTools === undefined
+			? {}
+			: { allowRepeatedAtlasTools: value.allowRepeatedAtlasTools }),
 	};
 }
 

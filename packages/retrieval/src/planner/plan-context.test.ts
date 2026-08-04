@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import {
   createSeededRetrievalFixture,
+  authPackageId,
   invoiceDocId,
   repoId,
   sessionDocId,
@@ -193,6 +194,47 @@ describe("planContext", () => {
       status: "ambiguous",
       reason: "No retrieval candidates matched the query.",
     });
+  });
+
+  test("applies exact repository package and module constraints before ranking", () => {
+    const plan = planContext({
+      store: fixture!.retrievalStore,
+      repoId,
+      packageId: authPackageId,
+      moduleId: sessionModuleId,
+      query: "How does renewal work?",
+      budgetTokens: 220,
+    });
+
+    expect(plan.rankedHits.length).toBeGreaterThan(0);
+    expect(
+      plan.rankedHits.every(
+        (hit) =>
+          hit.provenance.repoId === repoId &&
+          hit.provenance.packageId === authPackageId &&
+          hit.provenance.moduleId === sessionModuleId,
+      ),
+    ).toBe(true);
+    expect(
+      plan.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.stage === "scope-inference" &&
+          diagnostic.metadata?.exact === true,
+      ),
+    ).toBe(true);
+  });
+
+  test("rejects exact scope identifiers that do not belong to their parent", () => {
+    expect(() =>
+      planContext({
+        store: fixture!.retrievalStore,
+        repoId,
+        packageId: authPackageId,
+        moduleId: "missing_module",
+        query: "Explain the module.",
+        budgetTokens: 220,
+      }),
+    ).toThrow("Unknown moduleId: missing_module");
   });
 });
 

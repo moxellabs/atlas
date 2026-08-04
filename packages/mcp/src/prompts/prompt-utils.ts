@@ -13,21 +13,24 @@ export interface AtlasPromptDefinition {
 }
 
 /** Registers one static prompt definition on the SDK server. */
-export function registerAtlasPrompt(server: McpServer, definition: AtlasPromptDefinition): void {
+export function registerAtlasPrompt(
+  server: McpServer,
+  definition: AtlasPromptDefinition,
+): void {
   server.registerPrompt(
     definition.name,
     {
       title: definition.title,
-      description: definition.description
+      description: definition.description,
     },
     () => ({
       description: definition.description,
       messages: [
         {
           role: "user",
-          content: { type: "text", text: definition.text }
-        }
-      ]
-    })
+          content: { type: "text", text: definition.text },
+        },
+      ],
+    }),
   );
 }

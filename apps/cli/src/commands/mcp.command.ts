@@ -13,10 +13,12 @@ import {
 import type {
   AtlasMcpDiscoveryPolicy,
   AtlasMcpServer,
+  AtlasMcpToolProfile,
   RemoteMcpProxy,
 } from "@atlas/mcp";
 import {
   ATLAS_MCP_DISCOVERY_POLICIES,
+  ATLAS_MCP_TOOL_PROFILES,
   createAtlasMcpServer,
   createStdioTransport,
   createRemoteMcpProxy,
@@ -45,6 +47,8 @@ interface McpCommandRuntime {
     },
     identity: ReturnType<typeof resolveIdentityProfile>["mcpIdentity"],
     discoveryPolicy: AtlasMcpDiscoveryPolicy,
+    toolProfile: AtlasMcpToolProfile,
+    sourceFacadeRepoIds: readonly string[],
   ): AtlasMcpServer;
   createLifecycle?(
     config: ResolvedAtlasConfig,
@@ -56,11 +60,19 @@ interface McpCommandRuntime {
 }
 
 const defaultRuntime: McpCommandRuntime = {
-  createServer(deps, identity, discoveryPolicy) {
+  createServer(
+    deps,
+    identity,
+    discoveryPolicy,
+    toolProfile,
+    sourceFacadeRepoIds,
+  ) {
     return createAtlasMcpServer({
       db: deps.db,
       identity,
       discoveryPolicy,
+      toolProfile,
+      sourceFacadeRepoIds,
       ...(deps.repositoryRefreshStateProvider === undefined
         ? {}
         : {
@@ -131,6 +143,7 @@ export async function runMcpCommandWithDependencies(
           },
         }).mcpIdentity;
   const discoveryPolicy = readDiscoveryPolicy(context);
+  const toolProfile = readToolProfile(context);
   let server!: AtlasMcpServer;
   const createLifecycle =
     runtime.createLifecycle ?? defaultRuntime.createLifecycle;
@@ -158,6 +171,8 @@ export async function runMcpCommandWithDependencies(
     },
     identity,
     discoveryPolicy,
+    toolProfile,
+    deps.config?.config.repos?.map((repo) => repo.repoId) ?? [],
   );
   lifecycle?.start();
   const transport = runtime.createTransport(context);
@@ -310,6 +325,17 @@ function readDiscoveryPolicy(
   }
   throw new CliError(
     `Invalid MCP discovery policy: ${value}. Expected one of: ${ATLAS_MCP_DISCOVERY_POLICIES.join(", ")}.`,
+    { code: "CLI_INVALID_CHOICE", exitCode: EXIT_INPUT_ERROR },
+  );
+}
+
+function readToolProfile(context: CliCommandContext): AtlasMcpToolProfile {
+  const value = readStringOption(context, "toolProfile") ?? "agent";
+  if (ATLAS_MCP_TOOL_PROFILES.includes(value as AtlasMcpToolProfile)) {
+    return value as AtlasMcpToolProfile;
+  }
+  throw new CliError(
+    `Invalid MCP tool profile: ${value}. Expected one of: ${ATLAS_MCP_TOOL_PROFILES.join(", ")}.`,
     { code: "CLI_INVALID_CHOICE", exitCode: EXIT_INPUT_ERROR },
   );
 }

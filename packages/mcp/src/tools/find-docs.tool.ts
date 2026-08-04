@@ -2,10 +2,10 @@ import { findDocs } from "@atlas/retrieval";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { toolResult } from "../mcp-result";
+import { findDocsOutputSchema } from "../schemas/tool-output-schemas";
 import {
   type FindDocsInput,
   findDocsInputSchema,
-  jsonOutputSchema,
 } from "../schemas/tool-schemas";
 import type { AtlasRetrievalMcpDependencies, McpJsonObject } from "../types";
 
@@ -17,13 +17,18 @@ export function executeFindDocs(
   dependencies: AtlasRetrievalMcpDependencies,
 ): McpJsonObject {
   const parsed = findDocsInputSchema.parse(input);
-  return {
-    ...findDocs({
+  return findDocsOutputSchema.parse(
+    findDocs({
       store: dependencies.retrievalStore,
       query: parsed.query,
       ...(parsed.repoId === undefined ? {} : { repoId: parsed.repoId }),
       ...(parsed.scopeIds === undefined ? {} : { scopeIds: parsed.scopeIds }),
-      ...(parsed.kinds === undefined ? {} : { kinds: parsed.kinds }),
+      ...(parsed.documentKinds === undefined
+        ? {}
+        : { documentKinds: parsed.documentKinds }),
+      ...(parsed.targetTypes === undefined
+        ? {}
+        : { targetTypes: parsed.targetTypes }),
       ...(parsed.limit === undefined ? {} : { limit: parsed.limit }),
       filters: {
         ...(parsed.profile === undefined ? {} : { profile: parsed.profile }),
@@ -34,7 +39,7 @@ export function executeFindDocs(
           : { visibility: parsed.visibility }),
       },
     }),
-  };
+  );
 }
 
 /** Registers the find_docs MCP tool. */
@@ -45,11 +50,11 @@ export function registerFindDocsTool(
   server.registerTool(
     FIND_DOCS_TOOL,
     {
-      title: "Find ATLAS docs",
+      title: "Find indexed passages",
       description:
-        "Return ranked document, section, chunk, or skill hits for a query. Prefer plan_context first when building an answer; pass repoId and profile (public, contributor, maintainer, internal) or explicit metadata filters to avoid searching the wrong corpus slice.",
+        "Use for an exact location, a partial-answer follow-up, or retrieval debugging. Returns ranked document, section, chunk, or skill hits. Prefer plan_context for broad answer preparation. documentKinds filters document metadata; targetTypes filters the stored result types.",
       inputSchema: findDocsInputSchema,
-      outputSchema: jsonOutputSchema,
+      outputSchema: findDocsOutputSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,

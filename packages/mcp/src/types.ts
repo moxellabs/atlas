@@ -18,6 +18,8 @@ export type AtlasMcpDiscoveryPolicy =
   (typeof ATLAS_MCP_DISCOVERY_POLICIES)[number];
 
 export type AtlasMcpExposurePolicy = "full" | "bounded-remote";
+export const ATLAS_MCP_TOOL_PROFILES = ["agent", "advanced"] as const;
+export type AtlasMcpToolProfile = (typeof ATLAS_MCP_TOOL_PROFILES)[number];
 
 export interface AtlasMcpDependencies {
   /** Initialized ATLAS store database. */
@@ -28,6 +30,10 @@ export interface AtlasMcpDependencies {
   discoveryPolicy?: AtlasMcpDiscoveryPolicy | undefined;
   /** Controls whether aggregate resources and tools are exposed. */
   exposurePolicy?: AtlasMcpExposurePolicy | undefined;
+  /** Default agent surface or explicit advanced/debug inspection surface. */
+  toolProfile?: AtlasMcpToolProfile | undefined;
+  /** Configured repository order used to choose bounded source facades. */
+  sourceFacadeRepoIds?: readonly string[] | undefined;
   /** Query-time view of Atlas-owned background repository refresh health. */
   repositoryRefreshStateProvider?: RepositoryRefreshStateProvider | undefined;
 }

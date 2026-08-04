@@ -25,6 +25,8 @@ export interface GatherCandidatesInput {
   readonly query: string;
   readonly expandedQuery: string;
   readonly repoId?: string | undefined;
+  readonly packageId?: string | undefined;
+  readonly moduleId?: string | undefined;
   readonly scopes: readonly ScopeCandidate[];
   readonly candidateLimit: number;
   readonly countTokens: (text: string) => number;
@@ -164,12 +166,14 @@ export function gatherCandidates(
       }
     }
 
-    const deduped = dedupeCandidates(candidates);
+    const deduped = dedupeCandidates(candidates).filter((candidate) =>
+      matchesExactScope(candidate, context),
+    );
     if (deduped.length < Math.min(context.candidateLimit, 3)) {
       return dedupeCandidates([
         ...deduped,
         ...broadFallbackCandidates(store, context, deduped.length),
-      ]);
+      ]).filter((candidate) => matchesExactScope(candidate, context));
     }
     return deduped;
   } catch (error) {
@@ -201,7 +205,11 @@ function broadFallbackCandidates(
     BROAD_FALLBACK_SCAN_LIMIT,
     Math.max(needed * 4, needed),
   );
-  const documents = collectBroadFallbackDocuments(store, context, scanLimit);
+  const documents = collectBroadFallbackDocuments(
+    store,
+    context,
+    scanLimit,
+  ).filter((document) => matchesExactDocumentScope(document, context));
   const scored = documents
     .map((document) => ({
       document,
@@ -312,6 +320,32 @@ function broadDocumentScore(
     0,
   );
   return metadataScore + summaryScore;
+}
+
+function matchesExactScope(
+  candidate: RetrievalCandidate,
+  context: Pick<GatherCandidatesInput, "repoId" | "packageId" | "moduleId">,
+): boolean {
+  return (
+    (context.repoId === undefined ||
+      candidate.provenance.repoId === context.repoId) &&
+    (context.packageId === undefined ||
+      candidate.provenance.packageId === context.packageId) &&
+    (context.moduleId === undefined ||
+      candidate.provenance.moduleId === context.moduleId)
+  );
+}
+
+function matchesExactDocumentScope(
+  document: DocumentRecord,
+  context: Pick<GatherCandidatesInput, "repoId" | "packageId" | "moduleId">,
+): boolean {
+  return (
+    (context.repoId === undefined || document.repoId === context.repoId) &&
+    (context.packageId === undefined ||
+      document.packageId === context.packageId) &&
+    (context.moduleId === undefined || document.moduleId === context.moduleId)
+  );
 }
 
 function normalizedLexicalScores(

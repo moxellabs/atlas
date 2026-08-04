@@ -28,6 +28,7 @@
     "eval:luna": "bun tooling/scripts/luna-agent-eval.ts",
     "eval:luna:smoke": "bun tooling/scripts/luna-agent-eval.ts --dataset evals/datasets/luna-agent-discovery-smoke.json --snapshot-global-corpus --competitive-tools --require-atlas-adoption",
     "eval:luna:competitive": "bun run eval:luna:smoke",
+    "eval:luna:routing": "bun tooling/scripts/luna-agent-eval.ts --dataset evals/datasets/atlas-tool-routing.json --snapshot-global-corpus --competitive-tools --require-tool-routing",
     "eval:luna:release": "bun tooling/scripts/luna-agent-eval.ts",
     "eval:release:dashboard": "bun tooling/scripts/release-eval-dashboard.ts",
     "typecheck": "bunx tsc --noEmit",

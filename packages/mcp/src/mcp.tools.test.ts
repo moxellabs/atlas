@@ -29,16 +29,14 @@ import {
 import { createAtlasMcpServer } from "./server/create-mcp-server";
 import {
   findScopesInputSchema,
-  readSectionInputSchema,
+  readDocumentInputSchema,
   useSkillInputSchema,
 } from "./schemas/tool-schemas";
 import { executeExpandRelated } from "./tools/expand-related.tool";
-import { executeExplainModule } from "./tools/explain-module.tool";
 import { executeFindDocs } from "./tools/find-docs.tool";
 import { executeFindScopes } from "./tools/find-scopes.tool";
 import { executePlanContext } from "./tools/plan-context.tool";
-import { executeReadOutline } from "./tools/read-outline.tool";
-import { executeReadSection } from "./tools/read-section.tool";
+import { executeReadDocument } from "./tools/read-document.tool";
 import { executeUseSkill } from "./tools/use-skill.tool";
 import { documentResource } from "./resources/document.resource";
 
@@ -72,11 +70,18 @@ describe("MCP tool contracts", () => {
   });
 
   test("validates tool input schemas strictly", () => {
-    expect(() => readSectionInputSchema.parse({ docId })).toThrow();
-    expect(readSectionInputSchema.parse({ docId, sectionId })).toMatchObject({
+    expect(readDocumentInputSchema.parse({ docId })).toEqual({ docId });
+    expect(readDocumentInputSchema.parse({ docId, sectionId })).toMatchObject({
       docId,
       sectionId,
     });
+    expect(() =>
+      readDocumentInputSchema.parse({
+        docId,
+        sectionId,
+        heading: ["Session"],
+      }),
+    ).toThrow();
     expect(
       findScopesInputSchema.parse({
         query: "session rotation",
@@ -121,8 +126,33 @@ describe("MCP tool contracts", () => {
         }),
       ]),
     );
+    const filteredHits = executeFindDocs(
+      {
+        query: "session rotation",
+        repoId,
+        scopeIds: [moduleId],
+        documentKinds: ["module-doc"],
+        targetTypes: ["section"],
+        limit: 5,
+      },
+      dependencies,
+    ).hits as Array<{
+      targetType: string;
+      provenance: { moduleId?: string };
+    }>;
+    expect(filteredHits.length).toBeGreaterThan(0);
+    expect(
+      filteredHits.every(
+        (hit) =>
+          hit.targetType === "section" && hit.provenance.moduleId === moduleId,
+      ),
+    ).toBe(true);
     const plannedContext = executePlanContext(
-      { query: "how do I rotate session tokens?", repoId, budgetTokens: 200 },
+      {
+        query: "how do I rotate session tokens?",
+        scope: { repoId },
+        budgetTokens: 200,
+      },
       dependencies,
     );
     expect(plannedContext).toMatchObject({
@@ -152,7 +182,7 @@ describe("MCP tool contracts", () => {
     const plannedContext = executePlanContext(
       {
         query: "What does `rotateSessionToken` do during renewal?",
-        repoId,
+        scope: { repoId },
         budgetTokens: 2_000,
       },
       {
@@ -187,7 +217,7 @@ describe("MCP tool contracts", () => {
     const plannedContext = executePlanContext(
       {
         query: "what changed in the session rotation docs?",
-        repoId,
+        scope: { repoId },
         budgetTokens: 200,
       },
       {
@@ -257,22 +287,39 @@ describe("MCP tool contracts", () => {
     }
   });
 
-  test("executes store-backed read tools", () => {
+  test("reads a document outline or one exact section through one tool", () => {
     const { store } = fixture;
     const dependencies = { db: store };
 
-    expect(executeReadOutline({ docId }, dependencies)).toMatchObject({
+    expect(executeReadDocument({ docId }, dependencies)).toMatchObject({
+      status: "outline",
       document: expect.objectContaining({ docId }),
       outline: [expect.objectContaining({ sectionId })],
     });
     expect(
-      executeReadSection({ docId, sectionId }, dependencies),
+      executeReadDocument({ docId, sectionId }, dependencies),
     ).toMatchObject({
+      status: "section",
       section: expect.objectContaining({
         sectionId,
         text: "Rotate session tokens by calling rotateSessionToken during renewal.",
       }),
     });
+    expect(
+      executeReadDocument(
+        { docId, heading: ["Session", "Rotation"] },
+        dependencies,
+      ),
+    ).toMatchObject({
+      status: "section",
+      section: expect.objectContaining({ sectionId }),
+    });
+    expect(() =>
+      executeReadDocument(
+        { docId, heading: ["Session", "Missing"] },
+        dependencies,
+      ),
+    ).toThrow("Section was not found.");
   });
 
   test("browses and resolves skills through one tool", () => {
@@ -522,46 +569,37 @@ describe("MCP tool contracts", () => {
     ).toThrow("Related expansion target was not found.");
   });
 
-  test("explains a module from summaries, documents, sections, skills, and provenance", () => {
+  test("plans module explanations through an exact scoped context", () => {
     const { store } = fixture;
-    const explained = executeExplainModule(
-      { moduleId, limit: 2 },
-      { db: store },
+    const planned = executePlanContext(
+      {
+        query: "Explain the session module.",
+        scope: { repoId, packageId, moduleId },
+        budgetTokens: 2_000,
+      },
+      {
+        db: store,
+        retrievalStore: createRetrievalStore(store),
+      },
     );
 
-    expect(explained).toMatchObject({
-      module: expect.objectContaining({ moduleId, name: "session" }),
-      explanation: "Session module coordinates token rotation and renewal.",
-      summaries: {
-        module: [
-          expect.objectContaining({ targetType: "module", targetId: moduleId }),
-        ],
+    expect(planned).toMatchObject({
+      coverage: { status: "sufficient" },
+      context: {
+        evidence: expect.arrayContaining([
+          expect.objectContaining({
+            provenance: expect.objectContaining({
+              repoId,
+              packageId,
+              moduleId,
+            }),
+          }),
+        ]),
       },
-      skills: [expect.objectContaining({ skillId })],
+      citations: expect.arrayContaining([
+        expect.objectContaining({ path: "packages/auth/docs/session.md" }),
+      ]),
     });
-    expect(explained.documents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ docId }),
-        expect.objectContaining({ docId: relatedDocId }),
-      ]),
-    );
-    const summaryPayload = explained.summaries as { documents?: unknown[] };
-    expect(Array.isArray(summaryPayload.documents)).toBe(true);
-    expect(summaryPayload.documents?.length ?? 0).toBeLessThanOrEqual(2);
-    expect(explained.sections).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          sectionId,
-          preview: expect.stringContaining("Rotate session tokens"),
-        }),
-      ]),
-    );
-    expect(explained.provenance).toEqual(
-      expect.arrayContaining([expect.objectContaining({ docId })]),
-    );
-    expect(() =>
-      executeExplainModule({ moduleId: "missing_module" }, { db: store }),
-    ).toThrow("Module was not found.");
   });
 
   test("use_skill exposes first-party skill artifacts", () => {
@@ -858,8 +896,7 @@ describe("MCP tool contracts", () => {
     expect(server.tools).toEqual(
       expect.arrayContaining([
         "find_docs",
-        "read_outline",
-        "read_section",
+        "read_document",
         "plan_context",
         "use_skill",
       ]),

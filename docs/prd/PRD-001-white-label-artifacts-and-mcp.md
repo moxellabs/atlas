@@ -248,7 +248,7 @@ And emits a warning that .moxel/atlas exists but was not used or migrated
 
 MCP construction must accept a white-label MCP identity. LLM clients should see custom server name/title/description rather than `atlas-mcp`/ATLAS defaults.
 
-**Decision for user question 7/8:** MCP white-labeling includes server metadata and Atlas-prefixed surfaces. It does **not** rename generic tool names in phase 1 because `find_docs`, `read_outline`, and similar names are brand-neutral and stable for agents. If a client displays tool calls as `<server>.<tool>`, custom server name solves the requested “call custom brand as MCP” behavior without breaking existing prompts.
+**Decision for user question 7/8:** MCP white-labeling includes server metadata and Atlas-prefixed surfaces. It does **not** rename generic tool names because `plan_context`, `find_docs`, `read_document`, and similar names are brand-neutral and stable for agents. If a client displays tool calls as `<server>.<tool>`, the custom server name provides the requested MCP branding without changing those contracts.
 
 **Acceptance criteria:**
 

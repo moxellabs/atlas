@@ -4,8 +4,8 @@ import { SectionRepository, SkillRepository } from "@atlas/store";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { toolResult } from "../mcp-result";
+import { useSkillOutputSchema } from "../schemas/tool-output-schemas";
 import {
-  jsonOutputSchema,
   type UseSkillInput,
   useSkillInputSchema,
 } from "../schemas/tool-schemas";
@@ -69,7 +69,7 @@ export function executeUseSkill(
   if (parsed.skill !== undefined) {
     const matches = resolveExactSkillMatches(skills, parsed.skill, prefix);
     if (matches.length === 0) {
-      return {
+      return useSkillOutputSchema.parse({
         status: "not_found",
         skill: parsed.skill,
         diagnostics: [
@@ -82,7 +82,7 @@ export function executeUseSkill(
         recommendedNextActions: [
           "Call use_skill without skill to browse the selected scope, or pass a natural-language task.",
         ],
-      };
+      });
     }
     if (matches.length > 1) {
       return ambiguousResult({
@@ -107,7 +107,7 @@ export function executeUseSkill(
     const terms = meaningfulTaskTerms(parsed.task);
     const ranked = rankSkills(skills, terms);
     if (ranked.length === 0) {
-      return {
+      return useSkillOutputSchema.parse({
         status: "not_found",
         task: parsed.task,
         diagnostics: [
@@ -120,7 +120,7 @@ export function executeUseSkill(
         recommendedNextActions: [
           "Broaden the task description or call use_skill without task to browse the selected scope.",
         ],
-      };
+      });
     }
 
     const best = ranked[0] as RankedSkill;
@@ -149,7 +149,7 @@ export function executeUseSkill(
     });
   }
 
-  return {
+  return useSkillOutputSchema.parse({
     status: "listed",
     total: skills.length,
     skills: skills
@@ -158,7 +158,7 @@ export function executeUseSkill(
     recommendedNextActions: [
       "Call use_skill with a listed skillId or invocation alias to load complete instructions.",
     ],
-  };
+  });
 }
 
 /** Registers the unified use_skill MCP tool. */
@@ -174,7 +174,7 @@ export function registerUseSkillTool(
       title: `Use ${title} skill`,
       description: `Browse stored ${title} skills, resolve an exact skill ID, title, or alias such as $${prefix}-add-cli-command, or find one for a natural-language task. Exact and unambiguous task matches return agent-ready instructions, provenance, and read-only artifacts.`,
       inputSchema: useSkillInputSchema,
-      outputSchema: jsonOutputSchema,
+      outputSchema: useSkillOutputSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -287,7 +287,7 @@ function ambiguousResult(input: {
   task?: string;
   message: string;
 }): McpJsonObject {
-  return {
+  return useSkillOutputSchema.parse({
     status: "ambiguous",
     ...(input.skill === undefined ? {} : { skill: input.skill }),
     ...(input.task === undefined ? {} : { task: input.task }),
@@ -303,7 +303,7 @@ function ambiguousResult(input: {
     recommendedNextActions: [
       "Call use_skill with the skill field set to one candidate skillId or invocation alias.",
     ],
-  };
+  });
 }
 
 function resolvedSkillResult(
@@ -330,7 +330,7 @@ function resolvedSkillResult(
             artifact.path.toLowerCase() === `agents/${requestedAgent}.yaml`,
         );
 
-  return {
+  return useSkillOutputSchema.parse({
     status: "resolved",
     resolution: {
       method,
@@ -377,7 +377,7 @@ function resolvedSkillResult(
       "Follow the returned skill instructions.",
       "Only run served scripts after applying the local agent or user approval policy.",
     ],
-  };
+  });
 }
 
 function presentSkillCandidate(
@@ -478,4 +478,3 @@ function normalizeAlias(value: string | undefined, prefix: string): string {
     ) ?? ""
   );
 }
-

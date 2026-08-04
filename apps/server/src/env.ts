@@ -53,6 +53,8 @@ export interface ServerEnv {
   enableTelemetry: boolean;
   /** Tool-advertising policy used by HTTP MCP sessions. */
   discoveryPolicy: "neutral" | "prefer-local";
+  /** Default or advanced/debug MCP tool surface. */
+  mcpToolProfile: "agent" | "advanced";
   /** Enable structured request logging. */
   logRequests: boolean;
   /** Remote-only security settings. Required for non-loopback binds. */
@@ -73,6 +75,7 @@ const serverEnvSchema = z.object({
   ATLAS_ENABLE_MCP: booleanEnv,
   ATLAS_ENABLE_TELEMETRY: booleanEnv,
   ATLAS_MCP_DISCOVERY_POLICY: z.enum(["neutral", "prefer-local"]).optional(),
+  ATLAS_MCP_TOOL_PROFILE: z.enum(["agent", "advanced"]).optional(),
   ATLAS_LOG_REQUESTS: booleanEnv,
   ATLAS_REMOTE_AUTH_TOKEN: z.preprocess(
     emptyStringToUndefined,
@@ -114,6 +117,7 @@ export function loadServerEnv(env: NodeJS.ProcessEnv = process.env): ServerEnv {
     enableTelemetry: parsed.ATLAS_ENABLE_TELEMETRY ?? false,
     logRequests: parsed.ATLAS_LOG_REQUESTS ?? true,
     discoveryPolicy: parsed.ATLAS_MCP_DISCOVERY_POLICY ?? "neutral",
+    mcpToolProfile: parsed.ATLAS_MCP_TOOL_PROFILE ?? "agent",
     remote: {
       enabled:
         parsed.ATLAS_REMOTE_AUTH_TOKEN !== undefined ||

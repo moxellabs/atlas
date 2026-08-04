@@ -27,6 +27,7 @@ export interface AtlasCliKnownOptions {
 	atlasMcpName?: string | undefined;
 	atlasMcpTitle?: string | undefined;
 	discoveryPolicy?: string | undefined;
+	toolProfile?: string | undefined;
 	remoteUrl?: string | undefined;
 	authTokenEnv?: string | undefined;
 	authTokenFile?: string | undefined;

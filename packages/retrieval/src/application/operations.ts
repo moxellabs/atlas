@@ -30,6 +30,7 @@ import type {
   RankedHit,
   RetrievalStore,
   RetrievalDiagnostic,
+  RetrievalTargetType,
   ScopeCandidate,
 } from "../types";
 
@@ -69,10 +70,11 @@ export function findScopes(input: SearchApplicationInput): FindScopesResult {
   };
 }
 
-/** Input for ranked document retrieval. */
+/** Input for precise ranked document retrieval. */
 export interface FindDocsInput extends SearchApplicationInput {
   scopeIds?: readonly string[] | undefined;
-  kinds?: readonly DocumentRecord["kind"][] | undefined;
+  documentKinds?: readonly DocumentRecord["kind"][] | undefined;
+  targetTypes?: readonly Exclude<RetrievalTargetType, "summary">[] | undefined;
 }
 
 /** Ranked document retrieval result shared by HTTP and MCP transports. */
@@ -96,7 +98,8 @@ export function findDocs(input: FindDocsInput): FindDocsResult {
     ...(input.filters === undefined ? {} : { filters: input.filters }),
   });
   const scopeIds = new Set(input.scopeIds ?? []);
-  const kinds = new Set(input.kinds ?? []);
+  const documentKinds = new Set(input.documentKinds ?? []);
+  const targetTypes = new Set(input.targetTypes ?? []);
   const filters = plan.diagnostics.find(
     (diagnostic) => diagnostic.stage === "candidate-generation",
   )?.metadata?.filters;
@@ -108,7 +111,9 @@ export function findDocs(input: FindDocsInput): FindDocsResult {
       .filter(
         (hit) =>
           hit.targetType !== "summary" &&
-          (kinds.size === 0 || (hit.kind !== undefined && kinds.has(hit.kind))),
+          (targetTypes.size === 0 || targetTypes.has(hit.targetType)) &&
+          (documentKinds.size === 0 ||
+            (hit.kind !== undefined && documentKinds.has(hit.kind))),
       )
       .filter((hit) =>
         scopeIds.size === 0

@@ -6,6 +6,7 @@ import { dirname, resolve } from "node:path";
 
 import {
   agentEffectDatasetDigest,
+  assertAgentToolRouting,
   assertHermeticAtlasDiscovery,
   createCodexExecutor,
   loadAgentEffectDataset,
@@ -27,6 +28,7 @@ const outputPath = resolve(
 const taskId = args.task;
 const trialCount = positiveInteger(args.trials, "--trials");
 const requireAtlasAdoption = args["require-atlas-adoption"] === "true";
+const requireToolRouting = args["require-tool-routing"] === "true";
 const agentCwd =
   args.workspace === undefined ? undefined : resolve(cwd, args.workspace);
 const useGlobal = args.global === "true";
@@ -46,6 +48,14 @@ if (requireAtlasAdoption && (!snapshotGlobalCorpus || agentCwd !== undefined)) {
 if (requireAtlasAdoption && trialCount !== undefined && trialCount < 3) {
   throw new Error("Atlas adoption gates require at least three trials.");
 }
+if (
+  requireToolRouting &&
+  (!snapshotGlobalCorpus || agentCwd !== undefined || !competitiveTools)
+) {
+  throw new Error(
+    "Agent routing gates require --snapshot-global-corpus, --competitive-tools, and an evaluator-generated empty workspace.",
+  );
+}
 
 if (Bun.env.CI !== undefined && Bun.env.CI !== "") {
   throw new Error(
@@ -54,7 +64,10 @@ if (Bun.env.CI !== undefined && Bun.env.CI !== "") {
 }
 if (
   releaseId !== undefined &&
-  (taskId !== undefined || trialCount !== undefined || requireAtlasAdoption)
+  (taskId !== undefined ||
+    trialCount !== undefined ||
+    requireAtlasAdoption ||
+    requireToolRouting)
 ) {
   throw new Error(
     "Release Luna snapshots must run the complete standard suite without smoke-test overrides.",
@@ -65,9 +78,12 @@ if (releaseId !== undefined && !(await hasCleanTrackedWorktree(cwd))) {
     "Release Luna snapshots require committed source changes. Commit or stash tracked changes, then run the benchmark before adding its history-only snapshot commit.",
   );
 }
-if (requireAtlasAdoption && !(await hasCleanTrackedWorktree(cwd))) {
+if (
+  (requireAtlasAdoption || requireToolRouting) &&
+  !(await hasCleanTrackedWorktree(cwd))
+) {
   throw new Error(
-    "Atlas adoption gates require committed source changes so evaluatedRevision identifies the exact implementation under test.",
+    "Atlas adoption and routing gates require committed source changes so evaluatedRevision identifies the exact implementation under test.",
   );
 }
 
@@ -124,6 +140,7 @@ try {
     console.log(`Wrote local Luna result ${outputPath}`);
   }
   if (requireAtlasAdoption) assertHermeticAtlasDiscovery(snapshot);
+  if (requireToolRouting) assertAgentToolRouting(dataset, snapshot);
   console.log(
     `Luna paired results: ${snapshot.metrics.paired.wins} treatment wins, ${snapshot.metrics.paired.ties} ties, ${snapshot.metrics.paired.losses} treatment losses across ${snapshot.metrics.pairs} pairs.`,
   );

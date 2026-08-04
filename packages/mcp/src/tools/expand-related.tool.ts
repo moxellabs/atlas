@@ -16,9 +16,9 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { McpResourceNotFoundError } from "../errors";
 import { toolResult } from "../mcp-result";
+import { expandRelatedOutputSchema } from "../schemas/tool-output-schemas";
 import {
   expandRelatedInputSchema,
-  jsonOutputSchema,
   type ExpandRelatedInput,
 } from "../schemas/tool-schemas";
 import { listSummaries } from "../store-mappers";
@@ -63,7 +63,7 @@ export function executeExpandRelated(
           anchorDocument.docId,
         );
 
-  return {
+  return expandRelatedOutputSchema.parse({
     anchor: presentAnchor(anchor),
     related: {
       documents: relatedDocuments.map(presentDocument),
@@ -89,7 +89,7 @@ export function executeExpandRelated(
         },
       },
     ],
-  };
+  });
 }
 
 /** Registers the expand_related MCP tool. */
@@ -100,11 +100,11 @@ export function registerExpandRelatedTool(
   server.registerTool(
     EXPAND_RELATED_TOOL,
     {
-      title: "Expand related ATLAS context",
+      title: "Expand a stored retrieval hit",
       description:
-        "Expand from a stored hit to nearby documents, sections, summaries, and skills by locality.",
+        "Use after find_docs, plan_context, or read_document returns a stable targetType and targetId. Expands that stored hit to nearby documents, sections, summaries, and skills by deterministic locality.",
       inputSchema: expandRelatedInputSchema,
-      outputSchema: jsonOutputSchema,
+      outputSchema: expandRelatedOutputSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,

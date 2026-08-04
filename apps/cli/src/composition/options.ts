@@ -39,6 +39,10 @@ export const mcpOptions: readonly OptionSpec[] = [
     description: "MCP guidance policy: neutral or prefer-local",
   },
   {
+    flags: "--tool-profile <profile>",
+    description: "MCP tool surface: agent or advanced",
+  },
+  {
     flags: "--remote-url <url>",
     description: "Proxy stdio to a remote HTTPS MCP endpoint",
   },

@@ -8,6 +8,7 @@ export {
 export { createCodexExecutor } from "./codex";
 export {
   assertHermeticAtlasDiscovery,
+  assertAgentToolRouting,
   aggregateAgentEffect,
   pairOrder,
   runAgentEffectEvaluation,
@@ -27,6 +28,7 @@ export type {
   AgentEffectRunnerConfig,
   AgentEffectSnapshot,
   AgentEffectTask,
+  AgentRoutingExpectation,
   AgentRun,
   AgentRunStatus,
   ArmMetrics,

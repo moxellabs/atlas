@@ -6,8 +6,8 @@ import { z } from "zod";
 import type { IndexedSourceCatalogEntry } from "../discovery/indexed-source-catalog";
 import { toolResult } from "../mcp-result";
 import { listIndexedCoverage } from "../store-mappers";
+import { planContextOutputSchema } from "../schemas/tool-output-schemas";
 import {
-  jsonOutputSchema,
   type PlanContextToolInput,
   planContextInputSchema,
 } from "../schemas/tool-schemas";
@@ -48,7 +48,15 @@ function buildPlanContextResult(
     store: dependencies.retrievalStore,
     query: parsed.query,
     budgetTokens: parsed.budgetTokens,
-    ...(parsed.repoId === undefined ? {} : { repoId: parsed.repoId }),
+    ...(parsed.scope?.repoId === undefined
+      ? {}
+      : { repoId: parsed.scope.repoId }),
+    ...(parsed.scope?.packageId === undefined
+      ? {}
+      : { packageId: parsed.scope.packageId }),
+    ...(parsed.scope?.moduleId === undefined
+      ? {}
+      : { moduleId: parsed.scope.moduleId }),
     ...(parsed.candidateLimit === undefined
       ? {}
       : { candidateLimit: parsed.candidateLimit }),
@@ -108,7 +116,7 @@ function buildPlanContextResult(
         ? "refine_locally"
         : "web_fallback";
   const citations = uniqueCitations(selected);
-  return {
+  return planContextOutputSchema.parse({
     query: parsed.query,
     coverage: {
       status: coverage,
@@ -125,7 +133,7 @@ function buildPlanContextResult(
       ? { recentChanges: recentRepositoryChanges(refreshStateByRepo) }
       : {}),
     ...(parsed.detail === "debug" ? { debug: plan } : {}),
-  };
+  });
 }
 
 /** Registers the plan_context MCP tool. */
@@ -137,12 +145,12 @@ export function registerPlanContextTool(
   return server.registerTool(
     PLAN_CONTEXT_TOOL,
     {
-      title: "Answer from indexed documentation",
+      title: "Build answer-ready context",
       description:
         options.description ??
-        "Use this first to answer a question about an indexed library, framework, API, or repository. Searches the corpus and returns sufficient, partial, absent, or stale evidence with source-relative citations and the next safe action. When coverage is sufficient and context.evidence supports the required claims, answer immediately without calling find_docs, read_section, expand_related, web, or filesystem tools. Retrieve more only when a required claim is unsupported. Use repoId when the source is known.",
+        "Use first for broad or cross-source questions. Returns one token-budgeted, deduplicated evidence packet with inferred scopes, coverage, citations, and the next safe action. Use exact scope constraints when the repository, package, or module is known. Call find_docs or expand_related only when a required claim remains unsupported.",
       inputSchema: planContextInputSchema,
-      outputSchema: jsonOutputSchema,
+      outputSchema: planContextOutputSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -160,6 +168,7 @@ export function registerSourcePlanContextTool(
   server: McpServer,
   dependencies: AtlasRetrievalMcpDependencies,
   source: IndexedSourceCatalogEntry,
+  options: { alwaysLoad: boolean },
 ) {
   const name = `answer_${source.toolSuffix}_docs`;
   return {
@@ -168,36 +177,31 @@ export function registerSourcePlanContextTool(
       name,
       {
         title: `Answer from ${source.title} documentation`,
-        description: `Answer a question from the ${source.fresh ? "fresh" : "stale"} indexed ${source.title} documentation corpus (${source.documentCount} documents), which is independent of the client's current workspace. Returns focused exact passages and source-relative citations. When coverage is sufficient and the returned evidence supports the required claims, answer immediately without calling another retrieval tool or repeating this tool. Source names: ${source.aliases.slice(0, 8).join(", ")}. Covered topics: ${source.topics.slice(0, 24).join(", ")}.`,
+        description: `Use first for questions about ${source.title}. Returns one token-budgeted, deduplicated evidence packet from the ${source.fresh ? "fresh" : "stale"} indexed corpus with source-relative citations. Answer immediately when coverage is sufficient. Aliases: ${source.aliases.slice(0, 5).join(", ")}. Topics: ${source.topics.slice(0, 12).join(", ")}.`,
         inputSchema: sourcePlanContextInputSchema,
-        outputSchema: jsonOutputSchema,
+        outputSchema: planContextOutputSchema,
         annotations: {
           readOnlyHint: true,
           destructiveHint: false,
           idempotentHint: true,
           openWorldHint: false,
         },
-        _meta: { "anthropic/alwaysLoad": true },
+        ...(options.alwaysLoad
+          ? { _meta: { "anthropic/alwaysLoad": true } }
+          : {}),
       },
-      (input) => {
-        const result = buildPlanContextResult(
-          {
-            query: input.query,
-            repoId: source.repoId,
-            budgetTokens: 4_000,
-            candidateLimit: 40,
-          },
-          dependencies,
-        );
-        return toolResult({
-          ...result,
-          exactPassages: selectExactPassages(
-            input.query,
-            result.citations,
+      (input) =>
+        toolResult(
+          buildPlanContextResult(
+            {
+              query: input.query,
+              scope: { repoId: source.repoId },
+              budgetTokens: 4_000,
+              candidateLimit: 40,
+            },
             dependencies,
           ),
-        });
-      },
+        ),
     ),
   };
 }
@@ -224,7 +228,7 @@ function uniqueSelectedSources(
             ? false
             : (freshness?.fresh ?? false);
       return {
-      repoId,
+        repoId,
         fresh,
         stale: !fresh,
         repositoryRefresh:
@@ -256,116 +260,6 @@ function recentRepositoryChanges(
         : { lastCheckedAt: state.lastCheckedAt }),
     }));
 }
-
-function selectExactPassages(
-  query: string,
-  citations: readonly PlanCitation[],
-  dependencies: AtlasRetrievalMcpDependencies,
-) {
-  const terms = queryTerms(query);
-  const compounds = [
-    ...query.toLowerCase().matchAll(/[a-z0-9]+(?:[._/-][a-z0-9]+)+/g),
-  ].map((match) => match[0]!);
-  return citations
-    .slice(0, 3)
-    .flatMap((citation, citationIndex) =>
-      dependencies.retrievalStore
-        .listSectionsByDocument(citation.docId)
-        .map((section) => ({
-          citation,
-          citationIndex,
-          section,
-          score: passageScore(section, terms, compounds, citationIndex),
-        }))
-        .filter((candidate) => candidate.score > 0)
-        .sort(
-          (left, right) =>
-            right.score - left.score ||
-            left.section.ordinal - right.section.ordinal,
-        )
-        .slice(0, 2),
-    )
-    .sort(
-      (left, right) =>
-        right.score - left.score ||
-        left.citationIndex - right.citationIndex ||
-        left.section.ordinal - right.section.ordinal,
-    )
-    .slice(0, 6)
-    .map(({ citation, section }) => ({
-      ...citation,
-      sectionId: section.sectionId,
-      headingPath: section.headingPath,
-      text: section.text,
-      codeBlocks: section.codeBlocks,
-    }));
-}
-
-function passageScore(
-  section: {
-    readonly headingPath: readonly string[];
-    readonly text: string;
-  },
-  terms: ReadonlySet<string>,
-  compounds: readonly string[],
-  citationIndex: number,
-): number {
-  const heading = normalizeSearchText(section.headingPath.join(" "));
-  const text = normalizeSearchText(section.text);
-  let score = Math.max(0, 3 - citationIndex);
-  for (const term of terms) {
-    if (heading.includes(term)) score += 3;
-    if (text.includes(term)) score += 1;
-  }
-  for (const compound of compounds) {
-    const normalized = normalizeSearchText(compound);
-    if (heading.includes(normalized)) score += 6;
-    if (text.includes(normalized)) score += 4;
-  }
-  return score;
-}
-
-function queryTerms(query: string): ReadonlySet<string> {
-  return new Set(
-    normalizeSearchText(query)
-      .split(" ")
-      .map((term) => stem(term))
-      .filter((term) => term.length >= 3 && !PASSAGE_STOP_WORDS.has(term)),
-  );
-}
-
-function normalizeSearchText(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .split(/\s+/)
-    .filter((term) => term.length > 0)
-    .map((term) => stem(term))
-    .join(" ");
-}
-
-function stem(term: string): string {
-  if (term.length > 5 && term.endsWith("ing")) return term.slice(0, -3);
-  if (term.length > 4 && term.endsWith("ed")) return term.slice(0, -2);
-  if (term.length > 4 && term.endsWith("s")) return term.slice(0, -1);
-  return term;
-}
-
-const PASSAGE_STOP_WORDS = new Set([
-  "after",
-  "and",
-  "exactly",
-  "from",
-  "how",
-  "make",
-  "may",
-  "perform",
-  "the",
-  "this",
-  "what",
-  "which",
-  "with",
-]);
 
 function uniqueCitations(
   selected: readonly {

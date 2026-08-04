@@ -25,11 +25,15 @@ order: 240
 
 Default identity remains `atlas-mcp`, Atlas resource names, and `$atlas-*` skill aliases. Explicit identity knobs are `--atlas-mcp-name`, `ATLAS_MCP_NAME`, optional `ATLAS_MCP_TITLE`, and config `identity.mcp.name`, `identity.mcp.title`, `identity.mcp.resourcePrefix`.
 
-Identity changes server metadata, resource display names, and skill aliases. Generic MCP tool names remain stable (`find_docs`, `read_outline`, `read_section`, `plan_context`, `use_skill`). The `atlas://` URI scheme remains stable.
+Identity changes server metadata, resource display names, and skill aliases. Generic MCP tool names remain stable, and the `atlas://` URI scheme does not change.
 
-## Protocol Surface
+## Protocol surface
 
-Tools expose query, scope, document, skill, and context-planning operations with explicit schemas: `find_scopes`, `find_docs`, `read_outline`, `read_section`, `expand_related`, `explain_module`, `use_skill`, and `plan_context`. `use_skill` browses scoped skills, resolves exact IDs/titles/aliases, and returns complete instructions for deterministic task matches. `plan_context` includes local corpus freshness and, for diff questions, bounded changed-path state supplied by the runtime lifecycle service. Resources expose persisted corpus artifacts by stable identifiers: manifest, repo, package, module, document, skill, skill artifact, and summary. Prompts compose common grounding workflows such as onboarding, module explanation, local-doc answers, doc comparison, and skill usage explanation.
+The default `agent` profile exposes `plan_context`, `find_docs`, `read_document`, `expand_related`, `use_skill`, and one `answer_<source>_docs` facade. `plan_context` and source facades are eagerly advertised through `anthropic/alwaysLoad`. All tools publish concrete output schemas.
+
+`read_document` combines outline and exact-section reads. `plan_context` handles module explanations through exact scope constraints and returns one deduplicated evidence packet under one token budget. `use_skill` handles browsing, exact resolution, and deterministic task matching.
+
+The `advanced` profile adds `find_scopes` and exposes up to 12 configured source facades. The CLI selects it with `--tool-profile advanced`; the HTTP server uses `ATLAS_MCP_TOOL_PROFILE=advanced`. Resources expose persisted corpus artifacts by stable identifier. Prompts cover onboarding, module summaries, local-document answers, document comparison, and skill usage.
 
 Transports are runtime adapters. Stdio and Streamable HTTP setup should stay protocol-focused and should receive explicit streams or HTTP primitives from the host runtime.
 

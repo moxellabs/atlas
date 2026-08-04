@@ -16,6 +16,7 @@ import type {
 	RetrievalDiagnostic,
   RetrievalStore,
 	ScopeContext,
+	ScopeCandidate,
 } from "../types";
 import { expandSections } from "./expand-sections";
 import { finalizeContext } from "./finalize-context";
@@ -39,20 +40,35 @@ export function planContext(input: PlanContextInput): PlannedContext {
 		},
 	});
 
-	const scopeResult = inferScopes({
-    store: input.store,
-		query: input.query,
-		classification,
-		...(input.repoId === undefined ? {} : { repoId: input.repoId }),
-		limit: 10,
-	});
-	diagnostics.push(...scopeResult.diagnostics);
+	const exactScope = resolveExactScope(input);
+	const scopeResult =
+		exactScope === undefined
+			? inferScopes({
+					store: input.store,
+					query: input.query,
+					classification,
+					...(input.repoId === undefined ? {} : { repoId: input.repoId }),
+					limit: 10,
+				})
+			: {
+					scopes: [exactScope],
+					diagnostics: [
+						{
+							stage: "scope-inference" as const,
+							message: `Applied exact ${exactScope.level} scope ${exactScope.id}.`,
+							metadata: { exact: true, scopeId: exactScope.id },
+						},
+					],
+				};
 
+	diagnostics.push(...scopeResult.diagnostics);
 	const expandedQuery = expandQuery(input.query);
-  const candidates = gatherCandidates(input.store, {
+	const candidates = gatherCandidates(input.store, {
 		query: input.query,
 		expandedQuery,
-		repoId: input.repoId,
+		repoId: exactScope?.repoId ?? input.repoId,
+		packageId: exactScope?.packageId,
+		moduleId: exactScope?.moduleId,
 		scopes: scopeResult.scopes,
 		candidateLimit: input.candidateLimit ?? DEFAULT_CANDIDATE_LIMIT,
 		countTokens: (text) => encoder.count(text),
@@ -295,6 +311,98 @@ function freshnessScores(store: RetrievalStore): ReadonlyMap<string, number> {
 			];
 		}),
 	);
+}
+
+function resolveExactScope(
+	input: PlanContextInput,
+): ScopeCandidate | undefined {
+	if (input.packageId === undefined && input.moduleId === undefined) {
+		if (
+			input.repoId !== undefined &&
+			input.store.getRepo(input.repoId) === undefined
+		) {
+			throw invalidExactScope(`Unknown repoId: ${input.repoId}`);
+		}
+		return undefined;
+	}
+
+	const moduleRecord =
+		input.moduleId === undefined
+			? undefined
+			: input.store.getModule(input.moduleId);
+	if (input.moduleId !== undefined && moduleRecord === undefined) {
+		throw invalidExactScope(`Unknown moduleId: ${input.moduleId}`);
+	}
+	const packageId = input.packageId ?? moduleRecord?.packageId;
+	const packageRecord =
+		packageId === undefined ? undefined : input.store.getPackage(packageId);
+	if (packageId !== undefined && packageRecord === undefined) {
+		throw invalidExactScope(`Unknown packageId: ${packageId}`);
+	}
+	if (
+		input.packageId !== undefined &&
+		moduleRecord !== undefined &&
+		moduleRecord.packageId !== input.packageId
+	) {
+		throw invalidExactScope(
+			`Module ${moduleRecord.moduleId} does not belong to package ${input.packageId}.`,
+		);
+	}
+	const repoId = input.repoId ?? moduleRecord?.repoId ?? packageRecord?.repoId;
+	if (repoId === undefined || input.store.getRepo(repoId) === undefined) {
+		throw invalidExactScope(`Unknown repoId: ${repoId ?? "undefined"}`);
+	}
+	if (moduleRecord !== undefined && moduleRecord.repoId !== repoId) {
+		throw invalidExactScope(
+			`Module ${moduleRecord.moduleId} does not belong to repository ${repoId}.`,
+		);
+	}
+	if (packageRecord !== undefined && packageRecord.repoId !== repoId) {
+		throw invalidExactScope(
+			`Package ${packageRecord.packageId} does not belong to repository ${repoId}.`,
+		);
+	}
+
+	if (moduleRecord !== undefined) {
+		return {
+			level: "module",
+			id: moduleRecord.moduleId,
+			label: moduleRecord.name,
+			repoId,
+			...(packageId === undefined ? {} : { packageId }),
+			moduleId: moduleRecord.moduleId,
+			score: 1,
+			rationale: [`Applied exact module constraint ${moduleRecord.moduleId}.`],
+		};
+	}
+	if (packageRecord !== undefined) {
+		return {
+			level: "package",
+			id: packageRecord.packageId,
+			label: packageRecord.name,
+			repoId,
+			packageId: packageRecord.packageId,
+			score: 1,
+			rationale: [
+				`Applied exact package constraint ${packageRecord.packageId}.`,
+			],
+		};
+	}
+	return {
+		level: "repo",
+		id: repoId,
+		label: repoId,
+		repoId,
+		score: 1,
+		rationale: [`Applied exact repository constraint ${repoId}.`],
+	};
+}
+
+function invalidExactScope(message: string): RetrievalConfigurationError {
+	return new RetrievalConfigurationError(message, {
+		operation: "planContext",
+		entity: "scope",
+	});
 }
 
 function countBy<T>(
