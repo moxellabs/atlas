@@ -7,6 +7,8 @@ import {
 	toPlannedItem,
 } from "./select-summaries";
 
+const MAX_DETAIL_ITEMS_PER_DOCUMENT = 2;
+
 /** Input for detail expansion after summary-first planning. */
 export interface ExpandSectionsInput {
 	/** Ranked hits available for expansion. */
@@ -43,8 +45,21 @@ export function expandSections(
 	}
 
 	let added = 0;
-	const seenDocs = new Set(state.selected.map((item) => item.provenance.docId));
-	for (const hit of orderExpansionHits(input.rankedHits, input.queryKind)) {
+	const selectedDetailCounts = new Map<string, number>();
+	const seenEvidence = new Set<string>();
+	for (const item of state.selected) {
+		if (item.targetType === "summary") {
+			continue;
+		}
+		const docId = item.provenance.docId;
+		selectedDetailCounts.set(docId, (selectedDetailCounts.get(docId) ?? 0) + 1);
+		seenEvidence.add(evidenceKey(item));
+	}
+	for (const hit of orderExpansionHits(
+		input.rankedHits,
+		input.queryKind,
+		input.query,
+	)) {
     if (!isExpansionTarget(hit)) {
 			continue;
 		}
@@ -58,24 +73,35 @@ export function expandSections(
       state.omitted.push(toPlannedItem(hit, "Expansion limit reached."));
 			continue;
 		}
+		const key = evidenceKey(hit);
+		if (seenEvidence.has(key)) {
+			state.omitted.push(
+				toPlannedItem(
+					hit,
+					"Skipped redundant expansion for an already selected evidence heading.",
+				),
+			);
+			continue;
+		}
+		const docId = hit.provenance.docId;
 		if (
-			seenDocs.has(hit.provenance.docId) &&
-			state.selected.some(
-				(item) =>
-					item.targetType !== "summary" &&
-					item.provenance.docId === hit.provenance.docId,
-			)
+			(selectedDetailCounts.get(docId) ?? 0) >=
+			MAX_DETAIL_ITEMS_PER_DOCUMENT
 		) {
 			state.omitted.push(
 				toPlannedItem(
 					hit,
-					"Skipped redundant expansion from an already selected document.",
+					"Skipped redundant expansion after selecting two distinct passages from the document.",
 				),
 			);
 			continue;
 		}
 		if (appendIfBudgetAllows(state, hit, "Selected during detail expansion.")) {
-			seenDocs.add(hit.provenance.docId);
+			seenEvidence.add(key);
+			selectedDetailCounts.set(
+				docId,
+				(selectedDetailCounts.get(docId) ?? 0) + 1,
+			);
 			added += 1;
 		}
 	}
@@ -123,10 +149,12 @@ function defaultExpansionLimit(queryKind: QueryKind): number {
 function orderExpansionHits(
 	hits: readonly RankedHit[],
 	queryKind: QueryKind,
+	query: string | undefined,
 ): RankedHit[] {
 	return [...hits].sort((left, right) => {
 		const priorityDelta =
-			expansionPriority(right, queryKind) - expansionPriority(left, queryKind);
+			expansionPriority(right, queryKind, query) -
+			expansionPriority(left, queryKind, query);
 		return (
 			priorityDelta ||
 			right.score - left.score ||
@@ -135,13 +163,20 @@ function orderExpansionHits(
 	});
 }
 
-function expansionPriority(hit: RankedHit, queryKind: QueryKind): number {
+function expansionPriority(
+	hit: RankedHit,
+	queryKind: QueryKind,
+	query: string | undefined,
+): number {
 	const targetType = hit.targetType;
 	if (queryKind === "usage" || queryKind === "troubleshooting") {
 		return usageExpansionPriority(targetType);
 	}
 	if (queryKind === "skill-invocation") {
 		return skillExpansionPriority(targetType);
+	}
+	if (queryKind === "exact-lookup" && isNaturalLanguageQuery(query)) {
+		return naturalLanguageLookupPriority(targetType);
 	}
 	if (queryKind === "exact-lookup" || queryKind === "location") {
 		return lookupExpansionPriority(hit);
@@ -165,6 +200,18 @@ function skillExpansionPriority(targetType: RankedHit["targetType"]): number {
 		section: 4,
 		chunk: 4,
 		fallback: 2,
+	});
+}
+
+function naturalLanguageLookupPriority(
+	targetType: RankedHit["targetType"],
+): number {
+	return targetTypePriority(targetType, {
+		section: 5,
+		chunk: 5,
+		skill: 4,
+		document: 3,
+		fallback: 1,
 	});
 }
 
@@ -199,6 +246,22 @@ function targetTypePriority(
 	},
 ): number {
 	return weights[targetType] ?? weights.fallback;
+}
+
+function isNaturalLanguageQuery(query: string | undefined): boolean {
+	return query !== undefined && query.trim().split(/\s+/).length > 1;
+}
+
+function evidenceKey(
+	item: Pick<RankedHit, "targetType" | "targetId" | "provenance">,
+): string {
+	const headingPath = item.provenance.headingPath;
+	if (headingPath !== undefined && headingPath.length > 0) {
+		return `${item.provenance.docId}:heading:${headingPath
+			.map((heading) => heading.trim().toLowerCase())
+			.join("\u001f")}`;
+	}
+	return `${item.provenance.docId}:${item.targetType}:${item.targetId}`;
 }
 
 function cloneState(state: PlanningSelectionState): PlanningSelectionState {
