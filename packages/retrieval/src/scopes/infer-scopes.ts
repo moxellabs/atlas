@@ -276,18 +276,24 @@ function scoreLabel(
 		}
 		if (query === value) {
 			score += 1;
-		} else if (query.includes(value) || value.includes(query)) {
-			// Only treat full phrase containment as strong when the value is
-			// specific enough to avoid short-token false positives.
-			if (value.length >= 6 || query.length >= 6) {
-				score += 0.72;
-			}
+		} else if (
+			(query.includes(value) || value.includes(query)) &&
+			isSpecificScopeValue(value)
+		) {
+			// Phrase containment is strong only for a qualified name or path.
+			// Bare module words such as "runtime", "scopes", or "repos" are
+			// common query vocabulary and must not create false ambiguity.
+			score += 0.72;
 		}
 		const valueTerms = new Set(terms(value));
 		const overlap = queryTerms.filter((term) => valueTerms.has(term));
 		score += Math.min(0.42, overlap.length * 0.14);
 	}
 	return clampScore(score);
+}
+
+function isSpecificScopeValue(value: string): boolean {
+	return /[/@._\s-]/.test(value);
 }
 
 function clampScore(score: number): number {

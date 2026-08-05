@@ -43,7 +43,7 @@ export function executeFindDocs(
     nextActionGuidance:
       result.hits.length === 0
         ? "No indexed hit supports this claim. Use an external source if the claim still requires an answer."
-        : "Answer now from the highest-ranked supporting textPreview. If that preview is truncated, call read_document once for the same hit. Do not repeat find_docs.",
+        : "Answer now from the highest-ranked supporting textPreview. If that preview is truncated, call read_document once for the same hit. Do not repeat find_docs or infer repository-wide absence from the returned hit set.",
   });
 }
 
@@ -57,7 +57,7 @@ export function registerFindDocsTool(
     {
       title: "Find indexed passages",
       description:
-        "Call once for an exact rule or location, one missing claim from a partial answer, or retrieval debugging. Returns ranked document, section, chunk, or skill hits with text previews. Do not refine by repeating find_docs; answer from the highest-ranked supporting preview or read that hit once when truncated. Use plan_context only for ambiguity, comparison, module boundaries, or multi-passage planning.",
+        "Call once for an exact rule or location, one missing claim from a partial answer, or retrieval debugging. Returns ranked document, section, chunk, or skill hits with text previews. Do not refine by repeating find_docs or infer repository-wide absence from its bounded hit set; answer from the highest-ranked supporting preview or read that hit once when truncated. Use plan_context only for ambiguity, comparison, module boundaries, or multi-passage planning.",
       inputSchema: findDocsInputSchema,
       outputSchema: findDocsOutputSchema,
       annotations: {

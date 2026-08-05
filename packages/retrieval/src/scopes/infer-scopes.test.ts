@@ -40,6 +40,10 @@ describe("inferScopes", () => {
         (scope) => scope.level === "module" && scope.id === sessionModuleId,
       ),
     ).toBe(true);
+    const inferredModule = result.scopes.find(
+      (scope) => scope.level === "module" && scope.id === sessionModuleId,
+    );
+    expect(inferredModule?.score).toBeLessThan(0.62);
     expect(result.diagnostics[0]).toMatchObject({ stage: "scope-inference" });
   });
 });

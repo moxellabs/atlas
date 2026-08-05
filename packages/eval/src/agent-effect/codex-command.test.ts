@@ -96,6 +96,14 @@ describe("Codex command policy", () => {
         evidence,
       ),
     ).toContain("AUTHORITATIVE_JUDGE_ONLY_EVIDENCE");
+    expect(
+      judgePrompt(
+        dataset.tasks[0]!,
+        { answer: "left", citations: [] },
+        { answer: "right", citations: [] },
+        evidence,
+      ),
+    ).toContain("not an exclusive allowlist");
     expect(prompt).not.toContain("AUTHORITATIVE_JUDGE_ONLY_EVIDENCE");
   });
 

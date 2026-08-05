@@ -16,7 +16,7 @@
       "sourceCaseId": "routing-broad",
       "title": "Broad repository question",
       "category": "broad-answer",
-      "prompt": "Explain how Atlas turns indexed repository documentation into an answer-ready context packet. Include the main runtime boundary and cite the repository documentation you used.",
+      "prompt": "At query time, explain how Atlas turns already-indexed repository documentation into an answer-ready context packet: cover classification, scope inference, candidate generation, ranking, token-budgeted planning, and presenter output, then state the main runtime boundary. Cite the repository documentation you used.",
       "routing": {
         "firstTools": ["atlas:answer_atlas_docs", "atlas:plan_context"],
         "maxAtlasCalls": 1,
@@ -66,10 +66,10 @@
       "sourceCaseId": "routing-exact",
       "title": "Exact passage retrieval",
       "category": "exact-retrieval",
-      "prompt": "Find the precise documented rule for when an agent should use plan_context instead of find_docs. Quote or closely paraphrase that rule and cite its repository path.",
+      "prompt": "Retrieve one precise documented passage for when an agent should use plan_context instead of find_docs; no corroborating document is needed. Quote or closely paraphrase that one rule and cite its repository path.",
       "routing": {
         "firstTools": ["atlas:find_docs"],
-        "maxAtlasCalls": 2,
+        "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },
       "criteria": [
@@ -110,10 +110,10 @@
       "sourceCaseId": "routing-partial",
       "title": "Partial-answer follow-up",
       "category": "follow-up",
-      "prompt": "A prior answer established that Atlas artifacts are read-only but did not explain MCP stale-coverage behavior. In prefer-local mode, what happens when local indexed coverage is absent, partial, or stale? Retrieve only that missing behavior, then answer with a citation.",
+      "prompt": "A prior answer established that Atlas artifacts are read-only but omitted one MCP rule. Return only the documented prefer-local behavior when local indexed coverage is absent, partial, or stale; do not investigate implementation details. Cite the passage.",
       "routing": {
         "firstTools": ["atlas:find_docs"],
-        "maxAtlasCalls": 2,
+        "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },
       "criteria": [
