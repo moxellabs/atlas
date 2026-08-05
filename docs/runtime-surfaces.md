@@ -49,15 +49,15 @@ Repo target inference is shared across repo-targeting commands. Explicit `--repo
 
 Expected behavior matrix:
 
-| Prompt type                        | Expected behavior                                                                                                   |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Broad indexed-source prompt        | Call `answer_<source>_docs` or `plan_context`; answer when the packet is sufficient.                                |
-| Exact passage prompt               | Call `find_docs`, then read one exact section only if its preview is insufficient.                                  |
-| Known stable result                | Call `expand_related` only for a missing related claim.                                                             |
-| Skill or procedure prompt          | Call `use_skill` directly.                                                                                          |
-| Absent, partial, or stale coverage | Prefer local indexed evidence when sufficient; retain external fallback when coverage is absent, partial, or stale. |
-| Generic prompt                     | No Atlas MCP calls.                                                                                                 |
-| Security-sensitive prompt          | No Atlas MCP calls, no remote fetch, no credential echo.                                                            |
+| Prompt type                        | Expected behavior                                                                                                    |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Broad indexed-source prompt        | Call `answer_<source>_docs` or `plan_context`; answer when the packet is sufficient.                                 |
+| Exact passage prompt               | Call `search_passages`; open a known `docId` with `read_document` only when an outline or exact section is required. |
+| Known stable result                | Call `expand_related` only for a missing related claim.                                                              |
+| Skill or procedure prompt          | Call `use_skill` directly.                                                                                           |
+| Absent, partial, or stale coverage | Prefer local indexed evidence when sufficient; retain external fallback when coverage is absent, partial, or stale.  |
+| Generic prompt                     | No Atlas MCP calls.                                                                                                  |
+| Security-sensitive prompt          | No Atlas MCP calls, no remote fetch, no credential echo.                                                             |
 
 `adoptionScore` is `passedCases / totalCases`. Failed adoption cases make the CLI exit non-zero. Adoption fixtures are local JSON traces; they do not start network services, fetch remote repositories, or read environment tokens.
 
@@ -75,7 +75,7 @@ Local browser CORS allows `http://localhost`, `http://127.0.0.1`, and `http://[:
 
 `packages/mcp` exposes tools, resources, and prompts over stdio or Streamable HTTP. The server mounts Streamable HTTP at `/mcp` when enabled. MCP calls read from local store and retrieval services. `plan_context` may include state from the host runtime's background lifecycle, but the call itself never syncs, builds, or fetches remote source.
 
-The default `agent` profile advertises `plan_context`, `find_docs`, `read_document`, `expand_related`, `use_skill`, and one configured `answer_<source>_docs` facade. It does not expose addressable resources because clients can mistake resource traversal for evidence retrieval. The primary source facade carries `anthropic/alwaysLoad` and returns the strongest passage for a broad question. `plan_context` remains discoverable without forced preload and owns ambiguity, comparison, module boundaries, and multi-passage planning. Additional advanced-profile facades also remain discoverable without forced preload. Source aliases, topics, coverage, freshness, repository-relative citations, and explicit next-action guidance let clients route indexed-source questions and stop retrieval when the returned evidence is sufficient.
+The default `agent` profile advertises `plan_context`, `search_passages`, `read_document`, `expand_related`, `use_skill`, and one configured `answer_<source>_docs` facade. `search_passages` discovers evidence from a query; `read_document` only opens a known `docId`. The profile does not expose addressable resources because clients can mistake resource traversal for evidence retrieval. The primary source facade carries `anthropic/alwaysLoad` and returns the strongest passage for a broad question. `plan_context` remains discoverable without forced preload and owns ambiguity, comparison, module boundaries, and multi-passage planning. Additional advanced-profile facades also remain discoverable without forced preload. Source aliases, topics, coverage, freshness, repository-relative citations, and explicit next-action guidance let clients route indexed-source questions and stop retrieval when the returned evidence is sufficient.
 
 Use `atlas mcp --tool-profile advanced` for local stdio inspection or set `ATLAS_MCP_TOOL_PROFILE=advanced` on the HTTP server. This adds `find_scopes`, permits up to 12 configured source facades, and exposes addressable MCP resources for explicit inspection after a retrieval tool returns a stable identifier. The default profile keeps one source facade and no resources. `neutral` is the default discovery policy; `prefer-local` asks clients to consult matching indexed sources first while preserving fallback for absent, partial, or stale coverage.
 
@@ -164,7 +164,7 @@ atlas search shared-platform-token
 atlas search shared-platform-token --repo github.mycorp.com/platform/docs
 ```
 
-Unscoped search and retrieval can return results from multiple imported repos. Repo-scoped search/retrieval filters use canonical IDs such as `github.mycorp.com/platform/docs`. MCP `find_docs` and `plan_context` preserve repo provenance on each returned item.
+Unscoped search and retrieval can return results from multiple imported repos. Repo-scoped search/retrieval filters use canonical IDs such as `github.mycorp.com/platform/docs`. MCP `search_passages` and `plan_context` preserve repo provenance on each returned item.
 
 After import, queries do not need artifact files and do not fetch remote source at query time. `atlas repo remove github.mycorp.com/platform/docs` removes imported results for that repo from CLI, retrieval, MCP, and server runtime surfaces while preserving other repos.
 

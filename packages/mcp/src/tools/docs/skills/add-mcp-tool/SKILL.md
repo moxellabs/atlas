@@ -15,7 +15,7 @@ Use this skill for changes in `packages/mcp/src/tools`. MCP tools expose local A
    - Reuse existing schemas where possible.
 
 2. Implement executor and registration.
-   - Follow existing tool modules such as `find-docs.tool.ts` or `plan-context.tool.ts`.
+   - Follow existing tool modules such as `search-passages.tool.ts` or `plan-context.tool.ts`.
    - Split pure executor behavior from registration.
    - Return through shared result helpers from `mcp-result.ts`.
    - Map dependency or validation failures to structured MCP errors.

@@ -203,7 +203,7 @@ export const findScopesOutputSchema = z
   })
   .strict();
 
-export const findDocsOutputSchema = z
+export const searchPassagesOutputSchema = z
   .object({
     query: z.string(),
     nextAction: z.enum(["answer_locally", "web_fallback"]),

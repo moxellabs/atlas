@@ -8,18 +8,9 @@
       "category": "cli-workflow",
       "query": "When should a maintainer run atlas init and what repo-local files does it prepare?",
       "expected": {
-        "pathIncludes": [
-          "docs/ingestion-build-flow.md"
-        ],
-        "terms": [
-          "atlas init",
-          ".moxel/atlas",
-          "manifest.json"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["atlas init", ".moxel/atlas", "manifest.json"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "maintainer",
       "feature": "cli-init",
@@ -37,18 +28,9 @@
       "category": "cli-workflow",
       "query": "How does atlas build --profile public create a committed public artifact?",
       "expected": {
-        "pathIncludes": [
-          "docs/ingestion-build-flow.md"
-        ],
-        "terms": [
-          "atlas build --profile public",
-          "public",
-          "docs.index.json"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["atlas build --profile public", "public", "docs.index.json"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "maintainer",
       "feature": "cli-build",
@@ -66,19 +48,9 @@
       "category": "cli-workflow",
       "query": "What does atlas repo add org/repo do for a consumer importing documentation?",
       "expected": {
-        "pathIncludes": [
-          "docs/ingestion-build-flow.md",
-          "docs/index.md"
-        ],
-        "terms": [
-          "atlas repo add",
-          "imports",
-          "artifact"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/ingestion-build-flow.md", "docs/index.md"],
+        "terms": ["atlas repo add", "imports", "artifact"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "consumer",
       "feature": "cli-repo-add",
@@ -96,18 +68,9 @@
       "category": "cli-workflow",
       "query": "Where does atlas repo list read registry metadata from?",
       "expected": {
-        "pathIncludes": [
-          "docs/runtime-surfaces.md"
-        ],
-        "terms": [
-          "atlas repo list",
-          "repo.json",
-          "~/.moxel/atlas/repos"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/runtime-surfaces.md"],
+        "terms": ["atlas repo list", "repo.json", "~/.moxel/atlas/repos"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "operator",
       "feature": "cli-repo-list",
@@ -129,15 +92,8 @@
           "docs/ingestion-build-flow.md",
           "docs/troubleshooting.md"
         ],
-        "terms": [
-          "repo show",
-          "repo target inference",
-          "explicit flags"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "terms": ["repo show", "repo target inference", "explicit flags"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "operator",
       "feature": "cli-repo-show",
@@ -155,19 +111,9 @@
       "category": "cli-workflow",
       "query": "Show atlas search examples for querying deployment rollback in an imported repo.",
       "expected": {
-        "pathIncludes": [
-          "README.md",
-          "docs/ingestion-build-flow.md"
-        ],
-        "terms": [
-          "atlas search",
-          "deployment rollback",
-          "--repo"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["README.md", "docs/ingestion-build-flow.md"],
+        "terms": ["atlas search", "deployment rollback", "--repo"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "consumer",
       "feature": "cli-search",
@@ -185,18 +131,9 @@
       "category": "cli-workflow",
       "query": "Which Atlas CLI command inspects retrieval with --query and --repo?",
       "expected": {
-        "pathIncludes": [
-          "docs/index.md"
-        ],
-        "terms": [
-          "atlas inspect retrieval",
-          "--query",
-          "--repo"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/index.md"],
+        "terms": ["atlas inspect retrieval", "--query", "--repo"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "agent-user",
       "feature": "cli-inspect-retrieval",
@@ -214,18 +151,9 @@
       "category": "cli-workflow",
       "query": "What does atlas artifact verify --fresh check in maintainer CI?",
       "expected": {
-        "pathIncludes": [
-          "docs/ingestion-build-flow.md"
-        ],
-        "terms": [
-          "artifact verify --fresh",
-          "CI",
-          "stale"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["artifact verify --fresh", "CI", "stale"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "maintainer",
       "feature": "cli-artifact-verify",
@@ -243,18 +171,9 @@
       "category": "cli-workflow",
       "query": "What does atlas doctor validate for local prerequisites credentials and store readiness?",
       "expected": {
-        "pathIncludes": [
-          "docs/runtime-surfaces.md"
-        ],
-        "terms": [
-          "doctor",
-          "credentials",
-          "store readiness"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/runtime-surfaces.md"],
+        "terms": ["doctor", "credentials", "store readiness"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "operator",
       "feature": "cli-doctor",
@@ -272,18 +191,13 @@
       "category": "cli-workflow",
       "query": "For production build triage, what command uses bunx @mrmendez/atlas build --json --verbose?",
       "expected": {
-        "pathIncludes": [
-          "docs/index.md"
-        ],
+        "pathIncludes": ["docs/index.md"],
         "terms": [
           "production build triage",
           "--json --verbose",
           "inspect topology --live"
         ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "operator",
       "feature": "production-triage",
@@ -301,19 +215,9 @@
       "category": "cli-workflow",
       "query": "What public consumer workflow uses atlas setup, atlas repo add, and atlas search how to deploy?",
       "expected": {
-        "pathIncludes": [
-          "docs/ingestion-build-flow.md",
-          "README.md"
-        ],
-        "terms": [
-          "Public Consumer Workflow",
-          "atlas setup",
-          "how to deploy"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/ingestion-build-flow.md", "README.md"],
+        "terms": ["Public Consumer Workflow", "atlas setup", "how to deploy"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "consumer",
       "feature": "uat-docs",
@@ -331,19 +235,9 @@
       "category": "cli-workflow",
       "query": "How can a consumer generate maintainer onboarding text with atlas adoption-template or repo add --issue-pr-instructions?",
       "expected": {
-        "pathIncludes": [
-          "docs/ingestion-build-flow.md",
-          "docs/index.md"
-        ],
-        "terms": [
-          "adoption-template",
-          "--issue-pr-instructions",
-          "copyable"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/ingestion-build-flow.md", "docs/index.md"],
+        "terms": ["adoption-template", "--issue-pr-instructions", "copyable"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "consumer",
       "feature": "maintainer-onboarding",

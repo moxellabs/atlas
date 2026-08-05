@@ -39,7 +39,7 @@ export { skillArtifactResource } from "./resources/skill-artifact.resource";
 export { summaryResource } from "./resources/summary.resource";
 export type {
   ExpandRelatedInput,
-  FindDocsInput,
+  SearchPassagesInput,
   FindScopesInput,
   PlanContextToolInput,
   ReadDocumentInput,
@@ -47,7 +47,7 @@ export type {
 } from "./schemas/tool-schemas";
 export {
   expandRelatedInputSchema,
-  findDocsInputSchema,
+  searchPassagesInputSchema,
   findScopesInputSchema,
   limitSchema,
   planContextInputSchema,
@@ -58,7 +58,7 @@ export {
 } from "./schemas/tool-schemas";
 export {
   expandRelatedOutputSchema,
-  findDocsOutputSchema,
+  searchPassagesOutputSchema,
   findScopesOutputSchema,
   planContextOutputSchema,
   readDocumentOutputSchema,
@@ -86,10 +86,10 @@ export {
   registerExpandRelatedTool,
 } from "./tools/expand-related.tool";
 export {
-  executeFindDocs,
-  FIND_DOCS_TOOL,
-  registerFindDocsTool,
-} from "./tools/find-docs.tool";
+  executeSearchPassages,
+  SEARCH_PASSAGES_TOOL,
+  registerSearchPassagesTool,
+} from "./tools/search-passages.tool";
 export {
   executeFindScopes,
   FIND_SCOPES_TOOL,

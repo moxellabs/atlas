@@ -471,7 +471,7 @@ repos:
           serverReceivedRefreshStateProvider =
             deps.repositoryRefreshStateProvider === lifecycle;
           return {
-            tools: ["find_docs"],
+            tools: ["search_passages"],
             resources: ["atlas-document"],
             prompts: ["onboard_to_repo"],
             diagnostics: [],
@@ -500,7 +500,7 @@ repos:
       command: "mcp",
       data: {
         transport: "stdio",
-        tools: ["find_docs"],
+        tools: ["search_passages"],
       },
     });
     expect(connectedTransport).toBe(transport);
@@ -542,7 +542,12 @@ repos:
           receivedDiscoveryPolicy = discoveryPolicy;
           receivedToolProfile = toolProfile;
           return {
-            tools: ["find_docs", "read_document", "plan_context", "use_skill"],
+            tools: [
+              "search_passages",
+              "read_document",
+              "plan_context",
+              "use_skill",
+            ],
             resources: ["acme-document"],
             prompts: [],
             diagnostics: [],

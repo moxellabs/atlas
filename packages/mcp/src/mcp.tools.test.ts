@@ -38,7 +38,7 @@ import {
   useSkillInputSchema,
 } from "./schemas/tool-schemas";
 import { executeExpandRelated } from "./tools/expand-related.tool";
-import { executeFindDocs } from "./tools/find-docs.tool";
+import { executeSearchPassages } from "./tools/search-passages.tool";
 import { executeFindScopes } from "./tools/find-scopes.tool";
 import { executePlanContext } from "./tools/plan-context.tool";
 import { executeReadDocument } from "./tools/read-document.tool";
@@ -127,7 +127,7 @@ describe("MCP tool contracts", () => {
       ]),
     );
     expect(
-      executeFindDocs(
+      executeSearchPassages(
         { query: "session rotation", repoId, limit: 5 },
         dependencies,
       ).hits,
@@ -139,7 +139,7 @@ describe("MCP tool contracts", () => {
       ]),
     );
     expect(
-      executeFindDocs(
+      executeSearchPassages(
         { query: "session rotation", repoId, limit: 5 },
         dependencies,
       ),
@@ -149,7 +149,7 @@ describe("MCP tool contracts", () => {
         "Do not call another Atlas tool",
       ),
     });
-    const filteredHits = executeFindDocs(
+    const filteredHits = executeSearchPassages(
       {
         query: "session rotation",
         repoId,
@@ -284,7 +284,7 @@ describe("MCP tool contracts", () => {
       },
     };
 
-    const result = executeFindDocs(
+    const result = executeSearchPassages(
       { query: "session token renewal", repoId, limit: 1 },
       { db: store, retrievalStore: observedStore },
     );
@@ -1113,7 +1113,7 @@ describe("MCP tool contracts", () => {
     expect(documentUriTemplate).not.toContain("acme://");
     expect(server.tools).toEqual(
       expect.arrayContaining([
-        "find_docs",
+        "search_passages",
         "read_document",
         "plan_context",
         "use_skill",

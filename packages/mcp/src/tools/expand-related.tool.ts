@@ -110,7 +110,7 @@ export function registerExpandRelatedTool(
     {
       title: "Expand one stored retrieval hit",
       description:
-        "Use once after find_docs, plan_context, or read_document returns a stable targetType and targetId and a related claim remains unsupported. Pass the missing claim in query to rank related documents around that anchor; omit query for scope locality. Returned summaries are answer evidence: cite their provenance paths and state only source-backed content, not packet ranking, result order, canonical status, or relationship metadata. Omit opaque corpus IDs unless the user asks for them. Do not read every candidate, restart retrieval, or repeat expand_related.",
+        "Use once after search_passages, plan_context, or read_document returns a stable targetType and targetId and a related claim remains unsupported. Pass the missing claim in query to rank related documents around that anchor; omit query for scope locality. Returned summaries are answer evidence: cite their provenance paths and state only source-backed content, not packet ranking, result order, canonical status, or relationship metadata. Omit opaque corpus IDs unless the user asks for them. Do not read every candidate, restart retrieval, or repeat expand_related.",
       inputSchema: expandRelatedInputSchema,
       outputSchema: expandRelatedOutputSchema,
       annotations: {

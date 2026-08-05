@@ -31,7 +31,10 @@ import {
   EXPAND_RELATED_TOOL,
   registerExpandRelatedTool,
 } from "../tools/expand-related.tool";
-import { FIND_DOCS_TOOL, registerFindDocsTool } from "../tools/find-docs.tool";
+import {
+  SEARCH_PASSAGES_TOOL,
+  registerSearchPassagesTool,
+} from "../tools/search-passages.tool";
 import {
   FIND_SCOPES_TOOL,
   registerFindScopesTool,
@@ -59,7 +62,7 @@ import {
 
 const AGENT_TOOL_NAMES = [
   PLAN_CONTEXT_TOOL,
-  FIND_DOCS_TOOL,
+  SEARCH_PASSAGES_TOOL,
   READ_DOCUMENT_TOOL,
   EXPAND_RELATED_TOOL,
   USE_SKILL_TOOL,
@@ -67,19 +70,19 @@ const AGENT_TOOL_NAMES = [
 const ADVANCED_TOOL_NAMES = [
   PLAN_CONTEXT_TOOL,
   FIND_SCOPES_TOOL,
-  FIND_DOCS_TOOL,
+  SEARCH_PASSAGES_TOOL,
   READ_DOCUMENT_TOOL,
   EXPAND_RELATED_TOOL,
   USE_SKILL_TOOL,
 ] as const;
 const BOUNDED_REMOTE_AGENT_TOOL_NAMES = [
   PLAN_CONTEXT_TOOL,
-  FIND_DOCS_TOOL,
+  SEARCH_PASSAGES_TOOL,
 ] as const;
 const BOUNDED_REMOTE_ADVANCED_TOOL_NAMES = [
   PLAN_CONTEXT_TOOL,
   FIND_SCOPES_TOOL,
-  FIND_DOCS_TOOL,
+  SEARCH_PASSAGES_TOOL,
 ] as const;
 
 const DEFAULT_RESOURCE_NAMES = [
@@ -251,7 +254,7 @@ function registerTools(
   const planTool = registerPlanContextTool(server, dependencies, {
     description: genericPlanDescription(catalog),
   });
-  registerFindDocsTool(server, dependencies);
+  registerSearchPassagesTool(server, dependencies);
   if (dependencies.toolProfile === "advanced") {
     registerFindScopesTool(server, dependencies);
   }

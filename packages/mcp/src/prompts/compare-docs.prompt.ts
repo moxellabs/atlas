@@ -7,7 +7,7 @@ export const compareDocsPrompt: AtlasPromptDefinition = {
   description:
     "Compare local ATLAS documents or scopes with provenance-first grounding.",
   text: [
-    "Use plan_context for the comparison evidence packet, find_docs for a precise missing passage, and read_document for one exact cited section.",
+    "Use plan_context for the comparison evidence packet, search_passages for a precise missing passage, and read_document for one exact cited section by docId.",
     "Compare only documents, sections, or scopes that the retrieved ATLAS context supports.",
     "Separate confirmed similarities, confirmed differences, conflicts, and missing evidence.",
     "Cite document paths, section headings, and provenance for each claim that depends on local documentation.",

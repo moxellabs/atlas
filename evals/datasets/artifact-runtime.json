@@ -8,18 +8,9 @@
       "category": "artifact-runtime",
       "query": "Atlas MCP and Retrieval Evals quick start prefers repo-local .moxel/atlas/corpus.db artifact when present",
       "expected": {
-        "pathIncludes": [
-          "docs/index.md"
-        ],
-        "terms": [
-          ".moxel/atlas",
-          "local corpus",
-          "MCP"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/index.md"],
+        "terms": [".moxel/atlas", "local corpus", "MCP"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "maintainer",
       "feature": "eval-runtime-selection",
@@ -41,15 +32,8 @@
           "docs/ingestion-build-flow.md",
           "docs/runtime-surfaces.md"
         ],
-        "terms": [
-          "~/.moxel/atlas/corpus.db",
-          "global corpus",
-          "repo add"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "terms": ["~/.moxel/atlas/corpus.db", "global corpus", "repo add"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "operator",
       "feature": "global-corpus",
@@ -77,10 +61,7 @@
           "GitHub/GHES",
           "artifact-only"
         ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "consumer",
       "feature": "artifact-only-import",
@@ -102,15 +83,8 @@
           "docs/ingestion-build-flow.md",
           "docs/troubleshooting.md"
         ],
-        "terms": [
-          "manifest schema",
-          "checksums",
-          "secret/path safety"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "terms": ["manifest schema", "checksums", "secret/path safety"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "maintainer",
       "feature": "artifact-verification",
@@ -128,18 +102,13 @@
       "category": "artifact-runtime",
       "query": "What rebuild guidance appears when an artifact is stale and should run atlas build and commit .moxel/atlas?",
       "expected": {
-        "pathIncludes": [
-          "docs/ingestion-build-flow.md"
-        ],
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
         "terms": [
           "Artifact is stale; run atlas build and commit .moxel/atlas.",
           "artifact verify --fresh",
           "indexed revision"
         ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "maintainer",
       "feature": "rebuild-guidance",
@@ -157,18 +126,13 @@
       "category": "artifact-runtime",
       "query": "If artifact validation or import fails during repo add, what happens to repo.json and previous global rows?",
       "expected": {
-        "pathIncludes": [
-          "docs/ingestion-build-flow.md"
-        ],
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
         "terms": [
           "repo.json",
           "not marked as imported",
           "previous global rows remain intact"
         ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "operator",
       "feature": "import-recovery",
@@ -186,18 +150,9 @@
       "category": "artifact-runtime",
       "query": "Where are source revisions indexedRevision and diagnostic report metadata documented for artifacts and build reports?",
       "expected": {
-        "pathIncludes": [
-          "docs/ingestion-build-flow.md"
-        ],
-        "terms": [
-          "indexedRevision",
-          "revisions",
-          "diagnostics"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": ["indexedRevision", "revisions", "diagnostics"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "maintainer",
       "feature": "revision-metadata",
@@ -215,19 +170,9 @@
       "category": "artifact-runtime",
       "query": "What Git-first auth expectations apply to artifact fetches tokens and GitHub CLI credentials?",
       "expected": {
-        "pathIncludes": [
-          "docs/security.md",
-          "README.md"
-        ],
-        "terms": [
-          "GitHub CLI",
-          "tokens",
-          "credentials"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/security.md", "README.md"],
+        "terms": ["GitHub CLI", "tokens", "credentials"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "security-reviewer",
       "feature": "git-first-auth",
@@ -254,10 +199,7 @@
           "local-only",
           "maintainer instructions"
         ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "consumer",
       "feature": "missing-artifact-fallback",
@@ -275,18 +217,9 @@
       "category": "artifact-runtime",
       "query": "Which public artifact filtering excludes .planning docs archive PRD and internal visibility docs before checksums?",
       "expected": {
-        "pathIncludes": [
-          "docs/ingestion-build-flow.md"
-        ],
-        "terms": [
-          ".planning/**",
-          "docs/archive/**",
-          "visibility: internal"
-        ],
-        "tools": [
-          "plan_context",
-          "find_docs"
-        ]
+        "pathIncludes": ["docs/ingestion-build-flow.md"],
+        "terms": [".planning/**", "docs/archive/**", "visibility: internal"],
+        "tools": ["plan_context", "search_passages"]
       },
       "profile": "maintainer",
       "feature": "public-artifact-filtering",

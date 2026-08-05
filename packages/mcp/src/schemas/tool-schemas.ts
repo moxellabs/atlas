@@ -77,7 +77,7 @@ export const findScopesInputSchema = z
   .strict();
 
 /** Input schema for precise document and passage search. */
-export const findDocsInputSchema = z
+export const searchPassagesInputSchema = z
   .object({
     query: querySchema,
     repoId: repoIdSchema,
@@ -209,7 +209,7 @@ export const planContextInputSchema = z
   .strict();
 
 export type FindScopesInput = z.infer<typeof findScopesInputSchema>;
-export type FindDocsInput = z.infer<typeof findDocsInputSchema>;
+export type SearchPassagesInput = z.infer<typeof searchPassagesInputSchema>;
 export type ReadDocumentInput = z.infer<typeof readDocumentInputSchema>;
 export type UseSkillInput = z.infer<typeof useSkillInputSchema>;
 export type ExpandRelatedInput = z.infer<typeof expandRelatedInputSchema>;

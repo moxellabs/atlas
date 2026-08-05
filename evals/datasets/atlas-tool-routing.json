@@ -66,9 +66,9 @@
       "sourceCaseId": "routing-exact",
       "title": "Exact passage retrieval",
       "category": "exact-retrieval",
-      "prompt": "Retrieve one precise documented passage for when an agent should use plan_context instead of find_docs; no corroborating document is needed. Quote or closely paraphrase that one rule and cite its repository path.",
+      "prompt": "Retrieve one precise documented passage for when an agent should use plan_context instead of search_passages; no corroborating document is needed. Quote or closely paraphrase that one rule and cite its repository path.",
       "routing": {
-        "firstTools": ["atlas:find_docs"],
+        "firstTools": ["atlas:search_passages"],
         "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },
@@ -144,7 +144,7 @@
       "category": "follow-up",
       "prompt": "A prior answer established that Atlas artifacts are read-only but omitted one MCP rule. Retrieve one precise passage, then return only the documented prefer-local behavior when local indexed coverage is absent, partial, or stale; do not refine the retrieval or investigate implementation details. Cite that passage.",
       "routing": {
-        "firstTools": ["atlas:find_docs"],
+        "firstTools": ["atlas:search_passages"],
         "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },
@@ -391,7 +391,7 @@
       "category": "fallback-synthesis",
       "prompt": "First retrieve Atlas's documented prefer-local rule for absent, partial, or stale indexed coverage. Then treat the local package-version evidence as stale and use a current external source to verify the latest published @modelcontextprotocol/sdk version. Synthesize the local fallback policy with the current version, citing the repository path and an absolute external URL.",
       "routing": {
-        "firstTools": ["atlas:find_docs", "web:web_search"],
+        "firstTools": ["atlas:search_passages", "web:web_search"],
         "maxAtlasCalls": 1,
         "externalFallback": "required"
       },
@@ -423,7 +423,7 @@
       "category": "atlas-only",
       "prompt": "Using only the indexed Atlas corpus, state the exact default MCP server identity and list the documented identity override knobs. Cite the repository documentation and do not use an external source.",
       "routing": {
-        "firstTools": ["atlas:find_docs", "atlas:plan_context"],
+        "firstTools": ["atlas:search_passages", "atlas:plan_context"],
         "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },

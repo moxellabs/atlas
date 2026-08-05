@@ -40,14 +40,14 @@ describe("MCP server registration and in-memory protocol", () => {
     expect(onboardToRepoPrompt.text).toContain("provenance");
     expect(summarizeModulePrompt.text).toContain("plan_context");
     expect(summarizeModulePrompt.text).toContain("provenance");
-    expect(compareDocsPrompt.text).toContain("find_docs");
+    expect(compareDocsPrompt.text).toContain("search_passages");
     expect(compareDocsPrompt.text).toContain("provenance");
 
     const atlasServer = createAtlasMcpServer({ db: store });
     expect(atlasServer.tools).toEqual([
       "answer_atlas_docs",
       "plan_context",
-      "find_docs",
+      "search_passages",
       "read_document",
       "expand_related",
       "use_skill",
@@ -90,7 +90,7 @@ describe("MCP server registration and in-memory protocol", () => {
     expect(atlasServer.tools).toEqual([
       "answer_atlas_docs",
       "plan_context",
-      "find_docs",
+      "search_passages",
     ]);
     expect(atlasServer.resources).toEqual([]);
     const advanced = createAtlasMcpServer({
@@ -102,7 +102,7 @@ describe("MCP server registration and in-memory protocol", () => {
       "answer_atlas_docs",
       "plan_context",
       "find_scopes",
-      "find_docs",
+      "search_passages",
     ]);
     expect(advanced.resources).toEqual([]);
   });

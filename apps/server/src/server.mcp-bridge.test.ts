@@ -83,7 +83,7 @@ describe("server MCP bridge", () => {
       id: 2,
       result: {
         tools: expect.arrayContaining([
-          expect.objectContaining({ name: "find_docs" }),
+          expect.objectContaining({ name: "search_passages" }),
         ]),
       },
     });
@@ -154,14 +154,14 @@ describe("server MCP bridge", () => {
     expect(await firstTools.json()).toMatchObject({
       result: {
         tools: expect.arrayContaining([
-          expect.objectContaining({ name: "find_docs" }),
+          expect.objectContaining({ name: "search_passages" }),
         ]),
       },
     });
     expect(await secondTools.json()).toMatchObject({
       result: {
         tools: expect.arrayContaining([
-          expect.objectContaining({ name: "find_docs" }),
+          expect.objectContaining({ name: "search_passages" }),
         ]),
       },
     });
@@ -195,7 +195,7 @@ describe("server MCP bridge", () => {
     expect(await remainingSessionTools.json()).toMatchObject({
       result: {
         tools: expect.arrayContaining([
-          expect.objectContaining({ name: "find_docs" }),
+          expect.objectContaining({ name: "search_passages" }),
         ]),
       },
     });

@@ -37,21 +37,21 @@ This work adds a first-class white-label runtime profile while preserving defaul
 
 ## 2. Goals & Success Metrics
 
-| Goal | Metric | Target |
-|------|--------|--------|
-| **Configurable physical artifact root** | Commands that create, read, verify, fetch, import, clean, or mention repo-local artifacts use configured root | 100% of `.moxel/atlas` physical path call sites moved behind resolver |
-| **Configurable runtime storage root** | Setup/config/index/runtime commands can derive cache and corpus paths from white-label root | `--moxellabs-atlas-artifact-root` / env / config precedence works in tests |
-| **Configurable MCP identity** | MCP initialize response and LLM-visible resource/skill aliases reflect custom brand | Server name/title/resources/skill aliases use configured brand in stdio and HTTP tests |
-| **Backward compatibility** | Existing Atlas users see no behavior change without options | Existing CLI/MCP tests pass with default `.moxel/atlas` and `atlas-mcp` |
-| **Safe path handling** | Invalid roots cannot escape project or normalize ambiguously | Path validation rejects absolute paths and `..` traversal on POSIX/Windows |
-| **Migration hinting** | Users switching roots see actionable notice if default artifacts already exist | Warning appears when custom root is used and `.moxel/atlas` exists but custom root missing |
+| Goal                                    | Metric                                                                                                        | Target                                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **Configurable physical artifact root** | Commands that create, read, verify, fetch, import, clean, or mention repo-local artifacts use configured root | 100% of `.moxel/atlas` physical path call sites moved behind resolver                      |
+| **Configurable runtime storage root**   | Setup/config/index/runtime commands can derive cache and corpus paths from white-label root                   | `--moxellabs-atlas-artifact-root` / env / config precedence works in tests                 |
+| **Configurable MCP identity**           | MCP initialize response and LLM-visible resource/skill aliases reflect custom brand                           | Server name/title/resources/skill aliases use configured brand in stdio and HTTP tests     |
+| **Backward compatibility**              | Existing Atlas users see no behavior change without options                                                   | Existing CLI/MCP tests pass with default `.moxel/atlas` and `atlas-mcp`                    |
+| **Safe path handling**                  | Invalid roots cannot escape project or normalize ambiguously                                                  | Path validation rejects absolute paths and `..` traversal on POSIX/Windows                 |
+| **Migration hinting**                   | Users switching roots see actionable notice if default artifacts already exist                                | Warning appears when custom root is used and `.moxel/atlas` exists but custom root missing |
 
 **Guardrails (must not regress):**
 
 - No automatic migration, copy, delete, or fallback between `.moxel/atlas` and custom roots.
 - Atlas CLI default remains `.moxel/atlas` for repo-local artifacts and `~/.moxel/atlas` for runtime storage.
 - `atlas.config.*` discovery and `--config` behavior remain compatible.
-- MCP generic tool names such as `find_docs` and `read_document` remain stable by default so existing agents do not break.
+- MCP generic tool names such as `search_passages` and `read_document` remain stable across white-label identities so existing agents do not break.
 - Artifacts still contain no secrets or absolute machine-local paths.
 
 ---
@@ -98,14 +98,14 @@ This work adds a first-class white-label runtime profile while preserving defaul
 
 ### Out of scope / later
 
-| What | Why | Tracked in |
-|------|-----|------------|
-| Automatic artifact migration/copy | Could duplicate stale corpora or hide mistakes | Later PRD/issue |
-| Reading fallback from `.moxel/atlas` when custom root missing | Violates clean separation between branded artifact universes | Later PRD/issue if needed |
-| Renaming package names such as `@atlas/core` | Build-time package identity is not user-facing runtime white-labeling | N/A |
-| Renaming generic MCP tools (`find_docs`, `read_document`) | Tool name stability matters for agents and prompts; names are already brand-neutral | Later ADR if product wants prefixed tools |
-| Registry publishing as branded package | Wrapper CLIs can consume Atlas source/packages directly | Later PRD/issue |
-| Full text rewrite from ATLAS to custom brand in every prompt | Could reduce clarity/provenance; phase 1 only changes LLM-visible server identity and Atlas-prefixed aliases | Later PRD/issue |
+| What                                                                        | Why                                                                                                          | Tracked in                                |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| Automatic artifact migration/copy                                           | Could duplicate stale corpora or hide mistakes                                                               | Later PRD/issue                           |
+| Reading fallback from `.moxel/atlas` when custom root missing               | Violates clean separation between branded artifact universes                                                 | Later PRD/issue if needed                 |
+| Renaming package names such as `@atlas/core`                                | Build-time package identity is not user-facing runtime white-labeling                                        | N/A                                       |
+| Dynamically renaming generic MCP tools (`search_passages`, `read_document`) | Tool name stability matters for agents and prompts; names are brand-neutral across white-label identities    | Later ADR if product wants prefixed tools |
+| Registry publishing as branded package                                      | Wrapper CLIs can consume Atlas source/packages directly                                                      | Later PRD/issue                           |
+| Full text rewrite from ATLAS to custom brand in every prompt                | Could reduce clarity/provenance; phase 1 only changes LLM-visible server identity and Atlas-prefixed aliases | Later PRD/issue                           |
 
 ### Design for future (build with awareness)
 
@@ -248,7 +248,7 @@ And emits a warning that .moxel/atlas exists but was not used or migrated
 
 MCP construction must accept a white-label MCP identity. LLM clients should see custom server name/title/description rather than `atlas-mcp`/ATLAS defaults.
 
-**Decision for user question 7/8:** MCP white-labeling includes server metadata and Atlas-prefixed surfaces. It does **not** rename generic tool names because `plan_context`, `find_docs`, `read_document`, and similar names are brand-neutral and stable for agents. If a client displays tool calls as `<server>.<tool>`, the custom server name provides the requested MCP branding without changing those contracts.
+**Decision for user question 7/8:** MCP white-labeling includes server metadata and Atlas-prefixed surfaces. It does **not** dynamically rename generic tool names because `plan_context`, `search_passages`, `read_document`, and similar names are brand-neutral and stable across identities. If a client displays tool calls as `<server>.<tool>`, the custom server name provides the requested MCP branding without changing those contracts.
 
 **Acceptance criteria:**
 
@@ -257,7 +257,7 @@ Given a user starts atlas mcp --moxellabs-atlas-mcp-name acme-knowledge
 When an MCP client initializes
 Then serverInfo.name is acme-knowledge
 And serverInfo.title is Acme Knowledge MCP when title is not explicitly supplied
-And tools/list still includes find_docs
+And tools/list still includes search_passages
 ```
 
 **Files:**
@@ -347,14 +347,14 @@ Then they find flag/env/config examples, precedence, invalid path examples, and 
 
 ## 6. Non-Functional Requirements
 
-| Category | Requirement |
-|----------|-------------|
-| **Compatibility** | No behavior change with no white-label flags/env/config. |
-| **Security** | Roots must not allow path traversal outside checkout for repo-local artifacts; artifacts must not serialize absolute machine-local paths. |
-| **Portability** | Normalize separators and reject invalid roots consistently on Linux/macOS/Windows path semantics. |
-| **Operability** | CLI output and JSON output must include effective artifact root/MCP identity where relevant. |
-| **Testability** | New resolver logic must have unit tests plus end-to-end CLI/MCP tests. |
-| **Maintainability** | No new scattered `.moxel/atlas`, `atlas-mcp`, or `atlas-*` hardcodes outside defaults/tests/docs. |
+| Category            | Requirement                                                                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Compatibility**   | No behavior change with no white-label flags/env/config.                                                                                  |
+| **Security**        | Roots must not allow path traversal outside checkout for repo-local artifacts; artifacts must not serialize absolute machine-local paths. |
+| **Portability**     | Normalize separators and reject invalid roots consistently on Linux/macOS/Windows path semantics.                                         |
+| **Operability**     | CLI output and JSON output must include effective artifact root/MCP identity where relevant.                                              |
+| **Testability**     | New resolver logic must have unit tests plus end-to-end CLI/MCP tests.                                                                    |
+| **Maintainability** | No new scattered `.moxel/atlas`, `atlas-mcp`, or `atlas-*` hardcodes outside defaults/tests/docs.                                         |
 
 ---
 
@@ -362,21 +362,21 @@ Then they find flag/env/config examples, precedence, invalid path examples, and 
 
 ### Risks
 
-| Risk | Severity | Likelihood | Mitigation |
-|------|----------|------------|------------|
-| Missed hardcoded `.moxel/atlas` path causes mixed artifact roots | High | Medium | Add grep-based test or lint check for hardcoded path outside default constants/docs snapshots. |
-| MCP resource renaming breaks existing clients | Medium | Medium | Keep defaults unchanged; only rename with explicit config; preserve URI semantics where possible. |
-| Tool renaming breaks LLM prompts and client automations | High | Medium | Do not rename generic tools in phase 1; revisit only with ADR. |
-| Env/config names become confusing | Medium | Medium | Provide explicit long flags plus short aliases; document precedence. |
-| Runtime root and repo-local root semantics blur | Medium | Medium | Separate fields: `artifactRoot` for committed repo artifacts, `runtimeRoot`/`cacheDir` for home/cache state. |
-| Migration warning annoys fresh projects with intentionally custom root | Low | Medium | Warn only when default root exists and custom root missing. |
+| Risk                                                                   | Severity | Likelihood | Mitigation                                                                                                   |
+| ---------------------------------------------------------------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
+| Missed hardcoded `.moxel/atlas` path causes mixed artifact roots       | High     | Medium     | Add grep-based test or lint check for hardcoded path outside default constants/docs snapshots.               |
+| MCP resource renaming breaks existing clients                          | Medium   | Medium     | Keep defaults unchanged; only rename with explicit config; preserve URI semantics where possible.            |
+| Tool renaming breaks LLM prompts and client automations                | High     | Medium     | Do not rename generic tools in phase 1; revisit only with ADR.                                               |
+| Env/config names become confusing                                      | Medium   | Medium     | Provide explicit long flags plus short aliases; document precedence.                                         |
+| Runtime root and repo-local root semantics blur                        | Medium   | Medium     | Separate fields: `artifactRoot` for committed repo artifacts, `runtimeRoot`/`cacheDir` for home/cache state. |
+| Migration warning annoys fresh projects with intentionally custom root | Low      | Medium     | Warn only when default root exists and custom root missing.                                                  |
 
 ### Assumptions
 
 - Wrapper CLIs can pass flags or env vars on every invocation.
 - Existing config file support can carry new `whiteLabel` fields without breaking old configs.
 - User wants clean separation: no fallback reads and no migration in this phase.
-- MCP client UIs typically display server name plus tool name, so custom server identity satisfies “call custom brand as MCP” without renaming `find_docs`.
+- MCP client UIs typically display server name plus tool name, so custom server identity satisfies “call custom brand as MCP” without dynamically renaming `search_passages`.
 - Default artifact schema names such as `moxel-atlas-artifact/v1` may remain for compatibility unless implementation finds a safe schema alias path.
 
 ---
@@ -446,48 +446,48 @@ Then they find flag/env/config examples, precedence, invalid path examples, and 
 
 ## 9. File Breakdown
 
-| File | Change type | FR | Description |
-|------|-------------|-----|-------------|
-| `packages/config/src/defaults/default-config.ts` | Modify | FR-1, FR-3, FR-5 | Centralize default artifact/runtime roots and preserve Atlas defaults. |
-| `packages/config/src/atlas-config.schema.ts` | Modify | FR-1, FR-3, FR-4, FR-9 | Add `whiteLabel` config schema. |
-| `packages/config/src/env.schema.ts` | Modify | FR-1, FR-3, FR-7, FR-9 | Parse artifact/MCP env overrides. |
-| `packages/config/src/loaders/load-config.ts` | Modify | FR-3, FR-9 | Apply env/config/default precedence. |
-| `packages/config/src/paths/artifact-root.ts` | New | FR-1, FR-4 | Validate/normalize artifact roots. |
-| `apps/cli/src/runtime/args.ts` | Modify | FR-1, FR-7, FR-9 | Add global white-label flag parsing. |
-| `apps/cli/src/runtime/dependencies.ts` | Modify | FR-3, FR-9 | Resolve config target and runtime paths from profile. |
-| `apps/cli/src/index.ts` | Modify | FR-9, FR-10 | Help text for explicit white-label flags. |
-| `apps/cli/src/commands/init.command.ts` | Modify | FR-1, FR-3, FR-6 | Write metadata under custom root and setup runtime root. |
-| `apps/cli/src/commands/build.command.ts` | Modify | FR-1, FR-2, FR-6 | Detect/export repo-local artifacts under custom root. |
-| `apps/cli/src/commands/artifact.command.ts` | Modify | FR-2, FR-6 | Verify/inspect custom artifact roots. |
-| `apps/cli/src/commands/add-repo.command.ts` | Modify | FR-2 | Fetch/copy/import custom repo artifact paths. |
-| `apps/cli/src/commands/adoption-templates.ts` | Modify | FR-2, FR-10 | Render branded maintainer request text. |
-| `apps/cli/src/commands/adoption-template.command.ts` | Modify | FR-2 | Pass effective artifact root. |
-| `apps/cli/src/commands/missing-artifact.ts` | Modify | FR-2, FR-10 | Render branded missing artifact guidance. |
-| `apps/cli/src/commands/clean.command.ts` | Modify | FR-3 | Clean effective runtime corpus artifacts. |
-| `apps/cli/src/commands/prune.command.ts` | Modify | FR-3 | Prune effective runtime repo caches. |
-| `apps/cli/src/commands/doctor.command.ts` | Modify | FR-3 | Report effective white-label roots. |
-| `packages/indexer/src/artifact.ts` | Modify | FR-2, FR-10 | Support configurable artifact root labels and safety scans. |
-| `packages/mcp/src/types.ts` | Modify | FR-7, FR-8 | Add MCP branding option types. |
-| `packages/mcp/src/server/metadata.ts` | Modify | FR-7 | Build effective server metadata. |
-| `packages/mcp/src/server/create-mcp-server.ts` | Modify | FR-7, FR-8 | Register MCP with effective metadata/resources/prompts. |
-| `packages/mcp/src/resources/*.resource.ts` | Modify | FR-8 | Convert static Atlas-prefixed names to brand-aware names. |
-| `packages/mcp/src/resources/resource-utils.ts` | Modify | FR-8 | Support resource registration name overrides. |
-| `packages/mcp/src/tools/use-skill.tool.ts` | Modify | FR-8 | Emit and resolve brand-prefixed skill aliases. |
-| `packages/mcp/src/prompts/*.prompt.ts` | Modify | FR-7, FR-8 | Use effective MCP names where prompts mention Atlas surfaces. |
-| `apps/cli/src/commands/mcp.command.ts` | Modify | FR-7, FR-9 | Pass CLI MCP name/title/prefix options. |
-| `apps/server/src/services/mcp-bridge.service.ts` | Modify | FR-7 | Construct per-session MCP server with effective identity. |
-| `apps/server/src/services/dependencies.ts` | Modify | FR-7 | Wire config/env profile into MCP bridge. |
-| `apps/server/src/routes/mcp.route.ts` | Modify | FR-7 | Preserve HTTP MCP behavior with branded server identity. |
-| `apps/cli/src/cli.*.test.ts` | Modify | FR-1, FR-2, FR-4, FR-5, FR-6, FR-9 | CLI end-to-end coverage. |
-| `packages/config/src/loaders/load-config.*.test.ts` | Modify | FR-3, FR-4, FR-9 | Config/env precedence coverage. |
-| `packages/mcp/src/mcp.*.test.ts` | Modify | FR-7, FR-8 | MCP server/resource/skill alias coverage. |
-| `apps/server/src/server.*.test.ts` | Modify | FR-7 | HTTP MCP branded initialize coverage. |
-| `README.md` | Modify | FR-10 | White-label quickstart. |
-| `docs/configuration.md` | Modify | FR-10 | Config/env precedence. |
-| `docs/ingestion-build-flow.md` | Modify | FR-10 | Maintainer artifact root workflow. |
-| `docs/runtime-surfaces.md` | Modify | FR-10 | MCP identity behavior. |
-| `docs/security.md` | Modify | FR-10 | Safety constraints. |
-| `atlas.config.example.json` | Modify | FR-9, FR-10 | Example white-label config. |
+| File                                                 | Change type | FR                                 | Description                                                            |
+| ---------------------------------------------------- | ----------- | ---------------------------------- | ---------------------------------------------------------------------- |
+| `packages/config/src/defaults/default-config.ts`     | Modify      | FR-1, FR-3, FR-5                   | Centralize default artifact/runtime roots and preserve Atlas defaults. |
+| `packages/config/src/atlas-config.schema.ts`         | Modify      | FR-1, FR-3, FR-4, FR-9             | Add `whiteLabel` config schema.                                        |
+| `packages/config/src/env.schema.ts`                  | Modify      | FR-1, FR-3, FR-7, FR-9             | Parse artifact/MCP env overrides.                                      |
+| `packages/config/src/loaders/load-config.ts`         | Modify      | FR-3, FR-9                         | Apply env/config/default precedence.                                   |
+| `packages/config/src/paths/artifact-root.ts`         | New         | FR-1, FR-4                         | Validate/normalize artifact roots.                                     |
+| `apps/cli/src/runtime/args.ts`                       | Modify      | FR-1, FR-7, FR-9                   | Add global white-label flag parsing.                                   |
+| `apps/cli/src/runtime/dependencies.ts`               | Modify      | FR-3, FR-9                         | Resolve config target and runtime paths from profile.                  |
+| `apps/cli/src/index.ts`                              | Modify      | FR-9, FR-10                        | Help text for explicit white-label flags.                              |
+| `apps/cli/src/commands/init.command.ts`              | Modify      | FR-1, FR-3, FR-6                   | Write metadata under custom root and setup runtime root.               |
+| `apps/cli/src/commands/build.command.ts`             | Modify      | FR-1, FR-2, FR-6                   | Detect/export repo-local artifacts under custom root.                  |
+| `apps/cli/src/commands/artifact.command.ts`          | Modify      | FR-2, FR-6                         | Verify/inspect custom artifact roots.                                  |
+| `apps/cli/src/commands/add-repo.command.ts`          | Modify      | FR-2                               | Fetch/copy/import custom repo artifact paths.                          |
+| `apps/cli/src/commands/adoption-templates.ts`        | Modify      | FR-2, FR-10                        | Render branded maintainer request text.                                |
+| `apps/cli/src/commands/adoption-template.command.ts` | Modify      | FR-2                               | Pass effective artifact root.                                          |
+| `apps/cli/src/commands/missing-artifact.ts`          | Modify      | FR-2, FR-10                        | Render branded missing artifact guidance.                              |
+| `apps/cli/src/commands/clean.command.ts`             | Modify      | FR-3                               | Clean effective runtime corpus artifacts.                              |
+| `apps/cli/src/commands/prune.command.ts`             | Modify      | FR-3                               | Prune effective runtime repo caches.                                   |
+| `apps/cli/src/commands/doctor.command.ts`            | Modify      | FR-3                               | Report effective white-label roots.                                    |
+| `packages/indexer/src/artifact.ts`                   | Modify      | FR-2, FR-10                        | Support configurable artifact root labels and safety scans.            |
+| `packages/mcp/src/types.ts`                          | Modify      | FR-7, FR-8                         | Add MCP branding option types.                                         |
+| `packages/mcp/src/server/metadata.ts`                | Modify      | FR-7                               | Build effective server metadata.                                       |
+| `packages/mcp/src/server/create-mcp-server.ts`       | Modify      | FR-7, FR-8                         | Register MCP with effective metadata/resources/prompts.                |
+| `packages/mcp/src/resources/*.resource.ts`           | Modify      | FR-8                               | Convert static Atlas-prefixed names to brand-aware names.              |
+| `packages/mcp/src/resources/resource-utils.ts`       | Modify      | FR-8                               | Support resource registration name overrides.                          |
+| `packages/mcp/src/tools/use-skill.tool.ts`           | Modify      | FR-8                               | Emit and resolve brand-prefixed skill aliases.                         |
+| `packages/mcp/src/prompts/*.prompt.ts`               | Modify      | FR-7, FR-8                         | Use effective MCP names where prompts mention Atlas surfaces.          |
+| `apps/cli/src/commands/mcp.command.ts`               | Modify      | FR-7, FR-9                         | Pass CLI MCP name/title/prefix options.                                |
+| `apps/server/src/services/mcp-bridge.service.ts`     | Modify      | FR-7                               | Construct per-session MCP server with effective identity.              |
+| `apps/server/src/services/dependencies.ts`           | Modify      | FR-7                               | Wire config/env profile into MCP bridge.                               |
+| `apps/server/src/routes/mcp.route.ts`                | Modify      | FR-7                               | Preserve HTTP MCP behavior with branded server identity.               |
+| `apps/cli/src/cli.*.test.ts`                         | Modify      | FR-1, FR-2, FR-4, FR-5, FR-6, FR-9 | CLI end-to-end coverage.                                               |
+| `packages/config/src/loaders/load-config.*.test.ts`  | Modify      | FR-3, FR-4, FR-9                   | Config/env precedence coverage.                                        |
+| `packages/mcp/src/mcp.*.test.ts`                     | Modify      | FR-7, FR-8                         | MCP server/resource/skill alias coverage.                              |
+| `apps/server/src/server.*.test.ts`                   | Modify      | FR-7                               | HTTP MCP branded initialize coverage.                                  |
+| `README.md`                                          | Modify      | FR-10                              | White-label quickstart.                                                |
+| `docs/configuration.md`                              | Modify      | FR-10                              | Config/env precedence.                                                 |
+| `docs/ingestion-build-flow.md`                       | Modify      | FR-10                              | Maintainer artifact root workflow.                                     |
+| `docs/runtime-surfaces.md`                           | Modify      | FR-10                              | MCP identity behavior.                                                 |
+| `docs/security.md`                                   | Modify      | FR-10                              | Safety constraints.                                                    |
+| `atlas.config.example.json`                          | Modify      | FR-9, FR-10                        | Example white-label config.                                            |
 
 ---
 
@@ -524,30 +524,30 @@ Then they find flag/env/config examples, precedence, invalid path examples, and 
 
 ## 12. Open Questions
 
-| # | Question | Owner | Due | Status |
-|---|----------|-------|-----|--------|
-| Q1 | Should schema identifiers such as `moxel-atlas-artifact/v1` remain stable or gain aliases? | Moxel Labs | Phase 1 planning | Open |
-| Q2 | Should custom MCP resource names coexist with default `atlas-*` aliases in branded mode? | Moxel Labs | Phase 3 planning | Open |
-| Q3 | Should `ATLAS_CACHE_DIR` remain highest-priority runtime storage override when `ATLAS_ARTIFACT_ROOT` is also set? | Moxel Labs | Phase 2 planning | **Resolved:** Existing explicit cache env/config should win over derived white-label runtime root. |
-| Q4 | Should wrapper CLIs consume a library API instead of shelling out to Atlas CLI? | Moxel Labs | Later | Open |
+| #   | Question                                                                                                          | Owner      | Due              | Status                                                                                             |
+| --- | ----------------------------------------------------------------------------------------------------------------- | ---------- | ---------------- | -------------------------------------------------------------------------------------------------- |
+| Q1  | Should schema identifiers such as `moxel-atlas-artifact/v1` remain stable or gain aliases?                        | Moxel Labs | Phase 1 planning | Open                                                                                               |
+| Q2  | Should custom MCP resource names coexist with default `atlas-*` aliases in branded mode?                          | Moxel Labs | Phase 3 planning | Open                                                                                               |
+| Q3  | Should `ATLAS_CACHE_DIR` remain highest-priority runtime storage override when `ATLAS_ARTIFACT_ROOT` is also set? | Moxel Labs | Phase 2 planning | **Resolved:** Existing explicit cache env/config should win over derived white-label runtime root. |
+| Q4  | Should wrapper CLIs consume a library API instead of shelling out to Atlas CLI?                                   | Moxel Labs | Later            | Open                                                                                               |
 
 ---
 
 ## 13. Related
 
-| Issue | Relationship |
-|-------|-------------|
-| `docs/ingestion-build-flow.md` | Existing artifact publishing workflow updated by this PRD. |
-| `docs/runtime-surfaces.md` | Existing MCP/server surface documentation updated by this PRD. |
-| `docs/configuration.md` | Existing config/env precedence documentation updated by this PRD. |
+| Issue                          | Relationship                                                      |
+| ------------------------------ | ----------------------------------------------------------------- |
+| `docs/ingestion-build-flow.md` | Existing artifact publishing workflow updated by this PRD.        |
+| `docs/runtime-surfaces.md`     | Existing MCP/server surface documentation updated by this PRD.    |
+| `docs/configuration.md`        | Existing config/env precedence documentation updated by this PRD. |
 
 ---
 
 ## 14. Changelog
 
-| Date | Change | Author |
-|------|--------|--------|
-| 2026-04-27 | Initial draft | Pi |
+| Date       | Change        | Author |
+| ---------- | ------------- | ------ |
+| 2026-04-27 | Initial draft | Pi     |
 
 ---
 

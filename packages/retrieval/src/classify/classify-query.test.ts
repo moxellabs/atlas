@@ -18,7 +18,7 @@ describe("classifyQuery", () => {
     });
     expect(
       classifyQuery(
-        "when should an agent use plan_context instead of find_docs",
+        "when should an agent use plan_context instead of search_passages",
       ),
     ).toMatchObject({
       kind: "exact-lookup",

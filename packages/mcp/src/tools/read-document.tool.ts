@@ -73,7 +73,7 @@ export function registerReadDocumentTool(
     {
       title: "Read indexed document",
       description:
-        "Read a stored document after find_docs or plan_context returns its stable docId. When the caller already knows the docId and an exact section heading, pass heading directly and do not request an outline first; a unique trailing heading is accepted when the full path is unknown. Otherwise omit sectionId and heading for a compact outline. Pass exactly one selector for exact section text and provenance.",
+        "Open a known stored document by stable docId; this tool does not search indexed content. Use it after search_passages or plan_context returns a docId. When the caller also knows an exact section heading, pass heading directly and do not request an outline first; a unique trailing heading is accepted when the full path is unknown. Otherwise omit sectionId and heading for a compact outline. Pass exactly one selector for exact section text and provenance.",
       inputSchema: readDocumentInputSchema,
       outputSchema: readDocumentOutputSchema,
       annotations: {

@@ -2,21 +2,21 @@ import { findDocs } from "@atlas/retrieval";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { toolResult } from "../mcp-result";
-import { findDocsOutputSchema } from "../schemas/tool-output-schemas";
+import { searchPassagesOutputSchema } from "../schemas/tool-output-schemas";
 import {
-  type FindDocsInput,
-  findDocsInputSchema,
+  type SearchPassagesInput,
+  searchPassagesInputSchema,
 } from "../schemas/tool-schemas";
 import type { AtlasRetrievalMcpDependencies, McpJsonObject } from "../types";
 
-export const FIND_DOCS_TOOL = "find_docs";
+export const SEARCH_PASSAGES_TOOL = "search_passages";
 
-/** Executes document-oriented ranked retrieval for an MCP caller. */
-export function executeFindDocs(
-  input: FindDocsInput,
+/** Searches ranked, answer-bearing passages for an MCP caller. */
+export function executeSearchPassages(
+  input: SearchPassagesInput,
   dependencies: AtlasRetrievalMcpDependencies,
 ): McpJsonObject {
-  const parsed = findDocsInputSchema.parse(input);
+  const parsed = searchPassagesInputSchema.parse(input);
   const result = findDocs({
     store: dependencies.retrievalStore,
     query: parsed.query,
@@ -38,7 +38,7 @@ export function executeFindDocs(
         : { visibility: parsed.visibility }),
     },
   });
-  return findDocsOutputSchema.parse({
+  return searchPassagesOutputSchema.parse({
     ...result,
     nextAction: result.hits.length === 0 ? "web_fallback" : "answer_locally",
     nextActionGuidance:
@@ -48,19 +48,19 @@ export function executeFindDocs(
   });
 }
 
-/** Registers the find_docs MCP tool. */
-export function registerFindDocsTool(
+/** Registers the search_passages MCP tool. */
+export function registerSearchPassagesTool(
   server: McpServer,
   dependencies: AtlasRetrievalMcpDependencies,
 ): void {
   server.registerTool(
-    FIND_DOCS_TOOL,
+    SEARCH_PASSAGES_TOOL,
     {
-      title: "Find indexed passages",
+      title: "Search indexed passages",
       description:
-        "Use first and call exactly once for an exact value, default, identity, knob, rule, short list, location, one missing claim from a partial answer, or retrieval debugging. Pass the user's complete exact lookup question as query; do not shorten it to a topic label. For a mixed local-policy and current-external-fact question, use find_docs for the precise local claim and gather the required external evidence separately. Returns ranked hits plus a terminal nextAction. When nextAction is answer_locally, the highest-ranked textPreview is the answer-bearing passage: answer and cite it immediately without another Atlas call. Never refine by repeating find_docs or infer repository-wide absence from its bounded hit set. Use plan_context only for ambiguity, comparison, module boundaries, or multi-passage planning.",
-      inputSchema: findDocsInputSchema,
-      outputSchema: findDocsOutputSchema,
+        "Search by natural-language query for one exact value, default, identity, knob, rule, short list, location, or missing claim. This discovers evidence across indexed content; it does not open a known document ID. Call exactly once with the user's complete lookup question rather than a shortened topic label. For a mixed local-policy and current-external-fact question, use search_passages for the precise local claim and gather the required external evidence separately. Returns ranked hits plus a terminal nextAction. When nextAction is answer_locally, the highest-ranked textPreview is the answer-bearing passage: answer and cite it immediately without another Atlas call. Never refine by repeating search_passages or infer repository-wide absence from its bounded hit set. Use plan_context only for ambiguity, comparison, module boundaries, or multi-passage planning.",
+      inputSchema: searchPassagesInputSchema,
+      outputSchema: searchPassagesOutputSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -68,6 +68,6 @@ export function registerFindDocsTool(
         openWorldHint: false,
       },
     },
-    (input) => toolResult(executeFindDocs(input, dependencies)),
+    (input) => toolResult(executeSearchPassages(input, dependencies)),
   );
 }

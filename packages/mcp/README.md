@@ -24,8 +24,8 @@ Identity changes server metadata, resource display names, and skill aliases. Gen
 The default `agent` profile advertises five generic tools plus one source-named answer facade:
 
 - `plan_context` builds one token-budgeted, deduplicated evidence packet. It accepts exact repository, package, and module constraints and reports freshness, coverage, citations, omissions, and the next action.
-- `find_docs` retrieves precise document, section, chunk, or skill hits for exact locations and partial-answer follow-ups.
-- `read_document` returns a document outline or one exact section selected by `sectionId` or heading path.
+- `search_passages` searches indexed content by natural-language query and returns ranked, answer-bearing previews.
+- `read_document` opens a known `docId` as a compact outline or one exact section selected by `sectionId` or heading path; it does not search.
 - `expand_related` follows a stable retrieved ID to nearby documents, sections, summaries, and skills. An optional `query` ranks related documents for the one missing claim.
 - `use_skill` browses stored skills and resolves exact or unambiguous task matches into complete instructions, provenance, and read-only artifacts.
 - `answer_<source>_docs` returns the single strongest passage for a broad question about one named indexed source.
