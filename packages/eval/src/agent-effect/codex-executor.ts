@@ -75,21 +75,22 @@ export async function createCodexExecutor(input: {
           useGlobal: input.useGlobal === true,
           cwd: input.cwd,
         });
+  const corpusPath = "corpusDbPath" in config ? config.corpusDbPath : undefined;
   const evidenceByTask =
-    "corpusDbPath" in config
-      ? new Map(
+    corpusPath === undefined
+      ? new Map<string, CorpusEvidence[]>()
+      : new Map(
           input.dataset.tasks.map((task) => [
             task.id,
             readCorpusEvidence({
-              corpusPath: config.corpusDbPath,
+              corpusPath,
               repoId: input.dataset.repoId,
               paths: task.criteria.flatMap(
                 (criterion) => criterion.evidencePaths,
               ),
             }),
           ]),
-        )
-      : new Map<string, CorpusEvidence[]>();
+        );
   const agentSchemaPath = join(workDir, "agent-output.schema.json");
   const judgeSchemaPath = join(workDir, "judge-output.schema.json");
   await Promise.all([
@@ -133,8 +134,17 @@ export async function createCodexExecutor(input: {
           task,
           trial,
         }),
-      judgePair: async ({ task, baseline, treatment, order }) =>
-        judgePair({
+      judgePair: async ({ task, baseline, treatment, order }) => {
+        const citedEvidence =
+          corpusPath === undefined
+            ? []
+            : readCorpusEvidence({
+                corpusPath,
+                repoId: input.dataset.repoId,
+                paths: citedPaths(baseline, treatment),
+                ignoreMissing: true,
+              });
+        return judgePair({
           cwd: agentCwd,
           workDir,
           outputSchemaPath: judgeSchemaPath,
@@ -143,8 +153,12 @@ export async function createCodexExecutor(input: {
           baseline,
           treatment,
           order,
-          evidence: evidenceByTask.get(task.id) ?? [],
-        }),
+          evidence: mergeEvidence(
+            evidenceByTask.get(task.id) ?? [],
+            citedEvidence,
+          ),
+        });
+      },
     },
     close: async () => {
       await rm(workDir, { recursive: true, force: true });
@@ -283,6 +297,31 @@ async function judgePair(input: {
   } catch (error) {
     return failedCodexJudgeVerdict(input.task, String(error));
   }
+}
+
+function citedPaths(...runs: readonly AgentRun[]): string[] {
+  return [
+    ...new Set(
+      runs.flatMap(
+        (run) => run.answer?.citations.map((citation) => citation.path) ?? [],
+      ),
+    ),
+  ].slice(0, 12);
+}
+
+function mergeEvidence(
+  rubricEvidence: readonly CorpusEvidence[],
+  citedEvidence: readonly CorpusEvidence[],
+): CorpusEvidence[] {
+  const evidenceByPath = new Map(
+    rubricEvidence.map((evidence) => [evidence.path, evidence]),
+  );
+  for (const evidence of citedEvidence) {
+    if (!evidenceByPath.has(evidence.path)) {
+      evidenceByPath.set(evidence.path, evidence);
+    }
+  }
+  return [...evidenceByPath.values()];
 }
 
 function failedRun(

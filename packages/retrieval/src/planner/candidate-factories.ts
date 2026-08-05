@@ -179,7 +179,7 @@ function summaryCandidate(
   };
 }
 
-function sectionCandidate(
+export function sectionCandidate(
   document: DocumentRecord,
   section: SectionRecord,
   score: number,

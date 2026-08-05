@@ -28,6 +28,9 @@ describe("expandQuery", () => {
     expect(expandQuery("How does MCP work?")).toContain(
       "model context protocol",
     );
+    expect(expandQuery("Explain packages/mcp boundaries")).toContain(
+      "packages/mcp/docs/index.md",
+    );
     expect(expandQuery("repo import without checkout")).toContain("repo add");
     expect(expandQuery("inspect corpus search")).toContain("SQLite");
     expect(expandQuery("atlas build --profile public")).toContain(

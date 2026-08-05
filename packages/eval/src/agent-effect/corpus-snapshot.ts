@@ -79,6 +79,7 @@ export function readCorpusEvidence(input: {
   readonly corpusPath: string;
   readonly repoId: string;
   readonly paths: readonly string[];
+  readonly ignoreMissing?: boolean;
 }): CorpusEvidence[] {
   const store = openStore({ path: input.corpusPath, readOnly: true });
   try {
@@ -87,14 +88,18 @@ export function readCorpusEvidence(input: {
       documents.map((document) => [document.path, document]),
     );
     const sections = new SectionRepository(store);
-    return [...new Set(input.paths)].map((path) => {
+    return [...new Set(input.paths)].flatMap((path) => {
       const document = byPath.get(path);
       if (document === undefined) {
+        if (input.ignoreMissing === true) {
+          return [];
+        }
         throw new Error(
           `Judge evidence path ${path} is absent from the isolated ${input.repoId} corpus.`,
         );
       }
-      return {
+      return [
+        {
         path,
         text: sections
           .listByDocument(document.docId)
@@ -106,7 +111,8 @@ export function readCorpusEvidence(input: {
           ])
           .filter((part) => part.length > 0)
           .join("\n\n"),
-      };
+        },
+      ];
     });
   } finally {
     store.close();

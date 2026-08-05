@@ -111,6 +111,58 @@ describe("gatherCandidates", () => {
     ).toBe(true);
   });
 
+  test("hydrates matching headings for an exact document path", () => {
+    const candidates = gatherCandidates(fixture!.retrievalStore, {
+      query: "packages/auth/docs/session.md rotation boundaries",
+      expandedQuery: "packages/auth/docs/session.md rotation boundaries",
+      repoId,
+      scopes: [],
+      candidateLimit: 40,
+      countTokens: () => 1,
+    });
+
+    expect(
+      candidates.some(
+        (candidate) =>
+          candidate.provenance.docId === sessionDocId &&
+          candidate.targetType === "section" &&
+          candidate.provenance.headingPath?.includes("Rotation") === true,
+      ),
+    ).toBe(true);
+  });
+
+  test("keeps late Atlas expansion terms in verbose lexical queries", () => {
+    const lexicalQueries: string[] = [];
+    const pathQueries: string[] = [];
+    const retrievalStore = fixture!.retrievalStore;
+    const trackedStore: RetrievalStore = {
+      ...retrievalStore,
+      lexicalSearch(options) {
+        lexicalQueries.push(options.query);
+        return retrievalStore.lexicalSearch(options);
+      },
+      pathSearch(options) {
+        pathQueries.push(options.path);
+        return retrievalStore.pathSearch(options);
+      },
+    };
+    const query =
+      "explain package module responsibilities boundaries protocol surfaces prompts resources transports";
+
+    gatherCandidates(trackedStore, {
+      query,
+      expandedQuery: `${query} docs/architecture.md`,
+      repoId,
+      scopes: [],
+      candidateLimit: 40,
+      countTokens: () => 1,
+    });
+
+    expect(lexicalQueries).toHaveLength(2);
+    expect(lexicalQueries[1]).toContain("architecture");
+    expect(pathQueries).toContain("docs/architecture.md");
+  });
+
   test("bounds repository scans behind the retrieval store port", () => {
     const store = fixture!.store;
     const repos = new RepoRepository(store);

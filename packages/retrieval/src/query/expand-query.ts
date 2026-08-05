@@ -1,6 +1,9 @@
 const QUERY_EXPANSIONS: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
 	[/\bartifacts?\b/i, [".moxel/atlas", "public artifact", "corpus artifact"]],
-	[/\bmcp\b/i, ["model context protocol", "tools", "server"]],
+  [
+    /\bmcp\b/i,
+    ["model context protocol", "MCP package", "packages/mcp/docs/index.md"],
+  ],
 	[/\brepo\s+imports?\b/i, ["repo add", "artifact", "without cloning"]],
 	[/\bcorpus\b/i, ["SQLite", "store", "index"]],
 	[

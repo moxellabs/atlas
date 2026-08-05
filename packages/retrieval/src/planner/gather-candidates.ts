@@ -12,6 +12,7 @@ import {
   documentCandidate,
   documentsForScope,
   documentSummaries,
+  sectionCandidate,
   skillCandidate,
 } from "./candidate-factories";
 import { dedupeCandidates } from "./candidate-utils";
@@ -42,7 +43,11 @@ export function gatherCandidates(
     const candidates: RetrievalCandidate[] = [];
     const expandedQuery = context.expandedQuery;
     const lexicalQuery = toLexicalQuery(context.query);
-    const expandedLexicalQuery = toLexicalQuery(expandedQuery);
+    const headingTerms = new Set(queryTerms(context.query));
+    const expandedLexicalQuery = toExpandedLexicalQuery(
+      context.query,
+      expandedQuery,
+    );
     const useAtlasVocabulary = shouldUseAtlasVocabulary(context.repoId);
     let useExpandedRetrieval = lexicalQuery.length === 0;
     let lexicalHits =
@@ -127,6 +132,30 @@ export function gatherCandidates(
           ),
         );
         candidates.push(...documentSummaries(store, document, score * 0.72));
+        if (isDocumentPath(signal.path)) {
+          for (const { section } of store
+            .listSectionsByDocument(document.docId)
+            .map((section) => ({
+              section,
+              score: headingMatchScore(section.headingPath, headingTerms),
+            }))
+            .filter(({ score: headingScore }) => headingScore > 0)
+            .sort(
+              (left, right) =>
+                right.score - left.score ||
+                left.section.ordinal - right.section.ordinal,
+            )
+            .slice(0, 4)) {
+            candidates.push(
+              sectionCandidate(
+                document,
+                section,
+                signal.expanded ? 0.9 : 0.96,
+                context.countTokens,
+              ),
+            );
+          }
+        }
       }
     }
 
@@ -416,6 +445,21 @@ function toLexicalQuery(query: string): string {
   return queryTerms(query).slice(0, 12).join(" ");
 }
 
+function toExpandedLexicalQuery(query: string, expandedQuery: string): string {
+  const baseTerms = queryTerms(query);
+  const baseTermSet = new Set(baseTerms);
+  const expansionTerms = queryTerms(expandedQuery)
+    .filter((term) => !baseTermSet.has(term))
+    .slice(0, 4);
+  if (expansionTerms.length === 0) {
+    return baseTerms.slice(0, 12).join(" ");
+  }
+  return [
+    ...baseTerms.slice(0, 12 - expansionTerms.length),
+    ...expansionTerms,
+  ].join(" ");
+}
+
 function queryTerms(query: string): string[] {
   return query
     .replace(/[`"'()[\]{}:*^~+-]/g, " ")
@@ -473,6 +517,22 @@ function extractPathSignals(query: string): string[] {
   ]
     .map((match) => (match[1] ?? match[0]).trim())
     .filter((value) => value.length > 0);
+}
+
+function headingMatchScore(
+  headingPath: readonly string[],
+  queryTermsSet: ReadonlySet<string>,
+): number {
+  if (headingPath.length <= 1) {
+    return 0;
+  }
+  const leafHeading = headingPath[headingPath.length - 1]!;
+  return queryTerms(leafHeading).filter((term) => queryTermsSet.has(term))
+    .length;
+}
+
+function isDocumentPath(path: string): boolean {
+  return /\.(?:md|mdx)$/i.test(path);
 }
 
 function normalizePathSignal(path: string): string {

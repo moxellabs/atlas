@@ -110,7 +110,7 @@
       "sourceCaseId": "routing-partial",
       "title": "Partial-answer follow-up",
       "category": "follow-up",
-      "prompt": "A prior answer established that Atlas artifacts are read-only but did not explain how stale source coverage is reported. Retrieve only the missing stale-coverage behavior, then answer with a citation.",
+      "prompt": "A prior answer established that Atlas artifacts are read-only but did not explain MCP stale-coverage behavior. In prefer-local mode, what happens when local indexed coverage is absent, partial, or stale? Retrieve only that missing behavior, then answer with a citation.",
       "routing": {
         "firstTools": ["atlas:find_docs"],
         "maxAtlasCalls": 2,
@@ -210,7 +210,7 @@
       "prompt": "A prior retrieval returned document ID doc_d4c49c8c77e916c7a95c7f7f for docs/retrieval-and-context.md. Using that stable hit, identify and explain the directly related ingestion/build-flow document without restarting search.",
       "routing": {
         "firstTools": ["atlas:expand_related"],
-        "maxAtlasCalls": 1,
+        "maxAtlasCalls": 2,
         "externalFallback": "forbidden"
       },
       "criteria": [
@@ -295,8 +295,9 @@
       "prompt": "Prepare the repository-approved procedure for adding a new Atlas CLI command. Return the complete skill instructions and identify any bundled references or scripts.",
       "routing": {
         "firstTools": ["atlas:use_skill"],
-        "maxAtlasCalls": 1,
-        "externalFallback": "forbidden"
+        "maxAtlasCalls": 2,
+        "externalFallback": "forbidden",
+        "allowRepeatedAtlasTools": true
       },
       "criteria": [
         {

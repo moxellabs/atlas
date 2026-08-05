@@ -115,7 +115,7 @@ function buildPlanContextResult(
       : "answer_locally";
   const nextActionGuidance =
     coverage === "partial"
-      ? "Answer from context.evidence while stating the scope ambiguity and likely candidates. Do not call another retrieval tool."
+      ? "Answer from context.evidence while stating the scope ambiguity and likely candidates. Do not infer repository-wide absence from packet omissions, and do not call another retrieval tool."
       : nextAction === "answer_locally"
         ? "Answer now from context.evidence and cite provenance paths. Do not call another retrieval tool."
         : "Indexed coverage is absent or stale. Use an external source, cite it, and do not attribute the answer to Atlas.";

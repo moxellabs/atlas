@@ -119,6 +119,14 @@ describe("corpus snapshots", () => {
         paths: ["docs/architecture/missing.md"],
       }),
     ).toThrow("is absent from the isolated");
+    expect(
+      readCorpusEvidence({
+        corpusPath: targetPath,
+        repoId: targetRepoId,
+        paths: ["docs/architecture/missing.md"],
+        ignoreMissing: true,
+      }),
+    ).toEqual([]);
     const unchangedSource = openStore({ path: sourcePath, readOnly: true });
     try {
       expect(
