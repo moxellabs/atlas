@@ -22,6 +22,8 @@ The config package owns schema validation, defaults, path normalization, reposit
 - `server`: transport, host, and port.
 - `lifecycle.repositoryRefresh`: background source reconciliation settings.
 - `repos`: configured source repositories.
+- `identity.root`: maintainer artifact root and derived consumer runtime root.
+- `identity.mcp.name`, `identity.mcp.title`, and `identity.mcp.resourcePrefix`: runtime MCP identity.
 
 `loadConfig` normalizes paths relative to the config file and returns `runtimeRepos` for indexer and source adapters. CLI, HTTP, tests, and MCP-hosting workflows therefore use the same repository root and source contract.
 
@@ -79,7 +81,7 @@ Secrets should be referenced by environment variable name rather than written in
 
 ## Mutation Rules
 
-The CLI owns config mutation workflows such as `atlas setup` and repository registration through `atlas repo add`. Setup creates `~/.moxel/atlas`, `~/.moxel/atlas/repos`, and the config and corpus parent directories as needed. Standalone setup does not ask for wrapper namespace, MCP display identity, or visual branding fields. Those settings belong in embedded Commander wrapper code. Server mutation uses the same defaults, validation, and path normalization stages as `loadConfig` before writing YAML or JSON.
+The CLI owns config mutation workflows such as `atlas setup` and repository registration through `atlas repo add`. Setup creates `~/.moxel/atlas`, `~/.moxel/atlas/repos`, and the config and corpus parent directories as needed. Standalone setup does not prompt for wrapper namespace, MCP display identity, or visual branding fields. Runtime identity remains configurable through the documented `identity.*` fields, CLI flags, and environment variables; embedded Commander wrappers may also supply those defaults in wrapper code. Server mutation uses the same defaults, validation, and path normalization stages as `loadConfig` before writing YAML or JSON.
 
 Config changes must remain compatible with the schema and both source adapters. When adding a field, update validation, defaults, docs, CLI and server usage, and tests together.
 
