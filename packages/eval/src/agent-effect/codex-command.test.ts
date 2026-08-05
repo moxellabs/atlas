@@ -74,6 +74,9 @@ describe("Codex command policy", () => {
       "Preserve the task's distinguishing names, paths, quoted terms, and constraints verbatim",
     );
     expect(prompt).toContain(
+      "Do not add repository, scope, profile, audience, purpose, or visibility filters",
+    );
+    expect(prompt).toContain(
       "When an evidence tool marks a result terminal or directs you to answer now",
     );
     const baselineCommand = codexAgentCommand({

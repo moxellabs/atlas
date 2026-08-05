@@ -232,6 +232,36 @@ describe("MCP tool contracts", () => {
       ]),
     });
   });
+
+  test("resolves human-readable package and module scope paths", () => {
+    const { store } = fixture;
+    const plannedContext = executePlanContext(
+      {
+        query: "What does `rotateSessionToken` do during renewal?",
+        scope: {
+          repoId,
+          packageId: "packages/auth",
+          moduleId: "packages/auth/src/session",
+        },
+        budgetTokens: 2_000,
+      },
+      {
+        db: store,
+        retrievalStore: createRetrievalStore(store),
+      },
+    );
+
+    expect(plannedContext).toMatchObject({
+      coverage: { status: "sufficient" },
+      context: {
+        evidence: expect.arrayContaining([
+          expect.objectContaining({
+            provenance: expect.objectContaining({ packageId, moduleId }),
+          }),
+        ]),
+      },
+    });
+  });
   test("folds lifecycle freshness and bounded recent changes into plan_context", () => {
     const { store } = fixture;
     const plannedContext = executePlanContext(

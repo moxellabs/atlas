@@ -41,7 +41,7 @@ const profileSchema = z
   .min(1)
   .optional()
   .describe(
-    "Metadata profile filter. Use public for consumer docs, contributor for public contributor docs, maintainer for maintainer docs, or internal for all indexed docs.",
+    "Optional metadata filter. Omit unless the user explicitly requests a profile or audience. Use public for consumer docs, contributor for public contributor docs, maintainer for maintainer docs, or internal for all indexed docs.",
   );
 const docAudienceSchema = z.enum([
   "consumer",
@@ -174,7 +174,7 @@ export const planContextInputSchema = z
           .min(1)
           .optional()
           .describe(
-            "Opaque package ID returned by Atlas. Omit for a human-readable package path and keep that path in query.",
+            "Stored package ID, package name, or repository-relative package path. Omit when the package is unknown and keep any human-readable package reference in query.",
           ),
         moduleId: z
           .string()
@@ -182,13 +182,13 @@ export const planContextInputSchema = z
           .min(1)
           .optional()
           .describe(
-            "Opaque module ID returned by Atlas. Omit for a human-readable module path and keep that path in query.",
+            "Stored module ID, module name, or repository-relative module path. Omit when the module is unknown and keep any human-readable module reference in query.",
           ),
       })
       .strict()
       .optional()
       .describe(
-        "Exact stored IDs only. Omit unknown package/module IDs; human-readable paths belong in query.",
+        "Optional exact scope. Package and module fields accept stored IDs, names, or repository-relative paths; omit constraints the user did not supply.",
       ),
     budgetTokens: z.number().int().min(1).max(200_000).default(2_000),
     candidateLimit: limitSchema,

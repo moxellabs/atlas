@@ -30,6 +30,11 @@ interface PlanCitation {
   path: string;
   docId: string;
 }
+interface ResolvedPlanScope {
+  repoId?: string;
+  packageId?: string;
+  moduleId?: string;
+}
 
 /** Executes token-budgeted context planning for an MCP caller. */
 export function executePlanContext(
@@ -44,19 +49,14 @@ function buildPlanContextResult(
   dependencies: AtlasRetrievalMcpDependencies,
 ) {
   const parsed = planContextInputSchema.parse(input);
+  const scope = resolvePlanScope(parsed.scope, dependencies);
   const plan = planContext({
     store: dependencies.retrievalStore,
     query: parsed.query,
     budgetTokens: parsed.budgetTokens,
-    ...(parsed.scope?.repoId === undefined
-      ? {}
-      : { repoId: parsed.scope.repoId }),
-    ...(parsed.scope?.packageId === undefined
-      ? {}
-      : { packageId: parsed.scope.packageId }),
-    ...(parsed.scope?.moduleId === undefined
-      ? {}
-      : { moduleId: parsed.scope.moduleId }),
+    ...(scope.repoId === undefined ? {} : { repoId: scope.repoId }),
+    ...(scope.packageId === undefined ? {} : { packageId: scope.packageId }),
+    ...(scope.moduleId === undefined ? {} : { moduleId: scope.moduleId }),
     ...(parsed.candidateLimit === undefined
       ? {}
       : { candidateLimit: parsed.candidateLimit }),
@@ -142,6 +142,74 @@ function buildPlanContextResult(
       : {}),
     ...(parsed.detail === "debug" ? { debug: plan } : {}),
   });
+}
+function resolvePlanScope(
+  scope: PlanContextToolInput["scope"],
+  dependencies: AtlasRetrievalMcpDependencies,
+): ResolvedPlanScope {
+  if (scope === undefined) return {};
+  const repoIds =
+    scope.repoId === undefined
+      ? dependencies.retrievalStore.listRepos().map((repo) => repo.repoId)
+      : [scope.repoId];
+  const packageId = resolvePackageId(scope.packageId, repoIds, dependencies);
+  const moduleId = resolveModuleId(
+    scope.moduleId,
+    repoIds,
+    packageId,
+    dependencies,
+  );
+  return {
+    ...(scope.repoId === undefined ? {} : { repoId: scope.repoId }),
+    ...(packageId === undefined ? {} : { packageId }),
+    ...(moduleId === undefined ? {} : { moduleId }),
+  };
+}
+
+function resolvePackageId(
+  requested: string | undefined,
+  repoIds: readonly string[],
+  dependencies: AtlasRetrievalMcpDependencies,
+): string | undefined {
+  if (requested === undefined) return undefined;
+  if (dependencies.retrievalStore.getPackage(requested) !== undefined) {
+    return requested;
+  }
+  const matches = repoIds
+    .flatMap((repoId) => dependencies.retrievalStore.listPackagesByRepo(repoId))
+    .filter(
+      (candidate) =>
+        candidate.name === requested ||
+        normalizeScopePath(candidate.path) === normalizeScopePath(requested),
+    );
+  if (matches.length === 1) return matches[0]!.packageId;
+  return requested.startsWith("pkg_") ? requested : undefined;
+}
+
+function resolveModuleId(
+  requested: string | undefined,
+  repoIds: readonly string[],
+  packageId: string | undefined,
+  dependencies: AtlasRetrievalMcpDependencies,
+): string | undefined {
+  if (requested === undefined) return undefined;
+  if (dependencies.retrievalStore.getModule(requested) !== undefined) {
+    return requested;
+  }
+  const matches = repoIds
+    .flatMap((repoId) => dependencies.retrievalStore.listModulesByRepo(repoId))
+    .filter(
+      (candidate) =>
+        (packageId === undefined || candidate.packageId === packageId) &&
+        (candidate.name === requested ||
+          normalizeScopePath(candidate.path) === normalizeScopePath(requested)),
+    );
+  if (matches.length === 1) return matches[0]!.moduleId;
+  return requested.startsWith("mod_") ? requested : undefined;
+}
+
+function normalizeScopePath(value: string): string {
+  return value.replaceAll("\\", "/").replace(/\/+$/, "");
 }
 
 /** Registers the plan_context MCP tool. */

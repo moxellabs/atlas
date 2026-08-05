@@ -1,7 +1,7 @@
 ---
 title: MCP Package
 description: MCP tools, resources, prompts, transports, skill artifact access, and identity-aware aliases.
-audience: [contributor, maintainer]
+audience: [consumer, contributor, maintainer]
 purpose: [implementation, reference]
 visibility: public
 order: 240
