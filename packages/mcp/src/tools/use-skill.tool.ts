@@ -188,7 +188,7 @@ export function registerUseSkillTool(
     USE_SKILL_TOOL,
     {
       title: `Resolve ${title} skill and artifacts`,
-      description: `Call first for any request for a repository-approved procedure, complete skill instructions, or bundled scripts, references, or agent profiles. Pass task once for a natural-language request; pass skill only when an exact ID, title, or alias such as $${prefix}-add-cli-command is already known. This is the only tool that returns the complete stored instructions and artifact inventory; do not substitute search_passages or shell/file search. Exact and unambiguous matches return agent-ready instructions, provenance, and read-only artifacts; do not call again after status resolved.`,
+      description: `Call first for any request for a repository-approved procedure, complete skill instructions, or bundled scripts, references, or agent profiles. Pass task once for a natural-language request; pass skill only when an exact ID, title, or alias such as $${prefix}-add-cli-command is already known. This is the only tool that returns the complete stored instructions and artifact inventory; do not substitute search_passages or shell/file search. Report artifact inventory paths, but do not quote or summarize artifact content unless the request asks for it. Exact and unambiguous matches return agent-ready instructions, provenance, and read-only artifacts; do not call again after status resolved.`,
       inputSchema: useSkillInputSchema,
       outputSchema: useSkillOutputSchema,
       annotations: {
@@ -405,7 +405,7 @@ function resolvedSkillResult(
       },
     ],
     recommendedNextActions: [
-      "Answer or act from this complete skill payload and mention every artifactInventory path, including agent profiles. Do not call another Atlas retrieval tool.",
+      "TERMINAL: answer_locally now from instructions.markdown and artifactInventory. Mention every artifactInventory path, including agent profiles. Do not quote or summarize artifacts[].content unless the task explicitly requests artifact contents. Do not call another Atlas retrieval tool.",
     ],
   });
 }

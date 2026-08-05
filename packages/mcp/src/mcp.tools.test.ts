@@ -525,6 +525,11 @@ describe("MCP tool contracts", () => {
       freshness: expect.objectContaining({ repoId, fresh: true }),
       provenance: expect.objectContaining({ docId, skillId }),
       diagnostics: [expect.objectContaining({ stage: "execution-policy" })],
+      recommendedNextActions: [
+        expect.stringContaining(
+          "Do not quote or summarize artifacts[].content unless the task explicitly requests artifact contents.",
+        ),
+      ],
     });
 
     expect(
