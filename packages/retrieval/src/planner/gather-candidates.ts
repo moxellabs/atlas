@@ -42,10 +42,16 @@ export function gatherCandidates(
   try {
     const candidates: RetrievalCandidate[] = [];
     const expandedQuery = context.expandedQuery;
-    const lexicalQuery = toLexicalQuery(context.query);
-    const headingTerms = new Set(queryTerms(context.query));
-    const expandedLexicalQuery = toExpandedLexicalQuery(
+    const evidenceQuery = expansionRetainsOriginalQuery(
       context.query,
+      expandedQuery,
+    )
+      ? context.query
+      : expandedQuery;
+    const lexicalQuery = toLexicalQuery(evidenceQuery);
+    const headingTerms = new Set(queryTerms(evidenceQuery));
+    const expandedLexicalQuery = toExpandedLexicalQuery(
+      evidenceQuery,
       expandedQuery,
     );
     const useAtlasVocabulary = shouldUseAtlasVocabulary(context.repoId);
@@ -108,7 +114,7 @@ export function gatherCandidates(
     }
 
     for (const signal of pathSignals(
-      context.query,
+      evidenceQuery,
       expandedQuery,
       useExpandedRetrieval,
     )) {
@@ -227,7 +233,12 @@ export function gatherCandidates(
     if (deduped.length < Math.min(context.candidateLimit, 3)) {
       return dedupeCandidates([
         ...deduped,
-        ...broadFallbackCandidates(store, context, deduped.length),
+        ...broadFallbackCandidates(
+          store,
+          context,
+          deduped.length,
+          evidenceQuery,
+        ),
       ]).filter((candidate) => matchesExactScope(candidate, context));
     }
     return deduped;
@@ -247,8 +258,9 @@ function broadFallbackCandidates(
   store: RetrievalStore,
   context: GatherCandidatesInput,
   existingCount: number,
+  query: string,
 ): RetrievalCandidate[] {
-  const terms = queryTerms(context.query);
+  const terms = queryTerms(query);
   if (terms.length === 0) {
     return [];
   }
@@ -484,6 +496,15 @@ function toExpandedLexicalQuery(query: string, expandedQuery: string): string {
     ...baseTerms.slice(0, 12 - expansionTerms.length),
     ...expansionTerms,
   ].join(" ");
+}
+
+function expansionRetainsOriginalQuery(
+  query: string,
+  expandedQuery: string,
+): boolean {
+  const original = query.trim();
+  const expanded = expandedQuery.trim();
+  return expanded === original || expanded.startsWith(`${original} `);
 }
 
 function queryTerms(query: string): string[] {

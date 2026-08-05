@@ -1,13 +1,11 @@
+const PREFER_LOCAL_PATTERN =
+  /\bprefer-local\b|\babsent\b.*\bpartial\b.*\bstale\b|\bstale\b.*\bpartial\b.*\babsent\b/i;
+const PREFER_LOCAL_EXPANSIONS = [
+  "prefer-local fallback",
+  "absent partial stale local indexed coverage",
+] as const;
+
 const QUERY_EXPANSIONS: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
-  [
-    /\bprefer-local\b|\babsent\b.*\bpartial\b.*\bstale\b|\bstale\b.*\bpartial\b.*\babsent\b/i,
-    [
-      "prefer-local fallback",
-      "absent partial stale local indexed coverage",
-      "Agent and IDE integration",
-      "docs/runtime-surfaces.md",
-    ],
-  ],
   [
     /\bcovered-query-first\b|\binitialization guidance\b|\bconsult matching indexed sources\b/i,
     [
@@ -150,21 +148,34 @@ const QUERY_EXPANSIONS: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
 
 /** Adds small Atlas-specific vocabulary expansions for lexical retrieval. */
 export function expandQuery(query: string): string {
+  if (PREFER_LOCAL_PATTERN.test(query)) {
+    const focusedTerms: string[] = [];
+    addExpansionTerms(focusedTerms, new Set(), PREFER_LOCAL_EXPANSIONS);
+    return focusedTerms.join(" ");
+  }
   const terms = [query.trim()];
   const seen = new Set(normalizeTerms(query));
   for (const [pattern, expansions] of QUERY_EXPANSIONS) {
     if (!pattern.test(query)) {
       continue;
     }
-    for (const expansion of expansions) {
-      const key = expansion.toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
-        terms.push(expansion);
-      }
-    }
+    addExpansionTerms(terms, seen, expansions);
   }
   return terms.filter((term) => term.length > 0).join(" ");
+}
+
+function addExpansionTerms(
+  terms: string[],
+  seen: Set<string>,
+  expansions: readonly string[],
+): void {
+  for (const expansion of expansions) {
+    const key = expansion.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      terms.push(expansion);
+    }
+  }
 }
 
 function normalizeTerms(query: string): string[] {

@@ -59,11 +59,14 @@ describe("expandQuery", () => {
     const fallbackQuery = expandQuery(
       "prefer-local behavior for absent, partial, or stale coverage",
     );
-    expect(fallbackQuery).toContain("docs/runtime-surfaces.md");
+    expect(fallbackQuery).not.toContain("docs/runtime-surfaces.md");
     expect(fallbackQuery).toContain(
       "absent partial stale local indexed coverage",
     );
     expect(fallbackQuery).not.toContain("covered-query-first");
+    expect(fallbackQuery).not.toContain("model context protocol");
+    expect(fallbackQuery).not.toContain("docs/retrieval-and-context.md");
+    expect(fallbackQuery).not.toContain("behavior for");
     expect(
       expandQuery("covered-query-first initialization guidance"),
     ).toContain("atlas agent install");

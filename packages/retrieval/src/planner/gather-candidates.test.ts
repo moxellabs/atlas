@@ -112,6 +112,39 @@ describe("gatherCandidates", () => {
     ).toBe(true);
   });
 
+  test("uses a focused canonical expansion instead of a verbose wrapper query", () => {
+    const lexicalQueries: string[] = [];
+    const pathQueries: string[] = [];
+    const retrievalStore = fixture!.retrievalStore;
+    const trackedStore: RetrievalStore = {
+      ...retrievalStore,
+      lexicalSearch(options) {
+        lexicalQueries.push(options.query);
+        return retrievalStore.lexicalSearch(options);
+      },
+      pathSearch(options) {
+        pathQueries.push(options.path);
+        return retrievalStore.pathSearch(options);
+      },
+    };
+
+    gatherCandidates(trackedStore, {
+      query:
+        "A prior artifact answer omitted the prefer-local behavior for absent, partial, or stale indexed coverage.",
+      expandedQuery:
+        "prefer-local fallback absent partial stale local indexed coverage",
+      repoId,
+      scopes: [],
+      candidateLimit: 40,
+      countTokens: () => 1,
+    });
+
+    expect(lexicalQueries).toEqual([
+      "prefer local fallback absent partial stale local indexed coverage",
+    ]);
+    expect(pathQueries).toEqual([]);
+  });
+
   test("hydrates matching headings for an exact document path", () => {
     const candidates = gatherCandidates(fixture!.retrievalStore, {
       query: "packages/auth/docs/session.md rotation boundaries",
