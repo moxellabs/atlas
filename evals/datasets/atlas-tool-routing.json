@@ -351,6 +351,70 @@
           "evidencePaths": []
         }
       ]
+    },
+    {
+      "id": "stale-local-coverage",
+      "sourceCaseId": "routing-stale-fallback",
+      "title": "Stale local coverage with external fallback",
+      "category": "fallback-synthesis",
+      "prompt": "First retrieve Atlas's documented prefer-local rule for absent, partial, or stale indexed coverage. Then treat the local package-version evidence as stale and use a current external source to verify the latest published @modelcontextprotocol/sdk version. Synthesize the local fallback policy with the current version, citing the repository path and an absolute external URL.",
+      "routing": {
+        "firstTools": ["atlas:find_docs"],
+        "maxAtlasCalls": 1,
+        "externalFallback": "required"
+      },
+      "criteria": [
+        {
+          "id": "stale-completion",
+          "kind": "completion",
+          "description": "States the prefer-local stale-coverage behavior and the externally verified current SDK version.",
+          "evidencePaths": ["docs/runtime-surfaces.md"]
+        },
+        {
+          "id": "stale-grounding",
+          "kind": "grounding",
+          "description": "Uses indexed evidence for the local fallback policy and a current external source for the package version.",
+          "evidencePaths": ["docs/runtime-surfaces.md"]
+        },
+        {
+          "id": "stale-citation",
+          "kind": "citation",
+          "description": "Cites the local policy path and an absolute external package source URL.",
+          "evidencePaths": ["docs/runtime-surfaces.md"]
+        }
+      ]
+    },
+    {
+      "id": "exact-answer-atlas-only",
+      "sourceCaseId": "routing-atlas-only",
+      "title": "Exact indexed answer without fallback",
+      "category": "atlas-only",
+      "prompt": "Using only the indexed Atlas corpus, state the exact default MCP server identity and list the documented identity override knobs. Cite the repository documentation and do not use an external source.",
+      "routing": {
+        "firstTools": ["atlas:find_docs"],
+        "maxAtlasCalls": 1,
+        "externalFallback": "forbidden"
+      },
+      "criteria": [
+        {
+          "id": "atlas-only-completion",
+          "kind": "completion",
+          "description": "States the default MCP identity and its documented override knobs.",
+          "evidencePaths": ["packages/mcp/docs/index.md"]
+        },
+        {
+          "id": "atlas-only-grounding",
+          "kind": "grounding",
+          "description": "Answers from the indexed MCP identity passage without external evidence.",
+          "evidencePaths": ["packages/mcp/docs/index.md"]
+        },
+        {
+          "id": "atlas-only-citation",
+          "kind": "citation",
+          "description": "Cites the repository-relative MCP package documentation path.",
+          "evidencePaths": ["packages/mcp/docs/index.md"]
+        }
+      ]
     }
   ]
 }
