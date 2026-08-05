@@ -27,7 +27,10 @@ import {
   skillId,
 } from "./mcp.test-fixtures";
 import { createAtlasMcpServer } from "./server/create-mcp-server";
-import { planContextOutputSchema } from "./schemas/tool-output-schemas";
+import {
+  expandRelatedOutputSchema,
+  planContextOutputSchema,
+} from "./schemas/tool-output-schemas";
 import {
   findScopesInputSchema,
   readDocumentInputSchema,
@@ -648,9 +651,11 @@ describe("MCP tool contracts", () => {
       retrievalStore: createRetrievalStore(store),
     };
 
-    const expanded = executeExpandRelated(
-      { targetType: "document", targetId: docId, limit: 3 },
-      dependencies,
+    const expanded = expandRelatedOutputSchema.parse(
+      executeExpandRelated(
+        { targetType: "document", targetId: docId, limit: 3 },
+        dependencies,
+      ),
     );
     expect(expanded).toMatchObject({
       anchor: {
@@ -672,7 +677,9 @@ describe("MCP tool contracts", () => {
         ]),
         skills: expect.arrayContaining([expect.objectContaining({ skillId })]),
       },
-      nextActionGuidance: expect.stringContaining("Do not restart retrieval"),
+      nextActionGuidance: expect.stringContaining(
+        "Omit opaque corpus IDs unless the user explicitly asks for them.",
+      ),
     });
     expect(
       executeExpandRelated(
