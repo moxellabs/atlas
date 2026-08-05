@@ -365,14 +365,12 @@ export const useSkillOutputSchema = z
       })
       .strict()
       .optional(),
-    requestedSkill: z.string().optional(),
-    instructions: z
+    artifactInventory: z
       .object({
-        title: z.string().optional(),
-        description: z.string().optional(),
-        sourceDocumentPath: z.string(),
-        markdown: z.string(),
-        keySections: z.array(z.string()),
+        scripts: z.array(z.string()),
+        references: z.array(z.string()),
+        agentProfiles: z.array(z.string()),
+        other: z.array(z.string()),
       })
       .strict()
       .optional(),
@@ -385,6 +383,17 @@ export const useSkillOutputSchema = z
       )
       .optional(),
     selectedAgentProfile: skillArtifactSchema.optional(),
+    requestedSkill: z.string().optional(),
+    instructions: z
+      .object({
+        title: z.string().optional(),
+        description: z.string().optional(),
+        sourceDocumentPath: z.string(),
+        markdown: z.string(),
+        keySections: z.array(z.string()),
+      })
+      .strict()
+      .optional(),
     summaries: z.array(summarySchema).optional(),
     freshness: metadataSchema.optional(),
     provenance: provenanceSchema.optional(),

@@ -224,7 +224,7 @@ describe("MCP tool contracts", () => {
           }),
         ]),
         recommendedNextActions: [
-          "Answer now from context.evidence and cite provenance paths. Do not call another retrieval tool.",
+          "TERMINAL: answer_locally now from context.evidence and cite provenance paths. Do not call another Atlas tool.",
         ],
       },
       citations: expect.arrayContaining([
@@ -398,6 +398,12 @@ describe("MCP tool contracts", () => {
         tokenCount: 18,
         invocationAliases: expect.arrayContaining(["$atlas-session-skill"]),
       }),
+      artifactInventory: {
+        scripts: ["scripts/check.py"],
+        references: ["references/session.md"],
+        agentProfiles: ["agents/openai.yaml"],
+        other: [],
+      },
       instructions: expect.objectContaining({
         description:
           "Use this skill to answer session token operation questions.",

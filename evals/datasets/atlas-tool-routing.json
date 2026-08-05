@@ -391,7 +391,7 @@
       "category": "atlas-only",
       "prompt": "Using only the indexed Atlas corpus, state the exact default MCP server identity and list the documented identity override knobs. Cite the repository documentation and do not use an external source.",
       "routing": {
-        "firstTools": ["atlas:find_docs"],
+        "firstTools": ["atlas:find_docs", "atlas:plan_context"],
         "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },

@@ -235,7 +235,7 @@ describe("MCP server registration and in-memory protocol", () => {
           }),
         ]),
         recommendedNextActions: [
-          "Answer now from context.evidence and cite provenance paths. Do not call another retrieval tool.",
+          "TERMINAL: answer_locally now from context.evidence and cite provenance paths. Do not call another Atlas tool.",
         ],
       },
       citations: expect.arrayContaining([expect.objectContaining({ repoId })]),

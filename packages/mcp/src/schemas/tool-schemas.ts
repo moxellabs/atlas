@@ -5,7 +5,9 @@ export const querySchema = z
   .string()
   .trim()
   .min(1)
-  .describe("Natural-language query.");
+  .describe(
+    "Natural-language query. Preserve the user's named entities, paths, requested stages, and constraints; do not replace the question with a broad paraphrase.",
+  );
 
 /** Shared positive limit schema. */
 export const limitSchema = z

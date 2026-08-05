@@ -336,6 +336,20 @@ function resolvedSkillResult(
       ? []
       : new SectionRepository(dependencies.db).listByDocument(document.docId);
   const artifacts = listSkillArtifacts(dependencies.db, skill.skillId);
+  const artifactInventory = {
+    scripts: artifacts
+      .filter((artifact) => artifact.kind === "script")
+      .map((artifact) => artifact.path),
+    references: artifacts
+      .filter((artifact) => artifact.kind === "reference")
+      .map((artifact) => artifact.path),
+    agentProfiles: artifacts
+      .filter((artifact) => artifact.kind === "agent-profile")
+      .map((artifact) => artifact.path),
+    other: artifacts
+      .filter((artifact) => artifact.kind === "other")
+      .map((artifact) => artifact.path),
+  };
   const requestedAgent = parsed.agent?.trim().toLowerCase();
   const selectedAgentProfile =
     requestedAgent === undefined
@@ -363,6 +377,13 @@ function resolvedSkillResult(
       ...skill,
       invocationAliases: invocationAliasesForSkill(skill, prefix),
     },
+    artifactInventory,
+    artifacts: artifacts.map((artifact) => ({
+      ...artifact,
+      uri: `atlas://skill-artifact/${encodeURIComponent(skill.skillId)}/${artifact.path.split("/").map(encodeURIComponent).join("/")}`,
+      execution: artifact.kind === "script" ? "served-only" : "not-executable",
+    })),
+    ...(selectedAgentProfile === undefined ? {} : { selectedAgentProfile }),
     instructions: {
       title: skill.title,
       description: skill.description,
@@ -370,12 +391,6 @@ function resolvedSkillResult(
       markdown: sections.map((section) => section.text).join("\n\n"),
       keySections: skill.keySections,
     },
-    artifacts: artifacts.map((artifact) => ({
-      ...artifact,
-      uri: `atlas://skill-artifact/${encodeURIComponent(skill.skillId)}/${artifact.path.split("/").map(encodeURIComponent).join("/")}`,
-      execution: artifact.kind === "script" ? "served-only" : "not-executable",
-    })),
-    ...(selectedAgentProfile === undefined ? {} : { selectedAgentProfile }),
     summaries: listSummaries(dependencies.db, "skill", skill.skillId),
     freshness: getFreshnessForSkillRepo(dependencies.db, skill),
     provenance:
@@ -390,7 +405,7 @@ function resolvedSkillResult(
       },
     ],
     recommendedNextActions: [
-      "Answer or act from this complete skill payload. Do not call another Atlas retrieval tool.",
+      "Answer or act from this complete skill payload and mention every artifactInventory path, including agent profiles. Do not call another Atlas retrieval tool.",
     ],
   });
 }
