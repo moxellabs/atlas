@@ -107,6 +107,10 @@ describe("planContext", () => {
     });
 
     expect(plan.classification.kind).toBe("exact-lookup");
+    expect(plan.selected.some((item) => item.targetType === "summary")).toBe(
+      false,
+    );
+    expect(plan.contextPacket.evidence[0]?.targetType).toBe("section");
     const exactEvidence = plan.contextPacket.evidence.find(
       (item) => item.targetType === "section",
     );

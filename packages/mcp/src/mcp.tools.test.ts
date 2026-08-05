@@ -27,6 +27,7 @@ import {
   skillId,
 } from "./mcp.test-fixtures";
 import { createAtlasMcpServer } from "./server/create-mcp-server";
+import { planContextOutputSchema } from "./schemas/tool-output-schemas";
 import {
   findScopesInputSchema,
   readDocumentInputSchema,
@@ -211,7 +212,12 @@ describe("MCP tool contracts", () => {
       },
     );
 
-    expect(plannedContext).toMatchObject({
+    const parsed = planContextOutputSchema.parse(plannedContext);
+    expect(parsed.context.evidence[0]?.targetType).toBe("section");
+    expect(
+      parsed.context.evidence.some((item) => item.targetType === "summary"),
+    ).toBe(false);
+    expect(parsed).toMatchObject({
       coverage: { status: "sufficient" },
       nextAction: "answer_locally",
       context: {
@@ -224,7 +230,7 @@ describe("MCP tool contracts", () => {
           }),
         ]),
         recommendedNextActions: [
-          "TERMINAL: answer_locally now from context.evidence and cite provenance paths. Do not call another Atlas tool.",
+          "TERMINAL: answer_locally now from context.evidence and cite provenance paths. Read the selected evidence text before answering; do not claim evidence is unavailable when it contains the requested value. Do not call another Atlas tool.",
         ],
       },
       citations: expect.arrayContaining([
@@ -282,7 +288,7 @@ describe("MCP tool contracts", () => {
 
     expect(result.hits).toHaveLength(1);
     expect(lexicalLimits.length).toBeGreaterThan(0);
-    expect(lexicalLimits.every((limit) => limit >= 40)).toBe(true);
+    expect(lexicalLimits.every((limit) => limit >= 80)).toBe(true);
   });
   test("folds lifecycle freshness and bounded recent changes into plan_context", () => {
     const { store } = fixture;

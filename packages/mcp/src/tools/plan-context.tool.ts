@@ -117,7 +117,7 @@ function buildPlanContextResult(
     coverage === "partial"
       ? "TERMINAL: answer_locally now from context.evidence while stating the scope ambiguity and likely candidates. Do not infer repository-wide absence from packet omissions, and do not call another Atlas tool."
       : nextAction === "answer_locally"
-        ? "TERMINAL: answer_locally now from context.evidence and cite provenance paths. Do not call another Atlas tool."
+        ? "TERMINAL: answer_locally now from context.evidence and cite provenance paths. Read the selected evidence text before answering; do not claim evidence is unavailable when it contains the requested value. Do not call another Atlas tool."
         : "TERMINAL: indexed coverage is absent or stale. Use an external source, cite it, and do not attribute the answer to Atlas.";
   const citations = uniqueCitations(selected);
   return planContextOutputSchema.parse({
@@ -224,7 +224,7 @@ export function registerPlanContextTool(
       title: "Resolve multi-passage context",
       description:
         options.description ??
-        "Use for ambiguity, comparison, cross-source questions, module boundaries, or an answer that genuinely needs multiple passages. Pass the user's complete question without dropping named stages, paths, or constraints. For a broad overview of one named source, use its answer_<source>_docs facade instead. Returns one token-budgeted, deduplicated evidence packet with inferred scopes, coverage, citations, and a terminal nextAction. When nextAction is answer_locally, answer from this result without another Atlas call. Use exact scope constraints when the repository, package, or module is known.",
+        "Use for ambiguity, comparison, cross-source questions, module boundaries, or an answer that genuinely needs multiple passages. Do not use for an exact value, default, identity, knob, rule, or short list; call find_docs for those queries. Pass the user's complete question without dropping named stages, paths, or constraints. For a broad overview of one named source, use its answer_<source>_docs facade instead. Returns one token-budgeted, deduplicated evidence packet with inferred scopes, coverage, citations, and a terminal nextAction. When nextAction is answer_locally, read the selected evidence text and answer from this result without another Atlas call. Use exact scope constraints when the repository, package, or module is known.",
       inputSchema: planContextInputSchema,
       outputSchema: planContextOutputSchema,
       annotations: {

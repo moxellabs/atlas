@@ -95,7 +95,7 @@ export function findDocs(input: FindDocsInput): FindDocsResult {
     query: input.query,
     budgetTokens: 8_000,
     ...(input.repoId === undefined ? {} : { repoId: input.repoId }),
-    candidateLimit: Math.max(outputLimit, 40),
+    candidateLimit: Math.max(outputLimit, 80),
     ...(input.filters === undefined ? {} : { filters: input.filters }),
   });
   const scopeIds = new Set(input.scopeIds ?? []);
