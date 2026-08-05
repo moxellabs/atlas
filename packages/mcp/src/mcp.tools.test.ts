@@ -233,7 +233,7 @@ describe("MCP tool contracts", () => {
           }),
         ]),
         recommendedNextActions: [
-          "TERMINAL: answer_locally now from context.evidence and cite provenance paths. Read the selected evidence text before answering; do not claim evidence is unavailable when it contains the requested value. Do not call another Atlas tool.",
+          "TERMINAL: answer_locally now from context.evidence and cite provenance paths. Read and synthesize the selected evidence text for every requested scope; do not merely list paths or headings, and do not claim details are unavailable while relevant evidence text is present. Do not call another Atlas tool.",
         ],
       },
       citations: expect.arrayContaining([

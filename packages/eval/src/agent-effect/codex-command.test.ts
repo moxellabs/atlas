@@ -129,10 +129,16 @@ describe("Codex command policy", () => {
     );
     expect(prompt).toContain("never broaden a compound noun or scoped term");
     expect(prompt).toContain(
-      "Do not add repository, scope, profile, audience, purpose, or visibility filters",
+      "For exhaustive lists, include every item and qualifier",
     );
     expect(prompt).toContain(
-      "when the requested claim is entirely a current external fact",
+      "Do not add repository, scope, profile, audience, purpose, visibility, token-budget, or selection-limit filters",
+    );
+    expect(prompt).toContain(
+      "a question about a repository path, module, package, or repository documentation starts with repository evidence",
+    );
+    expect(prompt).toContain(
+      "When the requested claim is entirely a current external fact",
     );
     expect(prompt).toContain(
       "A request for one evidence packet permits one successful evidence call total",
@@ -142,7 +148,7 @@ describe("Codex command policy", () => {
       "Repository answer text is carried in context.evidence[].text",
     );
     expect(prompt).toContain(
-      "For comparison or ambiguous-scope questions, synthesize the answer-bearing text",
+      "For comparison, ambiguous-scope, or module-boundary questions",
     );
     expect(prompt).toContain(
       "never claim an empty evidence array, absent or stale coverage",

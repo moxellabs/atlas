@@ -15,7 +15,12 @@ This package registers ATLAS tools, resources, prompts, metadata, and transports
 
 ## MCP identity
 
-Default MCP identity remains `atlas-mcp`, Atlas resource names, and `$atlas-*` skill aliases. Explicit identity knobs are `--atlas-mcp-name`, `ATLAS_MCP_NAME`, optional `ATLAS_MCP_TITLE`, and config `identity.mcp.name`, `identity.mcp.title`, `identity.mcp.resourcePrefix`.
+Default MCP identity remains `atlas-mcp`, Atlas resource names, and `$atlas-*` skill aliases. The documented identity override knobs are:
+
+- CLI: `--atlas-mcp-name`
+- Environment: `ATLAS_MCP_NAME`
+- Optional title environment variable: `ATLAS_MCP_TITLE`
+- Config: `identity.mcp.name`, `identity.mcp.title`, and `identity.mcp.resourcePrefix`
 
 Identity changes server metadata, resource display names, and skill aliases. Generic MCP tool names remain stable. The `atlas://` URI scheme remains stable.
 

@@ -196,10 +196,24 @@ export const planContextInputSchema = z
       .describe(
         "Optional exact scope. Package and module fields accept stored IDs, names, or repository-relative paths; omit constraints the user did not supply.",
       ),
-    budgetTokens: z.number().int().min(1).max(200_000).default(2_000),
-    candidateLimit: limitSchema,
-    summaryLimit: selectionLimitSchema,
-    expansionLimit: selectionLimitSchema,
+    budgetTokens: z
+      .number()
+      .int()
+      .min(1)
+      .max(200_000)
+      .default(2_000)
+      .describe(
+        "Maximum context tokens. Omit to use the answer-ready default unless the user explicitly requests a numeric budget.",
+      ),
+    candidateLimit: limitSchema.describe(
+      "Advanced retrieval tuning. Omit unless the user explicitly requests a candidate limit.",
+    ),
+    summaryLimit: selectionLimitSchema.describe(
+      "Advanced retrieval tuning. Omit unless the user explicitly requests a summary limit.",
+    ),
+    expansionLimit: selectionLimitSchema.describe(
+      "Advanced retrieval tuning. Omit unless the user explicitly requests an expansion limit.",
+    ),
     profile: profileSchema,
     audience: z.array(docAudienceSchema).optional(),
     purpose: z.array(docPurposeSchema).optional(),
