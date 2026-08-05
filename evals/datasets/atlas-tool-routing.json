@@ -359,7 +359,7 @@
       "category": "fallback-synthesis",
       "prompt": "First retrieve Atlas's documented prefer-local rule for absent, partial, or stale indexed coverage. Then treat the local package-version evidence as stale and use a current external source to verify the latest published @modelcontextprotocol/sdk version. Synthesize the local fallback policy with the current version, citing the repository path and an absolute external URL.",
       "routing": {
-        "firstTools": ["atlas:find_docs"],
+        "firstTools": ["atlas:find_docs", "web:web_search"],
         "maxAtlasCalls": 1,
         "externalFallback": "required"
       },

@@ -112,6 +112,12 @@ export function hermeticCodexEnvironment(
     LANG: "C.UTF-8",
     LC_ALL: "C.UTF-8",
     OPENAI_API_KEY: Bun.env.OPENAI_API_KEY ?? "",
+    MISE_CACHE_DIR:
+      Bun.env.MISE_CACHE_DIR ?? join(homedir(), ".cache", "mise"),
+    MISE_CONFIG_DIR:
+      Bun.env.MISE_CONFIG_DIR ?? join(homedir(), ".config", "mise"),
+    MISE_DATA_DIR:
+      Bun.env.MISE_DATA_DIR ?? join(homedir(), ".local", "share", "mise"),
     PATH: Bun.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
     TZ: "UTC",
     XDG_CACHE_HOME: join(home, ".cache"),

@@ -40,10 +40,11 @@ export function executeFindDocs(
   });
   return findDocsOutputSchema.parse({
     ...result,
+    nextAction: result.hits.length === 0 ? "web_fallback" : "answer_locally",
     nextActionGuidance:
       result.hits.length === 0
-        ? "No indexed hit supports this claim. Use an external source if the claim still requires an answer."
-        : "STOP: answer now from the highest-ranked supporting textPreview. If that preview is truncated, call read_document once for the same hit. Do not repeat find_docs or refine the query, and do not infer repository-wide absence from the bounded hit set.",
+        ? "TERMINAL: indexed evidence is absent. Use an external source if the claim still requires an answer."
+        : "TERMINAL: answer_locally now from the highest-ranked supporting textPreview. Do not call another Atlas tool. The preview is the answer-bearing passage; cite its provenance path.",
   });
 }
 
@@ -57,7 +58,7 @@ export function registerFindDocsTool(
     {
       title: "Find indexed passages",
       description:
-        "Call exactly once for an exact rule or location, one missing claim from a partial answer, or retrieval debugging. Returns ranked document, section, chunk, or skill hits with text previews. Never refine by repeating find_docs or infer repository-wide absence from its bounded hit set; answer from the highest-ranked supporting preview or read that hit once when truncated. Use plan_context only for ambiguity, comparison, module boundaries, or multi-passage planning.",
+        "Call exactly once for an exact rule or location, one missing claim from a partial answer, or retrieval debugging. Returns ranked hits plus a terminal nextAction. When nextAction is answer_locally, the highest-ranked textPreview is the answer-bearing passage: answer and cite it immediately without any other Atlas call. Never refine by repeating find_docs or infer repository-wide absence from its bounded hit set. Use plan_context only for ambiguity, comparison, module boundaries, or multi-passage planning.",
       inputSchema: findDocsInputSchema,
       outputSchema: findDocsOutputSchema,
       annotations: {

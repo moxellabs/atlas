@@ -138,8 +138,13 @@ describe("MCP tool contracts", () => {
       executeFindDocs(
         { query: "session rotation", repoId, limit: 5 },
         dependencies,
-      ).nextActionGuidance,
-    ).toContain("Do not repeat find_docs");
+      ),
+    ).toMatchObject({
+      nextAction: "answer_locally",
+      nextActionGuidance: expect.stringContaining(
+        "Do not call another Atlas tool",
+      ),
+    });
     const filteredHits = executeFindDocs(
       {
         query: "session rotation",

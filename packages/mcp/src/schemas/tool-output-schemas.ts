@@ -206,6 +206,7 @@ export const findScopesOutputSchema = z
 export const findDocsOutputSchema = z
   .object({
     query: z.string(),
+    nextAction: z.enum(["answer_locally", "web_fallback"]),
     nextActionGuidance: z.string(),
     classification: queryClassificationSchema,
     hits: z.array(rankedHitSchema),
