@@ -138,6 +138,15 @@ describe("MCP server registration and in-memory protocol", () => {
         openWorldHint: false,
       },
     });
+    expect(planTool?.description).toContain(
+      "Do not call plan_context merely because the question asks",
+    );
+    const searchTool = tools.tools.find(
+      (tool) => tool.name === "search_passages",
+    );
+    expect(searchTool?.description).toContain(
+      "naming a tool in the question does not mean invoke that tool",
+    );
     expect(planTool?.outputSchema).toMatchObject({ type: "object" });
   });
 

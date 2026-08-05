@@ -335,7 +335,7 @@ function genericPlanDescription(catalog: IndexedSourceCatalog): string {
       (source) => `${source.title} (${source.topics.slice(0, 8).join(", ")})`,
     )
     .join("; ");
-  return `Build a multi-passage local evidence packet for an ambiguous, comparative, cross-source, or module-boundary question. Returns coverage (sufficient, partial, absent, or stale), citations, and the next safe action. For a broad overview of one named source, use its answer_<source>_docs facade instead. Indexed sources and topics: ${sourceNames || "none"}. Use scope.repoId when the source is known.`;
+  return `Build a multi-passage local evidence packet for an ambiguous, comparative, cross-source, or module-boundary question. Do not call plan_context merely because the question asks when, why, or how plan_context is used; that is an exact documentation lookup for search_passages. Exact values, defaults, identities, knobs, rules, and short lists also use search_passages. Returns coverage (sufficient, partial, absent, or stale), citations, and the next safe action. For a broad overview of one named source, use its answer_<source>_docs facade instead. Indexed sources and topics: ${sourceNames || "none"}. Use scope.repoId when the source is known; leave budget and selection tuning at defaults unless the user supplied numeric constraints.`;
 }
 
 function registerPrompts(server: McpServer): void {
