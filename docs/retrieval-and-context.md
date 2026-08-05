@@ -10,7 +10,7 @@ order: 40
 # Retrieval And Context Planning
 
 Atlas retrieval is scope-aware. It uses topology, summaries, search records, ranking signals, and token budgets to return useful evidence without flattening the documentation corpus.
-At query time, Atlas turns indexed repository documentation into an answer-ready context packet entirely from the persisted local corpus: it classifies the query, infers likely scopes, gathers and ranks evidence, and selects summaries, sections, or chunks under one token budget. This retrieval boundary does not sync repositories, rebuild artifacts, or fetch remote sources; source acquisition and indexing are separate runtime operations described in [Architecture](./architecture.md).
+At query time, Atlas turns indexed repository documentation into an answer-ready context packet entirely from the persisted local corpus: it classifies the query, infers likely scopes, generates candidates, ranks them, selects summaries, sections, or chunks under one token budget, and presents rationale, ambiguity, omitted candidates, provenance, and diagnostics. This retrieval boundary does not sync repositories, rebuild artifacts, or fetch remote sources; source acquisition and indexing are separate runtime operations described in [Architecture](./architecture.md).
 
 ## Retrieval Pipeline
 
@@ -20,6 +20,8 @@ At query time, Atlas turns indexed repository documentation into an answer-ready
 4. Ranking combines lexical relevance, authority, locality, query-kind fit, token efficiency, redundancy, and freshness evidence.
 5. Context planning selects summaries first where useful, then expands to sections or chunks under a token budget.
 6. Presenters return rationale, ambiguity, omitted candidates, provenance, and diagnostics.
+
+The entire query-time pipeline reads the persisted local corpus. Source acquisition, synchronization, indexing, and artifact builds remain outside this runtime boundary.
 
 ## Retrieval Surfaces
 

@@ -96,7 +96,7 @@ export function executeExpandRelated(
       },
     ],
     nextActionGuidance:
-      "STOP when a returned summary supports the missing claim: answer from the related records and cite their provenance paths. Omit opaque corpus IDs unless the user explicitly asks for them. Do not restart retrieval, read every related candidate, or repeat expand_related.",
+      "STOP when a returned summary supports the missing claim: answer from the related records and cite their provenance paths. State only source-backed content; do not characterize packet ranking, result order, canonical status, or relationship metadata. Omit opaque corpus IDs unless the user explicitly asks for them. Do not restart retrieval, read every related candidate, or repeat expand_related.",
   });
 }
 
@@ -110,7 +110,7 @@ export function registerExpandRelatedTool(
     {
       title: "Expand one stored retrieval hit",
       description:
-        "Use once after find_docs, plan_context, or read_document returns a stable targetType and targetId and a related claim remains unsupported. Pass the missing claim in query to rank related documents around that anchor; omit query for scope locality. Returned summaries are answer evidence: cite their provenance paths and omit opaque corpus IDs unless the user asks for them. Do not read every candidate, restart retrieval, or repeat expand_related.",
+        "Use once after find_docs, plan_context, or read_document returns a stable targetType and targetId and a related claim remains unsupported. Pass the missing claim in query to rank related documents around that anchor; omit query for scope locality. Returned summaries are answer evidence: cite their provenance paths and state only source-backed content, not packet ranking, result order, canonical status, or relationship metadata. Omit opaque corpus IDs unless the user asks for them. Do not read every candidate, restart retrieval, or repeat expand_related.",
       inputSchema: expandRelatedInputSchema,
       outputSchema: expandRelatedOutputSchema,
       annotations: {

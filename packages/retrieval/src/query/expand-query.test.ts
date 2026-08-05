@@ -51,6 +51,11 @@ describe("expandQuery", () => {
     expect(expandQuery("configure Atlas scopes")).toContain(
       "docs/runtime-surfaces.md",
     );
+    expect(
+      expandQuery(
+        "prefer-local behavior for absent, partial, or stale coverage",
+      ),
+    ).toContain("docs/runtime-surfaces.md");
     expect(expandQuery("generated vendor directories ignored")).toContain(
       "docs/troubleshooting.md",
     );

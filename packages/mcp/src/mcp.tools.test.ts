@@ -678,7 +678,7 @@ describe("MCP tool contracts", () => {
         skills: expect.arrayContaining([expect.objectContaining({ skillId })]),
       },
       nextActionGuidance: expect.stringContaining(
-        "Omit opaque corpus IDs unless the user explicitly asks for them.",
+        "do not characterize packet ranking",
       ),
     });
     expect(

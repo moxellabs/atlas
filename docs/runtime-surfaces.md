@@ -49,15 +49,15 @@ Repo target inference is shared across repo-targeting commands. Explicit `--repo
 
 Expected behavior matrix:
 
-| Prompt type                 | Expected behavior                                                                    |
-| --------------------------- | ------------------------------------------------------------------------------------ |
-| Broad indexed-source prompt | Call `answer_<source>_docs` or `plan_context`; answer when the packet is sufficient. |
-| Exact passage prompt        | Call `find_docs`, then read one exact section only if its preview is insufficient.   |
-| Known stable result         | Call `expand_related` only for a missing related claim.                              |
-| Skill or procedure prompt   | Call `use_skill` directly.                                                           |
-| Absent or stale coverage    | Use external retrieval only after an Atlas result reports that state.                |
-| Generic prompt              | No Atlas MCP calls.                                                                  |
-| Security-sensitive prompt   | No Atlas MCP calls, no remote fetch, no credential echo.                             |
+| Prompt type                        | Expected behavior                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Broad indexed-source prompt        | Call `answer_<source>_docs` or `plan_context`; answer when the packet is sufficient.                                |
+| Exact passage prompt               | Call `find_docs`, then read one exact section only if its preview is insufficient.                                  |
+| Known stable result                | Call `expand_related` only for a missing related claim.                                                             |
+| Skill or procedure prompt          | Call `use_skill` directly.                                                                                          |
+| Absent, partial, or stale coverage | Prefer local indexed evidence when sufficient; retain external fallback when coverage is absent, partial, or stale. |
+| Generic prompt                     | No Atlas MCP calls.                                                                                                 |
+| Security-sensitive prompt          | No Atlas MCP calls, no remote fetch, no credential echo.                                                            |
 
 `adoptionScore` is `passedCases / totalCases`. Failed adoption cases make the CLI exit non-zero. Adoption fixtures are local JSON traces; they do not start network services, fetch remote repositories, or read environment tokens.
 

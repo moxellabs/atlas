@@ -1,4 +1,13 @@
 const QUERY_EXPANSIONS: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
+  [
+    /\bprefer-local\b|\babsent\b.*\bpartial\b.*\bstale\b|\bstale\b.*\bpartial\b.*\babsent\b/i,
+    [
+      "covered-query-first",
+      "Agent and IDE integration",
+      "atlas agent install",
+      "docs/runtime-surfaces.md",
+    ],
+  ],
   [/\bartifacts?\b/i, [".moxel/atlas", "public artifact", "corpus artifact"]],
   [
     /\bmcp\b.*\bidentity\b|\bidentity\b.*\bmcp\b|\bdefault MCP server\b|\bidentity override\b/i,

@@ -134,6 +134,9 @@ describe("Codex command policy", () => {
       "A request for one evidence packet permits one successful evidence call total",
     );
     expect(prompt).toContain(
+      "Repository answer text is carried in context.evidence[].text",
+    );
+    expect(prompt).toContain(
       "A successful evidence result with nextAction=answer_locally",
     );
     expect(prompt).toContain("Any tool call after that result is an error");
