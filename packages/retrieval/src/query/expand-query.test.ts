@@ -35,6 +35,11 @@ describe("expandQuery", () => {
       "ATLAS_MCP_NAME",
     );
     expect(expandQuery("repo import without checkout")).toContain("repo add");
+    expect(
+      expandQuery(
+        "I set up a repository and want another agent to use the knowledge from it",
+      ),
+    ).toContain("docs/self-indexing.md");
     expect(expandQuery("inspect corpus search")).toContain("SQLite");
     expect(expandQuery("atlas build --profile public")).toContain(
       "docs/ingestion-build-flow.md",

@@ -24,6 +24,15 @@ const QUERY_EXPANSIONS: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
     ["model context protocol", "MCP package", "packages/mcp/docs/index.md"],
   ],
   [/\brepo\s+imports?\b/i, ["repo add", "artifact", "without cloning"]],
+  [
+    /\brepositor(?:y|ies)\b.*\bagents?\b|\bagents?\b.*\brepositor(?:y|ies)\b/i,
+    [
+      "self-indexing",
+      "consume repository knowledge",
+      "repo add",
+      "docs/self-indexing.md",
+    ],
+  ],
   [/\bcorpus\b/i, ["SQLite", "store", "index"]],
   [
     /\bconfig(?:ure|ured|uration)?\b|\bsettings?\b/i,
