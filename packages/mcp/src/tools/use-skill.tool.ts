@@ -187,8 +187,8 @@ export function registerUseSkillTool(
   server.registerTool(
     USE_SKILL_TOOL,
     {
-      title: `Use ${title} skill`,
-      description: `Call once with task only to resolve a natural-language procedure, or with skill only when an exact ID, title, or alias such as $${prefix}-add-cli-command is already known. Exact and unambiguous matches return complete agent-ready instructions, provenance, and read-only artifacts; do not call again after status resolved.`,
+      title: `Resolve ${title} skill and artifacts`,
+      description: `Call first for any request for a repository-approved procedure, complete skill instructions, or bundled scripts, references, or agent profiles. Pass task once for a natural-language request; pass skill only when an exact ID, title, or alias such as $${prefix}-add-cli-command is already known. This is the only tool that returns the complete stored instructions and artifact inventory; do not substitute search_passages or shell/file search. Exact and unambiguous matches return agent-ready instructions, provenance, and read-only artifacts; do not call again after status resolved.`,
       inputSchema: useSkillInputSchema,
       outputSchema: useSkillOutputSchema,
       annotations: {

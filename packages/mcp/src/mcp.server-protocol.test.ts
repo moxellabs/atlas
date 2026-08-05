@@ -147,6 +147,16 @@ describe("MCP server registration and in-memory protocol", () => {
     expect(searchTool?.description).toContain(
       "naming a tool in the question does not mean invoke that tool",
     );
+    const useSkillTool = tools.tools.find((tool) => tool.name === "use_skill");
+    expect(useSkillTool).toMatchObject({
+      title: "Resolve ATLAS Local Knowledge MCP skill and artifacts",
+    });
+    expect(useSkillTool?.description).toContain(
+      "Call first for any request for a repository-approved procedure",
+    );
+    expect(useSkillTool?.description).toContain(
+      "do not substitute search_passages or shell/file search",
+    );
     expect(planTool?.outputSchema).toMatchObject({ type: "object" });
   });
 
