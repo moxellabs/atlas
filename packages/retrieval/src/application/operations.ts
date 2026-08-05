@@ -20,7 +20,10 @@ import {
   SummaryRepository,
 } from "@atlas/store";
 
-import { RetrievalEntityNotFoundError } from "../errors";
+import {
+  RetrievalConfigurationError,
+  RetrievalEntityNotFoundError,
+} from "../errors";
 import { planContext } from "../planner/plan-context";
 import { classifyQuery } from "../classify/classify-query";
 import { inferScopes } from "../scopes/infer-scopes";
@@ -178,7 +181,7 @@ export interface DocumentSectionResult {
   provenance: Provenance;
 }
 
-/** Reads one section by ID or exact heading path. */
+/** Reads one section by ID, exact heading path, or unique heading suffix. */
 export function readDocumentSection(
   db: StoreDatabase,
   docId: string,
@@ -188,13 +191,11 @@ export function readDocumentSection(
   },
 ): DocumentSectionResult {
   const document = requiredDocument(db, docId, "readDocumentSection");
-  const section = new SectionRepository(db)
-    .listByDocument(docId)
-    .find((candidate) =>
-      options.sectionId === undefined
-        ? sameHeading(candidate.headingPath, options.heading ?? [])
-        : candidate.sectionId === options.sectionId,
-    );
+  const sections = new SectionRepository(db).listByDocument(docId);
+  const section =
+    options.sectionId === undefined
+      ? sectionByHeading(sections, options.heading ?? [])
+      : sections.find((candidate) => candidate.sectionId === options.sectionId);
   if (section === undefined) {
     throw new RetrievalEntityNotFoundError("Section was not found.", {
       operation: "readDocumentSection",
@@ -383,4 +384,50 @@ function sameHeading(
     left.length === right.length &&
     left.every((value, index) => value === right[index])
   );
+}
+
+function sectionByHeading(
+  sections: readonly SectionRecord[],
+  heading: readonly string[],
+): SectionRecord | undefined {
+  let exact: SectionRecord | undefined;
+  let suffix: SectionRecord | undefined;
+  let suffixIsAmbiguous = false;
+  for (const candidate of sections) {
+    if (sameHeading(candidate.headingPath, heading)) {
+      exact = candidate;
+    }
+    if (!endsWithHeading(candidate.headingPath, heading)) {
+      continue;
+    }
+    if (suffix === undefined) {
+      suffix = candidate;
+    } else {
+      suffixIsAmbiguous = true;
+    }
+  }
+  if (exact !== undefined) {
+    return exact;
+  }
+  if (suffixIsAmbiguous) {
+    throw new RetrievalConfigurationError(
+      "Section heading is ambiguous; pass the full heading path or sectionId.",
+      {
+        operation: "readDocumentSection",
+        entity: heading.join(" > "),
+      },
+    );
+  }
+  return suffix;
+}
+
+function endsWithHeading(
+  candidate: readonly string[],
+  suffix: readonly string[],
+): boolean {
+  if (suffix.length === 0 || suffix.length > candidate.length) {
+    return false;
+  }
+  const offset = candidate.length - suffix.length;
+  return suffix.every((value, index) => value === candidate[offset + index]);
 }

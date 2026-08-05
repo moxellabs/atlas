@@ -119,7 +119,7 @@ export const readDocumentInputSchema = z
       .min(1)
       .optional()
       .describe(
-        "Exact heading path. When the caller already knows it, pass it directly instead of requesting an outline first.",
+        "Exact heading path or unique trailing heading. When the caller already knows it, pass it directly instead of requesting an outline first.",
       ),
   })
   .strict()

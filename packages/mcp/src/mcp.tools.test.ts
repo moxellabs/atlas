@@ -399,6 +399,37 @@ describe("MCP tool contracts", () => {
       status: "section",
       section: expect.objectContaining({ sectionId }),
     });
+    expect(
+      executeReadDocument({ docId, heading: ["Rotation"] }, dependencies),
+    ).toMatchObject({
+      status: "section",
+      section: expect.objectContaining({ sectionId }),
+    });
+    new SectionRepository(store).replaceForDocument(docId, [
+      {
+        sectionId,
+        headingPath: ["Session", "Rotation"],
+        ordinal: 0,
+        text: "Rotate session tokens by calling rotateSessionToken during renewal.",
+        codeBlocks: [],
+      },
+      {
+        sectionId: createSectionId({
+          docId,
+          headingPath: ["Audit", "Rotation"],
+          ordinal: 1,
+        }),
+        headingPath: ["Audit", "Rotation"],
+        ordinal: 1,
+        text: "Audit token rotation.",
+        codeBlocks: [],
+      },
+    ]);
+    expect(() =>
+      executeReadDocument({ docId, heading: ["Rotation"] }, dependencies),
+    ).toThrow(
+      "Section heading is ambiguous; pass the full heading path or sectionId.",
+    );
     expect(() =>
       executeReadDocument(
         { docId, heading: ["Session", "Missing"] },
