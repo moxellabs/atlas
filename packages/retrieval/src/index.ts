@@ -1,5 +1,5 @@
 export {
-  findDocs,
+  searchPassages,
   findScopes,
   freshnessFromRecords,
   listSkills,
@@ -12,8 +12,8 @@ export {
 export type {
   DocumentOutlineResult,
   DocumentSectionResult,
-  FindDocsInput,
-  FindDocsResult,
+  SearchPassagesInput,
+  SearchPassagesResult,
   FindScopesResult,
   FreshnessResult,
   SearchApplicationInput,

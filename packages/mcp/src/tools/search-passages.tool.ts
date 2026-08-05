@@ -1,4 +1,4 @@
-import { findDocs } from "@atlas/retrieval";
+import { searchPassages } from "@atlas/retrieval";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { toolResult } from "../mcp-result";
@@ -17,7 +17,7 @@ export function executeSearchPassages(
   dependencies: AtlasRetrievalMcpDependencies,
 ): McpJsonObject {
   const parsed = searchPassagesInputSchema.parse(input);
-  const result = findDocs({
+  const result = searchPassages({
     store: dependencies.retrievalStore,
     query: parsed.query,
     ...(parsed.repoId === undefined ? {} : { repoId: parsed.repoId }),

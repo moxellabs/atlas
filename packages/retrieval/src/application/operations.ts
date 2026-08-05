@@ -73,15 +73,15 @@ export function findScopes(input: SearchApplicationInput): FindScopesResult {
   };
 }
 
-/** Input for precise ranked document retrieval. */
-export interface FindDocsInput extends SearchApplicationInput {
+/** Input for precise ranked passage retrieval. */
+export interface SearchPassagesInput extends SearchApplicationInput {
   scopeIds?: readonly string[] | undefined;
   documentKinds?: readonly DocumentRecord["kind"][] | undefined;
   targetTypes?: readonly Exclude<RetrievalTargetType, "summary">[] | undefined;
 }
 
-/** Ranked document retrieval result shared by HTTP and MCP transports. */
-export interface FindDocsResult {
+/** Ranked passage retrieval result shared by HTTP and MCP transports. */
+export interface SearchPassagesResult {
   query: string;
   classification: QueryClassification;
   hits: RankedHit[];
@@ -90,8 +90,10 @@ export interface FindDocsResult {
   diagnostics: RetrievalDiagnostic[];
 }
 
-/** Finds ranked document, section, chunk, and skill hits through one application path. */
-export function findDocs(input: FindDocsInput): FindDocsResult {
+/** Searches ranked document, section, chunk, and skill passages through one application path. */
+export function searchPassages(
+  input: SearchPassagesInput,
+): SearchPassagesResult {
   const outputLimit = input.limit ?? 20;
   const plan = planContext({
     store: input.store,

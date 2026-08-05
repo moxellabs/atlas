@@ -1,4 +1,4 @@
-import { findDocs, provenanceFromDocument } from "@atlas/retrieval";
+import { searchPassages, provenanceFromDocument } from "@atlas/retrieval";
 import {
   ChunkRepository,
   DocRepository,
@@ -234,7 +234,7 @@ function relatedDocumentsFor(
   if (query === undefined) return local.slice(0, limit);
 
   const seen = new Set([anchor.docId]);
-  const ranked = findDocs({
+  const ranked = searchPassages({
     store: dependencies.retrievalStore,
     query,
     repoId: anchor.repoId,

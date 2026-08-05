@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import {
-  findDocsBodySchema,
+  searchPassagesBodySchema,
   findScopesBodySchema,
 } from "../../schemas/search.schema";
 import { planContextBodySchema } from "../../schemas/context.schema";
@@ -61,15 +61,15 @@ export const retrievalDocs = {
     ),
     responses: okResponses(scopeResultSchema),
   }),
-  findDocs: operation({
+  searchPassages: operation({
     tags: ["Retrieval"],
-    operationId: "findDocuments",
-    summary: "Search indexed documents",
+    operationId: "searchPassages",
+    summary: "Search indexed passages",
     description:
-      "Classifies a query such as session rotation and searches local chunks/documents using optional scope and kind constraints without fetching remote source at query time.",
+      "Classifies a query such as session rotation and searches local sections, chunks, and documents using optional scope and kind constraints without fetching remote source at query time.",
     requestBody: jsonRequest(
-      findDocsBodySchema,
-      "Document search request. Example query: session rotation. Optional repoId: github.com/org/repo.",
+      searchPassagesBodySchema,
+      "Passage search request. Example query: session rotation. Optional repoId: github.com/org/repo.",
     ),
     responses: okResponses(searchResultSchema),
   }),

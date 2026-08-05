@@ -238,7 +238,7 @@ describe("server OpenAPI contract", () => {
 
   test("keeps generated request schemas aligned with runtime validation", async () => {
     const spec = await openApiSpec(app);
-    const findDocuments = requestSchema(spec, "/api/search/docs");
+    const searchPassagesRequest = requestSchema(spec, "/api/search/docs");
     const findScopes = requestSchema(spec, "/api/search/scopes");
     const context = requestSchema(spec, "/api/context/plan");
     const repository = requestSchema(spec, "/api/repos");
@@ -278,7 +278,7 @@ describe("server OpenAPI contract", () => {
       },
     });
 
-    for (const schema of [findDocuments, findScopes, context]) {
+    for (const schema of [searchPassagesRequest, findScopes, context]) {
       expect(schema.properties).toMatchObject({
         profile: { minLength: 1 },
         audience: { type: "array", maxItems: 10 },
@@ -286,7 +286,7 @@ describe("server OpenAPI contract", () => {
         visibility: { type: "array", maxItems: 2 },
       });
     }
-    expect(findDocuments.properties?.scopeIds).toMatchObject({
+    expect(searchPassagesRequest.properties?.scopeIds).toMatchObject({
       type: "array",
       maxItems: 20,
       items: { minLength: 1 },
@@ -303,7 +303,9 @@ describe("server OpenAPI contract", () => {
       default: 2_000,
     });
     expect(repositoryId.schema).toMatchObject({ type: "string" });
-    expect(findDocuments.properties?.query).toMatchObject({ minLength: 1 });
+    expect(searchPassagesRequest.properties?.query).toMatchObject({
+      minLength: 1,
+    });
     expect(sync.properties).toMatchObject({
       repoId: { minLength: 1 },
       mode: { type: "string" },

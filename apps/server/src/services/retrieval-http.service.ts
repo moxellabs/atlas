@@ -1,7 +1,7 @@
 import type { DocumentMetadataFilters } from "@atlas/core";
 import {
   createRetrievalStore,
-  findDocs,
+  searchPassages,
   findScopes,
   planContext,
   type RetrievalStore,
@@ -29,8 +29,8 @@ export class RetrievalHttpService {
     });
   }
 
-  /** Finds ranked document-ish hits through retrieval planning. */
-  findDocs(input: {
+  /** Searches ranked passages through retrieval planning. */
+  searchPassages(input: {
     query: string;
     repoId?: string;
     scopeIds?: string[];
@@ -38,7 +38,7 @@ export class RetrievalHttpService {
     limit?: number;
     filters?: DocumentMetadataFilters;
   }) {
-    return findDocs({
+    return searchPassages({
       store: this.store,
       ...input,
     });
