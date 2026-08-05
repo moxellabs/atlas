@@ -89,6 +89,12 @@ describe("Codex command policy", () => {
       "Do not add repository, scope, profile, audience, purpose, or visibility filters",
     );
     expect(prompt).toContain(
+      "when the requested claim is entirely a current external fact",
+    );
+    expect(prompt).toContain(
+      "A request for one evidence packet permits one successful evidence call total",
+    );
+    expect(prompt).toContain(
       "A successful evidence result with nextAction=answer_locally",
     );
     expect(prompt).toContain("Any tool call after that result is an error");
