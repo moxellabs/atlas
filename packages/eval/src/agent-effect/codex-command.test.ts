@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { homedir } from "node:os";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
@@ -18,7 +19,10 @@ import {
 } from "./codex-contracts";
 import { hermeticCodexEnvironment } from "./codex-command-policy";
 import { dataset } from "./agent-effect.test-fixtures";
-import { runCodexCommand } from "./codex-process-runner";
+import {
+  resolveCodexExecutable,
+  runCodexCommand,
+} from "./codex-process-runner";
 
 const commandInput = {
   atlasCwd: "/atlas",
@@ -44,6 +48,41 @@ describe("Codex launcher selection", () => {
 
     expect(command[0]).toBe("/opt/codex/bin/codex");
   });
+});
+
+test("rejects a working launcher that lacks required exec options", async () => {
+  const root = await mkdtemp(join(tmpdir(), "atlas-codex-probe-"));
+  const executable = join(root, "codex");
+  const previousExecutable = Bun.env.ATLAS_CODEX_EXECUTABLE;
+  await writeFile(
+    executable,
+    `#!/bin/sh
+if [ "$1" = "--version" ]; then
+  echo "codex-cli 0.101.0"
+  exit 0
+fi
+if [ "$1" = "exec" ] && [ "$2" = "--help" ]; then
+  echo "Usage: codex exec --ephemeral --json --output-schema <FILE>"
+  exit 0
+fi
+exit 1
+`,
+    { mode: 0o755 },
+  );
+  Bun.env.ATLAS_CODEX_EXECUTABLE = executable;
+
+  try {
+    await expect(
+      resolveCodexExecutable(root, hermeticCodexEnvironment(root)),
+    ).rejects.toThrow("missing required option(s) --ignore-rules");
+  } finally {
+    if (previousExecutable === undefined) {
+      delete Bun.env.ATLAS_CODEX_EXECUTABLE;
+    } else {
+      Bun.env.ATLAS_CODEX_EXECUTABLE = previousExecutable;
+    }
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 describe("Codex command policy", () => {

@@ -16,6 +16,14 @@ export interface ResolvedCodexExecutable {
   readonly version: string;
 }
 
+const REQUIRED_CODEX_EXEC_OPTIONS = [
+  "--ephemeral",
+  "--ignore-rules",
+  "--ignore-user-config",
+  "--json",
+  "--output-schema",
+] as const;
+
 /**
  * Resolves and probes a concrete Codex launcher before the evaluator replaces
  * HOME. Version-manager shims can otherwise resolve against the isolated home
@@ -32,18 +40,41 @@ export async function resolveCodexExecutable(
       : [configured];
   const failures: string[] = [];
   for (const executable of candidates) {
-    const result = await runCodexCommand(
+    const versionResult = await runCodexCommand(
       [executable, "--version"],
       cwd,
       15_000,
       env,
     );
-    if (!result.timedOut && result.exitCode === 0) {
-      return { executable, version: result.stdout.trim() };
+    if (versionResult.timedOut || versionResult.exitCode !== 0) {
+      failures.push(
+        `${executable}: ${versionResult.timedOut ? "version probe timed out" : (versionResult.stderr || versionResult.stdout || `version probe exited ${versionResult.exitCode}`).trim()}`,
+      );
+      continue;
     }
-    failures.push(
-      `${executable}: ${result.timedOut ? "timed out" : (result.stderr || result.stdout || `exit ${result.exitCode}`).trim()}`,
+
+    const helpResult = await runCodexCommand(
+      [executable, "exec", "--help"],
+      cwd,
+      15_000,
+      env,
     );
+    if (helpResult.timedOut || helpResult.exitCode !== 0) {
+      failures.push(
+        `${executable}: ${helpResult.timedOut ? "exec capability probe timed out" : (helpResult.stderr || helpResult.stdout || `exec capability probe exited ${helpResult.exitCode}`).trim()}`,
+      );
+      continue;
+    }
+    const missingOptions = REQUIRED_CODEX_EXEC_OPTIONS.filter(
+      (option) => !helpResult.stdout.includes(option),
+    );
+    if (missingOptions.length > 0) {
+      failures.push(
+        `${executable}: exec is missing required option(s) ${missingOptions.join(", ")}`,
+      );
+      continue;
+    }
+    return { executable, version: versionResult.stdout.trim() };
   }
   throw new Error(
     `No working Codex executable was available in the hermetic evaluator environment.${failures.length === 0 ? "" : ` Tried ${failures.join("; ")}`}`,
