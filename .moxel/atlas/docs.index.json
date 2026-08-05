@@ -1,11 +1,11 @@
 {
   "schema": "moxel-atlas-docs-index/v1",
   "repoId": "github.com/moxellabs/atlas",
-  "generatedAt": "2026-08-04T21:34:00.588Z",
+  "generatedAt": "2026-08-05T05:24:30.984Z",
   "counts": {
-    "documents": 11,
+    "documents": 12,
     "skills": 0,
-    "packages": 0,
+    "packages": 1,
     "modules": 0
   },
   "documents": [
@@ -24,7 +24,7 @@
       ],
       "visibility": "public",
       "contentHash": "0b3e96bc41081eb0f1db9abee6178dfcd67b0e832e02622e1ab98b8aefbbb3aa",
-      "sourceVersion": "96353ebf7a9b1fe316ad5a4f7417aff22245523c",
+      "sourceVersion": "e049f7a04a94c4577c4a3a72727f6bfc7306edc3",
       "tags": [],
       "scopes": [
         {
@@ -50,8 +50,8 @@
       ],
       "visibility": "public",
       "order": 20,
-      "contentHash": "a5e78b7e5c4cc793b4bcdba88486dde852849b36f09163125139aed9e23df917",
-      "sourceVersion": "96353ebf7a9b1fe316ad5a4f7417aff22245523c",
+      "contentHash": "89728dd497a735901471aeaffd06aff19613af3652a21d4ac14976d2c9f3ef08",
+      "sourceVersion": "e049f7a04a94c4577c4a3a72727f6bfc7306edc3",
       "tags": [],
       "scopes": [
         {
@@ -78,7 +78,7 @@
       "visibility": "public",
       "order": 55,
       "contentHash": "50182a99b8044c75d23072cead8a9165c3b4b296eacad788704cc1ff3618c924",
-      "sourceVersion": "96353ebf7a9b1fe316ad5a4f7417aff22245523c",
+      "sourceVersion": "e049f7a04a94c4577c4a3a72727f6bfc7306edc3",
       "tags": [],
       "scopes": [
         {
@@ -106,7 +106,7 @@
       "visibility": "public",
       "order": 10,
       "contentHash": "5306ba79589096c92a67ff1dfce93eb2c46afb5b963a58f54f965e175b7b405f",
-      "sourceVersion": "96353ebf7a9b1fe316ad5a4f7417aff22245523c",
+      "sourceVersion": "e049f7a04a94c4577c4a3a72727f6bfc7306edc3",
       "tags": [],
       "scopes": [
         {
@@ -134,7 +134,7 @@
       "visibility": "public",
       "order": 30,
       "contentHash": "68facdb00fb03d8c066b5d8ad1faa065bb4d3fe3a77ae0a00181a74387440b4b",
-      "sourceVersion": "96353ebf7a9b1fe316ad5a4f7417aff22245523c",
+      "sourceVersion": "e049f7a04a94c4577c4a3a72727f6bfc7306edc3",
       "tags": [],
       "scopes": [
         {
@@ -149,7 +149,7 @@
       "title": "Retrieval And Context Planning",
       "kind": "repo-doc",
       "authority": "canonical",
-      "description": "Learn how Atlas searches, ranks, filters, and plans retrieval context from local public artifacts.",
+      "description": "Learn how Atlas turns indexed repository documentation into answer-ready context packets through scoped, ranked retrieval.",
       "audience": [
         "consumer",
         "contributor",
@@ -161,8 +161,8 @@
       ],
       "visibility": "public",
       "order": 40,
-      "contentHash": "eb47a74a823fa7f9954f16460f7196be2131878db945f584ec3a5f3bcef2322e",
-      "sourceVersion": "96353ebf7a9b1fe316ad5a4f7417aff22245523c",
+      "contentHash": "8dd833a7d8314261dcf76cd8dc44cc8fadd6fc2642851f79ad7cc7c8990ae05c",
+      "sourceVersion": "e049f7a04a94c4577c4a3a72727f6bfc7306edc3",
       "tags": [],
       "scopes": [
         {
@@ -189,8 +189,8 @@
       ],
       "visibility": "public",
       "order": 50,
-      "contentHash": "8d5b54edc6caab44f7c0854cbbb5da58ea4a0c8fced07984cb984ffdb39cc48c",
-      "sourceVersion": "96353ebf7a9b1fe316ad5a4f7417aff22245523c",
+      "contentHash": "bd8983f596a5f4d93c3ec58d39e2e64a741d33e761d4baae11519d8fae34bd99",
+      "sourceVersion": "e049f7a04a94c4577c4a3a72727f6bfc7306edc3",
       "tags": [],
       "scopes": [
         {
@@ -217,7 +217,7 @@
       "visibility": "public",
       "order": 60,
       "contentHash": "be2438137651cc7a524f5a6dfc26c7521fd29008ea7d956bba47a4b96f8ca32f",
-      "sourceVersion": "96353ebf7a9b1fe316ad5a4f7417aff22245523c",
+      "sourceVersion": "e049f7a04a94c4577c4a3a72727f6bfc7306edc3",
       "tags": [],
       "scopes": [
         {
@@ -244,7 +244,7 @@
       "visibility": "public",
       "order": 70,
       "contentHash": "1ea8d9336f13b77c38075ffb41b4d7683009cabab79a8464fb3466da1d5f70b2",
-      "sourceVersion": "96353ebf7a9b1fe316ad5a4f7417aff22245523c",
+      "sourceVersion": "e049f7a04a94c4577c4a3a72727f6bfc7306edc3",
       "tags": [],
       "scopes": [
         {
@@ -271,12 +271,42 @@
       "visibility": "public",
       "order": 90,
       "contentHash": "f4e10da47ef9d4c5f0700b9a4bebe2dae82ec010c13aa05dc97d31eca1d9ba13",
-      "sourceVersion": "96353ebf7a9b1fe316ad5a4f7417aff22245523c",
+      "sourceVersion": "e049f7a04a94c4577c4a3a72727f6bfc7306edc3",
       "tags": [],
       "scopes": [
         {
           "level": "repo",
           "repoId": "github.com/moxellabs/atlas"
+        }
+      ]
+    },
+    {
+      "path": "packages/mcp/docs/index.md",
+      "docId": "doc_efeecbe4666c328f44b6b8b6",
+      "title": "MCP Package",
+      "kind": "package-doc",
+      "authority": "preferred",
+      "packageId": "pkg_f09e3904238d52abefa5f789",
+      "description": "MCP tools, resources, prompts, transports, skill artifact access, and identity-aware aliases.",
+      "audience": [
+        "consumer",
+        "contributor",
+        "maintainer"
+      ],
+      "purpose": [
+        "implementation",
+        "reference"
+      ],
+      "visibility": "public",
+      "order": 240,
+      "contentHash": "c3b880783a3add8948bd5cbad90ce36c9a6cfbb8e7c1942d5b15d0ac89c162e5",
+      "sourceVersion": "e049f7a04a94c4577c4a3a72727f6bfc7306edc3",
+      "tags": [],
+      "scopes": [
+        {
+          "level": "package",
+          "repoId": "github.com/moxellabs/atlas",
+          "packageId": "pkg_f09e3904238d52abefa5f789"
         }
       ]
     },
@@ -298,7 +328,7 @@
       "visibility": "public",
       "order": 1,
       "contentHash": "103a571925b0188363de92be4641184a55335757ec581ec5ba68be3770f4f1e0",
-      "sourceVersion": "96353ebf7a9b1fe316ad5a4f7417aff22245523c",
+      "sourceVersion": "e049f7a04a94c4577c4a3a72727f6bfc7306edc3",
       "tags": [],
       "scopes": [
         {
