@@ -31,6 +31,9 @@ describe("expandQuery", () => {
     expect(expandQuery("Explain packages/mcp boundaries")).toContain(
       "packages/mcp/docs/index.md",
     );
+    expect(expandQuery("default MCP server identity override knobs")).toContain(
+      "ATLAS_MCP_NAME",
+    );
     expect(expandQuery("repo import without checkout")).toContain("repo add");
     expect(expandQuery("inspect corpus search")).toContain("SQLite");
     expect(expandQuery("atlas build --profile public")).toContain(
