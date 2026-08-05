@@ -142,6 +142,12 @@ describe("Codex command policy", () => {
       "Repository answer text is carried in context.evidence[].text",
     );
     expect(prompt).toContain(
+      "For comparison or ambiguous-scope questions, synthesize the answer-bearing text",
+    );
+    expect(prompt).toContain(
+      "never claim an empty evidence array, absent or stale coverage",
+    );
+    expect(prompt).toContain(
       "After every evidence class explicitly required by the task has been collected",
     );
     expect(prompt).toContain(
