@@ -77,8 +77,9 @@ describe("Codex command policy", () => {
       "Do not add repository, scope, profile, audience, purpose, or visibility filters",
     );
     expect(prompt).toContain(
-      "When an evidence tool marks a result terminal or directs you to answer now",
+      "A successful evidence result with nextAction=answer_locally",
     );
+    expect(prompt).toContain("Any tool call after that result is an error");
     const baselineCommand = codexAgentCommand({
       ...commandInput,
       arm: "baseline",

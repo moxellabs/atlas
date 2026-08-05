@@ -152,6 +152,34 @@ describe("rankCandidates", () => {
     expect(context.selected[0]?.targetId).toBe("security-guidance");
   });
 
+  test("prefers coherent sections over fragments for exact claims", () => {
+    const query = "state the exact default MCP server identity";
+    const section = candidate(
+      "section",
+      "identity-section",
+      "preferred",
+      "packages/mcp/docs/index.md",
+      0.55,
+      "Default MCP server identity is atlas-mcp.",
+    );
+    const chunk = candidate(
+      "chunk",
+      "identity-chunk",
+      "preferred",
+      "packages/mcp/docs/index.md",
+      0.83,
+      "MCP server identity override settings.",
+    );
+
+    const ranked = rankCandidates({
+      query,
+      classification: classifyQuery(query),
+      candidates: [chunk, section],
+    });
+
+    expect(ranked[0]?.targetId).toBe("identity-section");
+  });
+
   test("applies redundancy penalties after base ranking regardless of candidate order", () => {
     const classification = classifyQuery("session rotation usage");
     const stronger = candidate(

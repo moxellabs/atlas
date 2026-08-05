@@ -262,6 +262,28 @@ describe("MCP tool contracts", () => {
       },
     });
   });
+
+  test("keeps small output limits from starving candidate generation", () => {
+    const { store } = fixture;
+    const retrievalStore = createRetrievalStore(store);
+    const lexicalLimits: number[] = [];
+    const observedStore: typeof retrievalStore = {
+      ...retrievalStore,
+      lexicalSearch(options) {
+        lexicalLimits.push(options.limit ?? 0);
+        return retrievalStore.lexicalSearch(options);
+      },
+    };
+
+    const result = executeFindDocs(
+      { query: "session token renewal", repoId, limit: 1 },
+      { db: store, retrievalStore: observedStore },
+    );
+
+    expect(result.hits).toHaveLength(1);
+    expect(lexicalLimits.length).toBeGreaterThan(0);
+    expect(lexicalLimits.every((limit) => limit >= 40)).toBe(true);
+  });
   test("folds lifecycle freshness and bounded recent changes into plan_context", () => {
     const { store } = fixture;
     const plannedContext = executePlanContext(

@@ -30,6 +30,9 @@ describe("classifyQuery", () => {
       ),
     ).toMatchObject({ kind: "exact-lookup" });
     expect(
+      classifyQuery("state the exact default MCP server identity"),
+    ).toMatchObject({ kind: "exact-lookup" });
+    expect(
       classifyQuery(
         "How does a maintainer build and publish .moxel/atlas artifacts?",
       ),

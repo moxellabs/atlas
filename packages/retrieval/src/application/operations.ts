@@ -89,12 +89,13 @@ export interface FindDocsResult {
 
 /** Finds ranked document, section, chunk, and skill hits through one application path. */
 export function findDocs(input: FindDocsInput): FindDocsResult {
+  const outputLimit = input.limit ?? 20;
   const plan = planContext({
     store: input.store,
     query: input.query,
     budgetTokens: 8_000,
     ...(input.repoId === undefined ? {} : { repoId: input.repoId }),
-    candidateLimit: input.limit ?? 20,
+    candidateLimit: Math.max(outputLimit, 40),
     ...(input.filters === undefined ? {} : { filters: input.filters }),
   });
   const scopeIds = new Set(input.scopeIds ?? []);
@@ -132,7 +133,7 @@ export function findDocs(input: FindDocsInput): FindDocsResult {
           left.targetType.localeCompare(right.targetType) ||
           left.targetId.localeCompare(right.targetId),
       )
-      .slice(0, input.limit ?? 20),
+      .slice(0, outputLimit),
     ...(filters === undefined ? {} : { filters }),
     ambiguity: plan.ambiguity,
     diagnostics: plan.diagnostics,
