@@ -47,6 +47,16 @@ const SIGNALS: readonly SignalRule[] = [
   },
   {
     kind: "exact-lookup",
+    signal: "precise-passage",
+    weight: 4,
+    patterns: [
+      /\b(exact|precise|specific|documented)\b.*\b(rule|passage|behavior|policy|claim)\b/i,
+      /\b(quote|closely paraphrase|one missing claim)\b/i,
+      /\bwhen should\b.*\b(use|call)\b/i
+    ]
+  },
+  {
+    kind: "exact-lookup",
     signal: "path-or-symbol",
     weight: 4,
     patterns: [/\b[\w.-]+\/[\w./-]+\b/i, /\b[\w.-]+\.(?:md|mdx|ts|tsx|js|jsx|json|yml|yaml)\b/i, /`[^`]+`/]
@@ -97,15 +107,14 @@ export function classifyQuery(query: string): QueryClassification {
     rationale.push("Query looks like a short identifier or symbol.");
   }
 
-  if (scores.has("exact-lookup") && scores.has("location")) {
-    scores.set("exact-lookup", 1);
-    rationale.push("Preferred explicit location intent over an embedded path signal.");
-  } else if (
-    scores.has("exact-lookup") &&
-    looksLikeNaturalLanguagePathMention(trimmed, scores)
-  ) {
-    scores.set("exact-lookup", 1);
-    rationale.push("Softened path-like exact lookup signal inside a natural-language query.");
+  if (matchedSignals.includes("path-or-symbol")) {
+    if (scores.has("location")) {
+      scores.set("exact-lookup", 1);
+      rationale.push("Preferred explicit location intent over an embedded path signal.");
+    } else if (looksLikeNaturalLanguagePathMention(trimmed, scores)) {
+      scores.set("exact-lookup", 1);
+      rationale.push("Softened path-like exact lookup signal inside a natural-language query.");
+    }
   }
 
   if (matchedSignals.length === 0) {

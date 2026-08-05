@@ -139,7 +139,7 @@ const QUERY_KIND_WEIGHTS: Record<QueryKind, QueryKindWeightPolicy> = {
 	usage: usageWeight,
 	troubleshooting: usageWeight,
 	"skill-invocation": skillInvocationWeight,
-	"exact-lookup": lookupWeight,
+	"exact-lookup": exactLookupWeight,
 	location: lookupWeight,
 	compare: (candidate) =>
 		targetTypeWeight(candidate.targetType, {
@@ -182,6 +182,19 @@ function skillInvocationWeight(candidate: RetrievalCandidate): number {
 		return 1;
 	}
 	return candidate.provenance.skillId === undefined ? 0.1 : 0.78;
+}
+
+function exactLookupWeight(candidate: RetrievalCandidate): number {
+	if (candidate.source === "path") {
+		return 1;
+	}
+	return targetTypeWeight(candidate.targetType, {
+		section: 1,
+		chunk: 1,
+		skill: 0.5,
+		document: 0.2,
+		fallback: 0.22,
+	});
 }
 
 function lookupWeight(candidate: RetrievalCandidate): number {

@@ -92,9 +92,13 @@ export function readCorpusEvidence(input: {
     const requestedPaths = new Set(input.paths);
     const artifactEvidence = new Map<string, CorpusEvidence | undefined>();
     const skillRepository = new SkillRepository(store);
-    const skills = skillRepository
-      .listByRepo(input.repoId)
-      .filter((skill) => requestedPaths.has(skill.sourceDocPath));
+    const allSkills = skillRepository.listByRepo(input.repoId);
+    const skillsBySourcePath = new Map(
+      allSkills.map((skill) => [skill.sourceDocPath, skill]),
+    );
+    const skills = allSkills.filter((skill) =>
+      requestedPaths.has(skill.sourceDocPath),
+    );
     for (const skill of skills) {
       for (const artifact of skillRepository.listArtifacts(skill.skillId)) {
         if (artifact.content === undefined) continue;
@@ -126,18 +130,44 @@ export function readCorpusEvidence(input: {
           `Judge evidence path ${path} is absent from the isolated ${input.repoId} corpus.`,
         );
       }
+      const skill = skillsBySourcePath.get(path);
+      const skillArtifacts =
+        skill === undefined ? [] : skillRepository.listArtifacts(skill.skillId);
+      const skillMetadata =
+        skill === undefined
+          ? undefined
+          : `Skill metadata:\n${JSON.stringify(
+              {
+                title: skill.title,
+                sourceDocumentPath: skill.sourceDocPath,
+                artifactSummary: skillRepository.summarizeArtifacts(
+                  skill.skillId,
+                ),
+                artifacts: skillArtifacts.map((artifact) => ({
+                  path: artifact.path,
+                  kind: artifact.kind,
+                })),
+              },
+              null,
+              2,
+            )}`;
       return [
         {
           path,
-          text: sections
-            .listByDocument(document.docId)
-            .flatMap((section) => [
-              section.text,
-              ...section.codeBlocks.map(
-                (block) => `\`\`\`${block.lang ?? ""}\n${block.code}\n\`\`\``,
-              ),
-            ])
-            .filter((part) => part.length > 0)
+          text: [
+            document.title,
+            ...sections
+              .listByDocument(document.docId)
+              .flatMap((section) => [
+                section.headingPath.join(" > "),
+                section.text,
+                ...section.codeBlocks.map(
+                  (block) => `\`\`\`${block.lang ?? ""}\n${block.code}\n\`\`\``,
+                ),
+              ]),
+            skillMetadata,
+          ]
+            .filter((part) => part !== undefined && part.length > 0)
             .join("\n\n"),
         },
       ];

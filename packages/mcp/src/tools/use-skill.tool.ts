@@ -26,6 +26,12 @@ const TASK_STOP_WORDS = new Set([
   "a",
   "an",
   "and",
+  "any",
+  "approved",
+  "atla",
+  "bundle",
+  "bundled",
+  "complete",
   "can",
   "could",
   "do",
@@ -33,6 +39,8 @@ const TASK_STOP_WORDS = new Set([
   "help",
   "how",
   "i",
+  "identify",
+  "instruction",
   "in",
   "me",
   "my",
@@ -40,7 +48,15 @@ const TASK_STOP_WORDS = new Set([
   "of",
   "on",
   "or",
+  "new",
   "please",
+  "prepare",
+  "procedure",
+  "reference",
+  "repository",
+  "return",
+  "script",
+  "skill",
   "should",
   "the",
   "to",
@@ -422,6 +438,7 @@ function lexicalTerms(value: string | undefined): Set<string> {
 }
 
 function normalizeTerm(term: string): string {
+  if (term === "adding") return "add";
   if (term.length > 4 && term.endsWith("ies")) return `${term.slice(0, -3)}y`;
   if (term.length > 3 && term.endsWith("s") && !term.endsWith("ss"))
     return term.slice(0, -1);

@@ -18,6 +18,19 @@ describe("classifyQuery", () => {
     });
     expect(
       classifyQuery(
+        "when should an agent use plan_context instead of find_docs",
+      ),
+    ).toMatchObject({
+      kind: "exact-lookup",
+      signals: expect.arrayContaining(["precise-passage"]),
+    });
+    expect(
+      classifyQuery(
+        "retrieve the documented prefer-local behavior for partial coverage",
+      ),
+    ).toMatchObject({ kind: "exact-lookup" });
+    expect(
+      classifyQuery(
         "How does a maintainer build and publish .moxel/atlas artifacts?",
       ),
     ).not.toMatchObject({ kind: "exact-lookup" });

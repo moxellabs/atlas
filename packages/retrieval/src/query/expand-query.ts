@@ -97,7 +97,7 @@ const QUERY_EXPANSIONS: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
 		["artifact validation", "repo.json", "docs/ingestion-build-flow.md"],
 	],
 	[
-		/\bgenerated\b|\bvendor\b|\bnode_modules\b|\bdist\b|\bcoverage\b|\bignored\b/i,
+		/\bgenerated\b|\bvendor\b|\bnode_modules\b|\bdist\b|\b(?:test|code)\s+coverage\b|\bcoverage (?:report|directory|artifacts?)\b|\bignored\b/i,
 		["generated", "vendor", "ignored", "docs/troubleshooting.md"],
 	],
 	[

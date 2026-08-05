@@ -509,6 +509,69 @@ describe("MCP tool contracts", () => {
     ).not.toHaveProperty("instructions");
   });
 
+  test("resolves a specific CLI procedure despite generic response-shaping words", () => {
+    const { store } = fixture;
+    const repository = new SkillRepository(store);
+    for (const skill of [
+      {
+        title: "Add CLI Command",
+        path: "apps/cli/docs/skills/add-cli-command/SKILL.md",
+        description: "Add commands under apps/cli.",
+        keySections: ["Keep CLI commands thin."],
+      },
+      {
+        title: "Atlas Contributor",
+        path: "skills/atlas-contributor/SKILL.md",
+        description: "Use for any non-trivial Atlas codebase change.",
+        keySections: ["CLI work may use the add-cli-command skill."],
+      },
+    ]) {
+      const competingSkillId = createSkillId({
+        repoId,
+        packageId,
+        moduleId,
+        path: skill.path,
+      });
+      repository.upsert({
+        node: {
+          skillId: competingSkillId,
+          repoId,
+          packageId,
+          moduleId,
+          path: skill.path,
+          title: skill.title,
+          sourceDocPath: skill.path,
+          topics: [],
+          aliases: [],
+          tokenCount: 12,
+          diagnostics: [],
+        },
+        sourceDocId: docId,
+        description: skill.description,
+        headings: [[skill.title]],
+        keySections: skill.keySections,
+        artifacts: [],
+      });
+    }
+
+    expect(
+      executeUseSkill(
+        {
+          repoId,
+          task: "Prepare the repository-approved procedure for adding a new Atlas CLI command. Return the complete skill instructions and identify any bundled references or scripts.",
+        },
+        { db: store },
+      ),
+    ).toMatchObject({
+      status: "resolved",
+      resolution: {
+        method: "task",
+        matchedTerms: ["add", "cli", "command"],
+      },
+      skill: expect.objectContaining({ title: "Add CLI Command" }),
+    });
+  });
+
   test("expands related context from document, section, chunk, and summary anchors", () => {
     const { store } = fixture;
     const dependencies = {

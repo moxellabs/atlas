@@ -51,6 +51,12 @@ describe("expandQuery", () => {
     expect(expandQuery("generated vendor directories ignored")).toContain(
       "docs/troubleshooting.md",
     );
+    expect(expandQuery("stale indexed coverage")).not.toContain(
+      "docs/troubleshooting.md",
+    );
+    expect(expandQuery("generated test coverage artifacts")).toContain(
+      "docs/troubleshooting.md",
+    );
     expect(
       expandQuery("retrival contxt planing token budjet omissions diagnostics"),
     ).toContain("docs/retrieval-and-context.md");

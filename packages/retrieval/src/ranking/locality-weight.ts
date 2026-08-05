@@ -40,7 +40,7 @@ function localityForScope(provenance: Provenance, scope: ScopeCandidate): number
   }
   if (scope.level === "package") {
     if (provenance.packageId === scope.packageId) {
-      return 1;
+      return provenance.moduleId === undefined ? 1 : 0.84;
     }
     return provenance.repoId === scope.repoId ? 0.34 : 0;
   }

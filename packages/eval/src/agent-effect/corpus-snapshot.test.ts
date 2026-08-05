@@ -129,18 +129,23 @@ describe("corpus snapshots", () => {
         .update(await readFile(targetPath))
         .digest("hex"),
     });
-    expect(
-      readCorpusEvidence({
-        corpusPath: targetPath,
-        repoId: targetRepoId,
-        paths: [evidencePath, evidencePath],
-      }),
-    ).toEqual([
-      {
-        path: evidencePath,
-        text: "Recovery repairs only the interrupted append.\n\n```text\nscene-session-manifest.json\nscene-frames.jsonl\nscene-index.bin\n```",
-      },
-    ]);
+    const documentEvidence = readCorpusEvidence({
+      corpusPath: targetPath,
+      repoId: targetRepoId,
+      paths: [evidencePath, evidencePath],
+    });
+    expect(documentEvidence).toHaveLength(1);
+    const documentEvidenceText = documentEvidence[0]?.text ?? "";
+    expect(documentEvidence[0]?.path).toBe(evidencePath);
+    expect(documentEvidenceText).toContain(
+      "Recovery\n\nRecovery\n\nRecovery repairs only the interrupted append.",
+    );
+    expect(documentEvidenceText).toContain(
+      "```text\nscene-session-manifest.json\nscene-frames.jsonl\nscene-index.bin\n```",
+    );
+    expect(documentEvidenceText).toContain(
+      '"artifactSummary": {\n    "scripts": 0,\n    "references": 0,\n    "agentProfiles": 1',
+    );
     expect(
       readCorpusEvidence({
         corpusPath: targetPath,

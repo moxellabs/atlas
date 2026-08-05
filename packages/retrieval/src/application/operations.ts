@@ -125,6 +125,13 @@ export function findDocs(input: FindDocsInput): FindDocsResult {
               hit.provenance.skillId,
             ].some((scopeId) => scopeId !== undefined && scopeIds.has(scopeId)),
       )
+      .sort(
+        (left, right) =>
+          right.score - left.score ||
+          left.provenance.path.localeCompare(right.provenance.path) ||
+          left.targetType.localeCompare(right.targetType) ||
+          left.targetId.localeCompare(right.targetId),
+      )
       .slice(0, input.limit ?? 20),
     ...(filters === undefined ? {} : { filters }),
     ambiguity: plan.ambiguity,

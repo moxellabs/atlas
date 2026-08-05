@@ -267,6 +267,65 @@ describe("rankCandidates", () => {
         .evidenceMatch,
     ).toBeGreaterThan(0);
   });
+  test("prefers answer-bearing passages and package-level evidence for precise package questions", () => {
+    const query = "retrieve one precise documented rule";
+    const ranked = rankCandidates({
+      query,
+      classification: classifyQuery(query),
+      candidates: [
+        candidate(
+          "document",
+          "thin-document",
+          "canonical",
+          "docs/rules.md",
+          1,
+          "Rules\ndocs/rules.md",
+        ),
+        candidate(
+          "section",
+          "supporting-section",
+          "canonical",
+          "docs/rules.md",
+          0.7,
+          "Rules > Selection\n\nUse the precise passage.",
+        ),
+      ],
+    });
+    expect(ranked[0]?.targetId).toBe("supporting-section");
+
+    const packageScope = {
+      level: "package" as const,
+      id: authPackageId,
+      label: "@atlas/auth",
+      repoId,
+      packageId: authPackageId,
+      score: 1,
+      rationale: ["test package scope"],
+    };
+    const packageEvidence = candidate(
+      "section",
+      "package-evidence",
+      "preferred",
+      "packages/auth/docs/index.md",
+      0.8,
+      "Auth package responsibilities.",
+      { packageId: authPackageId },
+    );
+    const nestedModuleEvidence = candidate(
+      "section",
+      "nested-module-evidence",
+      "preferred",
+      "packages/auth/src/session/docs/index.md",
+      0.8,
+      "Session module responsibilities.",
+      { packageId: authPackageId, moduleId: sessionModuleId },
+    );
+    expect(
+      localityWeight(packageEvidence.provenance, [packageScope]),
+    ).toBeGreaterThan(
+      localityWeight(nestedModuleEvidence.provenance, [packageScope]),
+    );
+  });
 });
 
 function candidate(
