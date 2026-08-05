@@ -124,6 +124,7 @@ describe("Codex command policy", () => {
     expect(prompt).toContain(
       "Preserve the task's distinguishing names, paths, quoted terms, and constraints verbatim",
     );
+    expect(prompt).toContain("never broaden a compound noun or scoped term");
     expect(prompt).toContain(
       "Do not add repository, scope, profile, audience, purpose, or visibility filters",
     );

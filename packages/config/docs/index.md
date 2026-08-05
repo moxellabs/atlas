@@ -14,7 +14,7 @@ order: 210
 ## Responsibilities
 
 - Validate config files and environment inputs with schemas.
-- Resolve config file discovery, explicit config paths, and `ATLAS_CONFIG`.
+- Resolve configuration-file discovery, explicit config paths, and `ATLAS_CONFIG`. This locates configuration files; it does not discover repositories.
 - Normalize cache, corpus DB, local repo, and CA certificate paths.
 - Validate local Git and GHES repo source shapes.
 - Validate repository refresh lifecycle settings and install the 15-minute default.
