@@ -19,7 +19,10 @@ import {
 } from "./codex-contracts";
 import { snapshotGlobalCorpus } from "./codex-corpus-runtime";
 import { traceMcpEvents } from "./codex-mcp-trace";
-import { runCodexCommand, runCodexText } from "./codex-process-runner";
+import {
+  resolveCodexExecutable,
+  runCodexCommand,
+} from "./codex-process-runner";
 import { sanitizeEvalText } from "./sanitize";
 import type { AgentEffectExecutor } from "./run";
 import type {
@@ -103,9 +106,12 @@ export async function createCodexExecutor(input: {
       `${JSON.stringify(codexJudgeOutputJsonSchema())}\n`,
     ),
   ]);
-  const codexVersion = (
-    await runCodexText(["codex", "--version"], input.cwd, 15_000)
-  ).trim();
+  const codexEnvironment = hermeticCodexEnvironment(workDir);
+  const resolvedCodex = await resolveCodexExecutable(
+    input.cwd,
+    codexEnvironment,
+  );
+  const codexVersion = resolvedCodex.version;
   if (config.configPath === undefined && input.useGlobal !== true)
     throw new Error(
       "Agent-effect treatment requires a local indexed Atlas artifact or explicit global runtime.",
@@ -118,6 +124,7 @@ export async function createCodexExecutor(input: {
     executor: {
       runAgent: async ({ arm, task, trial }) =>
         runAgent({
+          codexExecutable: resolvedCodex.executable,
           atlasCwd: input.cwd,
           repoId: input.dataset.repoId,
           cwd: agentCwd,
@@ -146,6 +153,7 @@ export async function createCodexExecutor(input: {
               });
         return judgePair({
           cwd: agentCwd,
+          codexExecutable: resolvedCodex.executable,
           workDir,
           outputSchemaPath: judgeSchemaPath,
           runner: input.dataset.runner,
@@ -171,6 +179,7 @@ export async function createCodexExecutor(input: {
 }
 
 async function runAgent(input: {
+  readonly codexExecutable: string;
   readonly atlasCwd: string;
   readonly repoId: string;
   readonly cwd: string;
@@ -241,6 +250,7 @@ async function runAgent(input: {
 }
 
 async function judgePair(input: {
+  readonly codexExecutable: string;
   readonly cwd: string;
   readonly workDir: string;
   readonly outputSchemaPath: string;
@@ -261,7 +271,7 @@ async function judgePair(input: {
   );
   const result = await runCodexCommand(
     [
-      "codex",
+      input.codexExecutable,
       "exec",
       "--ephemeral",
       ...hermeticCodexOptions(input.cwd),
@@ -304,9 +314,8 @@ function citedPaths(...runs: readonly AgentRun[]): string[] {
     ...new Set(
       runs.flatMap(
         (run) =>
-          run.answer?.citations
-            .slice(0, 6)
-            .map((citation) => citation.path) ?? [],
+          run.answer?.citations.slice(0, 6).map((citation) => citation.path) ??
+          [],
       ),
     ),
   ].slice(0, 12);

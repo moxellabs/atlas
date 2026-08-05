@@ -9,6 +9,7 @@ import type {
 } from "./types";
 
 export function codexAgentCommand(input: {
+  readonly codexExecutable?: string;
   readonly atlasCwd: string;
   readonly repoId: string;
   readonly cwd: string;
@@ -25,7 +26,7 @@ export function codexAgentCommand(input: {
 }): string[] {
   const mcpServerName = atlasMcpServerName(input.repoId);
   const command = [
-    "codex",
+    input.codexExecutable ?? "codex",
     "exec",
     "--ephemeral",
     ...(input.competitiveTools === true

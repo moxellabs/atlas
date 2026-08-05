@@ -1,3 +1,8 @@
+import { constants } from "node:fs";
+import { access, readdir } from "node:fs/promises";
+import { homedir } from "node:os";
+import { delimiter, join, sep } from "node:path";
+
 import { hermeticCodexEnvironment } from "./codex-command-policy";
 
 export interface CodexProcessResult {
@@ -6,17 +11,43 @@ export interface CodexProcessResult {
   readonly exitCode: number;
   readonly timedOut: boolean;
 }
+export interface ResolvedCodexExecutable {
+  readonly executable: string;
+  readonly version: string;
+}
 
-export async function runCodexText(
-  command: string[],
+/**
+ * Resolves and probes a concrete Codex launcher before the evaluator replaces
+ * HOME. Version-manager shims can otherwise resolve against the isolated home
+ * and intermittently select an incomplete global npm installation.
+ */
+export async function resolveCodexExecutable(
   cwd: string,
-  timeoutMs: number,
-): Promise<string> {
-  const result = await runCodexCommand(command, cwd, timeoutMs);
-  if (result.exitCode !== 0 || result.timedOut) {
-    throw new Error(result.stderr || result.stdout || "Command failed.");
+  env: Record<string, string>,
+): Promise<ResolvedCodexExecutable> {
+  const configured = Bun.env.ATLAS_CODEX_EXECUTABLE?.trim();
+  const candidates =
+    configured === undefined || configured.length === 0
+      ? await discoverCodexExecutables()
+      : [configured];
+  const failures: string[] = [];
+  for (const executable of candidates) {
+    const result = await runCodexCommand(
+      [executable, "--version"],
+      cwd,
+      15_000,
+      env,
+    );
+    if (!result.timedOut && result.exitCode === 0) {
+      return { executable, version: result.stdout.trim() };
+    }
+    failures.push(
+      `${executable}: ${result.timedOut ? "timed out" : (result.stderr || result.stdout || `exit ${result.exitCode}`).trim()}`,
+    );
   }
-  return result.stdout;
+  throw new Error(
+    `No working Codex executable was available in the hermetic evaluator environment.${failures.length === 0 ? "" : ` Tried ${failures.join("; ")}`}`,
+  );
 }
 
 export async function runCodexCommand(
@@ -43,4 +74,68 @@ export async function runCodexCommand(
   ]);
   clearTimeout(timeout);
   return { stdout, stderr, exitCode, timedOut };
+}
+
+async function discoverCodexExecutables(): Promise<string[]> {
+  const candidates: string[] = [];
+  for (const directory of (Bun.env.PATH ?? "").split(delimiter)) {
+    if (directory.length === 0) continue;
+    const candidate = join(directory, "codex");
+    if (!(await isExecutable(candidate)) || isVersionManagerShim(candidate)) {
+      continue;
+    }
+    candidates.push(candidate);
+  }
+
+  candidates.push(...(await findMiseCodexExecutables()));
+  const pathExecutable = Bun.which("codex");
+  if (pathExecutable !== null) candidates.push(pathExecutable);
+  return [...new Set(candidates)];
+}
+
+async function findMiseCodexExecutables(): Promise<string[]> {
+  const dataDir =
+    Bun.env.MISE_DATA_DIR ?? join(homedir(), ".local", "share", "mise");
+  const installsDir = join(dataDir, "installs");
+  const tools = await directoryNames(installsDir);
+  const candidates: string[] = [];
+  for (const tool of tools) {
+    const toolDir = join(installsDir, tool);
+    const versions = (await directoryNames(toolDir)).sort((left, right) =>
+      right.localeCompare(left, undefined, { numeric: true }),
+    );
+    for (const version of versions) {
+      const versionDir = join(toolDir, version);
+      for (const candidate of [
+        join(versionDir, "bin", "codex"),
+        join(versionDir, "codex"),
+      ]) {
+        if (await isExecutable(candidate)) candidates.push(candidate);
+      }
+    }
+  }
+  return candidates;
+}
+
+async function directoryNames(path: string): Promise<string[]> {
+  try {
+    return (await readdir(path, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+  } catch {
+    return [];
+  }
+}
+
+async function isExecutable(path: string): Promise<boolean> {
+  try {
+    await access(path, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isVersionManagerShim(path: string): boolean {
+  return path.split(sep).includes("shims");
 }

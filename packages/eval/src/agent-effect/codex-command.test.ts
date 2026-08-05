@@ -34,6 +34,18 @@ const commandInput = {
   trial: 1,
 } as const;
 
+describe("Codex launcher selection", () => {
+  test("uses a pre-resolved executable instead of a version-manager shim", () => {
+    const command = codexAgentCommand({
+      ...commandInput,
+      codexExecutable: "/opt/codex/bin/codex",
+      arm: "treatment",
+    });
+
+    expect(command[0]).toBe("/opt/codex/bin/codex");
+  });
+});
+
 describe("Codex command policy", () => {
   test("builds an isolated treatment command without hiding Atlas in the prompt", () => {
     const command = codexAgentCommand({
