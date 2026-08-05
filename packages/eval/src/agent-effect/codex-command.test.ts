@@ -70,6 +70,12 @@ describe("Codex command policy", () => {
     expect(prompt).toContain(dataset.tasks[0]!.prompt);
     expect(prompt).not.toContain("Use Atlas");
     expect(prompt).not.toContain("plan_context");
+    expect(prompt).toContain(
+      "Preserve the task's distinguishing names, paths, quoted terms, and constraints verbatim",
+    );
+    expect(prompt).toContain(
+      "When an evidence tool marks a result terminal or directs you to answer now",
+    );
     const baselineCommand = codexAgentCommand({
       ...commandInput,
       arm: "baseline",

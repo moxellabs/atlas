@@ -112,8 +112,7 @@ export function hermeticCodexEnvironment(
     LANG: "C.UTF-8",
     LC_ALL: "C.UTF-8",
     OPENAI_API_KEY: Bun.env.OPENAI_API_KEY ?? "",
-    MISE_CACHE_DIR:
-      Bun.env.MISE_CACHE_DIR ?? join(homedir(), ".cache", "mise"),
+    MISE_CACHE_DIR: Bun.env.MISE_CACHE_DIR ?? join(homedir(), ".cache", "mise"),
     MISE_CONFIG_DIR:
       Bun.env.MISE_CONFIG_DIR ?? join(homedir(), ".config", "mise"),
     MISE_DATA_DIR:
@@ -212,5 +211,5 @@ function agentPrompt(task: AgentEffectTask): string {
     task.routing?.externalFallback === "required"
       ? "Cite absolute external URLs for factual statements."
       : "Cite repository-relative source paths for factual statements.";
-  return `Task:\n${task.prompt}\n\nReturn only the required JSON object. ${citationInstruction} Do not invent commands, files, or behavior; when evidence is unavailable, say so plainly.`;
+  return `Task:\n${task.prompt}\n\nReturn only the required JSON object. ${citationInstruction} Preserve the task's distinguishing names, paths, quoted terms, and constraints verbatim in evidence queries; do not replace them with a broad paraphrase. Use the minimum evidence calls needed. When an evidence tool marks a result terminal or directs you to answer now from its evidence, stop calling tools and answer from that packet. Use an external source only when indexed coverage explicitly says it is absent or stale, or when the task itself requires current external facts. Do not invent commands, files, or behavior; when evidence is unavailable, say so plainly.`;
 }
