@@ -44,6 +44,14 @@ describe("classifyQuery", () => {
       { kind: "usage" },
     );
     expect(
+      classifyQuery(
+        "Explain the responsibilities and boundaries of packages/mcp as a module.",
+      ),
+    ).toMatchObject({
+      kind: "overview",
+      signals: expect.arrayContaining(["module-structure"]),
+    });
+    expect(
       classifyQuery("how do repo artifacts build publish and sync?"),
     ).toMatchObject({ kind: "usage" });
     expect(

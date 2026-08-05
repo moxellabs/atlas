@@ -85,8 +85,7 @@ export function expandSections(
 		}
 		const docId = hit.provenance.docId;
 		if (
-			(selectedDetailCounts.get(docId) ?? 0) >=
-			MAX_DETAIL_ITEMS_PER_DOCUMENT
+      (selectedDetailCounts.get(docId) ?? 0) >= MAX_DETAIL_ITEMS_PER_DOCUMENT
 		) {
 			state.omitted.push(
 				toPlannedItem(
@@ -169,19 +168,22 @@ function expansionPriority(
 	query: string | undefined,
 ): number {
 	const targetType = hit.targetType;
-	if (queryKind === "usage" || queryKind === "troubleshooting") {
-		return usageExpansionPriority(targetType);
-	}
-	if (queryKind === "skill-invocation") {
-		return skillExpansionPriority(targetType);
-	}
-	if (queryKind === "exact-lookup" && isNaturalLanguageQuery(query)) {
-		return naturalLanguageLookupPriority(targetType);
-	}
-	if (queryKind === "exact-lookup" || queryKind === "location") {
-		return lookupExpansionPriority(hit);
-	}
-	return defaultTargetExpansionPriority(targetType);
+  const targetPriority =
+    queryKind === "usage" || queryKind === "troubleshooting"
+      ? usageExpansionPriority(targetType)
+      : queryKind === "skill-invocation"
+        ? skillExpansionPriority(targetType)
+        : queryKind === "exact-lookup" && isNaturalLanguageQuery(query)
+          ? naturalLanguageLookupPriority(targetType)
+          : queryKind === "exact-lookup" || queryKind === "location"
+            ? lookupExpansionPriority(hit)
+            : defaultTargetExpansionPriority(targetType);
+
+  return (
+    targetPriority * 100 +
+    requestedHeadingPriority(hit, query) * 20 +
+    explicitPathProximity(hit, query)
+  );
 }
 
 function usageExpansionPriority(targetType: RankedHit["targetType"]): number {
@@ -246,6 +248,57 @@ function targetTypePriority(
 	},
 ): number {
 	return weights[targetType] ?? weights.fallback;
+}
+function requestedHeadingPriority(
+  hit: RankedHit,
+  query: string | undefined,
+): number {
+  const leafHeading = hit.provenance.headingPath?.at(-1);
+  if (query === undefined || leafHeading === undefined) {
+    return 0;
+  }
+  const normalizedHeading = normalizeSearchText(leafHeading);
+  return normalizedHeading.length >= 4 &&
+    normalizeSearchText(query).includes(normalizedHeading)
+    ? 1
+    : 0;
+}
+
+function explicitPathProximity(
+  hit: RankedHit,
+  query: string | undefined,
+): number {
+  if (query === undefined) {
+    return 0;
+  }
+  const path = normalizePath(hit.provenance.path);
+  let best = 0;
+  for (const match of normalizeSearchText(query).matchAll(
+    /\b[\w.-]+\/[\w./-]+\b/g,
+  )) {
+    const requestedPath = normalizePath(match[0]);
+    if (path !== requestedPath && !path.startsWith(`${requestedPath}/`)) {
+      continue;
+    }
+    const suffixLength =
+      path === requestedPath
+        ? 0
+        : path.slice(requestedPath.length + 1).split("/").length;
+    best = Math.max(best, Math.max(1, 12 - suffixLength));
+  }
+  return best;
+}
+
+function normalizeSearchText(value: string): string {
+  return value.trim().toLowerCase().replace(/\\/g, "/");
+}
+
+function normalizePath(value: string): string {
+  return normalizeSearchText(value)
+    .replace(/^\.\/+/, "")
+    .replace(/^\/+/, "")
+    .replace(/\/+/g, "/")
+    .replace(/[),.;:!?]+$/g, "");
 }
 
 function isNaturalLanguageQuery(query: string | undefined): boolean {

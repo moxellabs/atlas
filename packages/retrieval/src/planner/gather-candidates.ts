@@ -54,11 +54,11 @@ export function gatherCandidates(
       lexicalQuery.length === 0
         ? []
         : store.lexicalSearch({
-        query: lexicalQuery,
-        repoId: context.repoId,
-        limit: context.candidateLimit,
-        filters: context.filters,
-      });
+            query: lexicalQuery,
+            repoId: context.repoId,
+            limit: context.candidateLimit,
+            filters: context.filters,
+          });
     let lexicalScores = normalizedLexicalScores(lexicalHits);
     if (
       (lexicalHits.length < Math.min(context.candidateLimit, 3) ||
@@ -173,6 +173,32 @@ export function gatherCandidates(
         candidates.push(
           ...documentSummaries(store, document, 0.68 * scope.score),
         );
+        for (const { section, score } of store
+          .listSectionsByDocument(document.docId)
+          .map((section) => ({
+            section,
+            score: headingMatchScore(section.headingPath, headingTerms),
+          }))
+          .filter(({ score }) => score > 0)
+          .sort(
+            (left, right) =>
+              right.score - left.score ||
+              left.section.ordinal - right.section.ordinal,
+          )
+          .slice(0, 2)) {
+          candidates.push({
+            ...sectionCandidate(
+              document,
+              section,
+              (0.7 + Math.min(score, 2) * 0.08) * scope.score,
+              context.countTokens,
+            ),
+            source: "scope",
+            rationale: [
+              `Matched requested heading within ${scope.level} scope ${scope.label}.`,
+            ],
+          });
+        }
       }
       if (scope.level === "skill" && scope.skillId !== undefined) {
         const skill = store.getSkill(scope.skillId);
@@ -499,12 +525,12 @@ function pathSignals(
     signals.set(normalizePathSignal(path), { path, expanded: false });
   }
   if (includeExpanded) {
-  for (const path of extractPathSignals(expandedQuery)) {
-    const key = normalizePathSignal(path);
-    if (!signals.has(key)) {
-      signals.set(key, { path, expanded: true });
+    for (const path of extractPathSignals(expandedQuery)) {
+      const key = normalizePathSignal(path);
+      if (!signals.has(key)) {
+        signals.set(key, { path, expanded: true });
+      }
     }
-  }
   }
   return [...signals.values()];
 }
@@ -527,9 +553,18 @@ function headingMatchScore(
     return 0;
   }
   const leafHeading = headingPath[headingPath.length - 1]!;
-  return queryTerms(leafHeading).filter((term) => queryTermsSet.has(term))
-    .length;
+  return queryTerms(leafHeading).filter(
+    (term) => !HEADING_STOPWORDS.has(term) && queryTermsSet.has(term),
+  ).length;
 }
+
+const HEADING_STOPWORDS = new Set([
+  "app",
+  "mcp",
+  "module",
+  "package",
+  "service",
+]);
 
 function isDocumentPath(path: string): boolean {
   return /\.(?:md|mdx)$/i.test(path);

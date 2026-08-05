@@ -150,6 +150,58 @@ describe("planContext", () => {
       expect.objectContaining({ targetId: "chunk-rotation" }),
     ]);
   });
+  test("prioritizes requested headings nearest an explicit module path", () => {
+    const state = expandSections({
+      rankedHits: [
+        rankedHit(
+          "nested-responsibilities",
+          ["Tools", "Responsibilities"],
+          10,
+          "section",
+          {
+            docId: "nested-doc",
+            path: "packages/mcp/src/tools/docs/index.md",
+          },
+        ),
+        rankedHit(
+          "package-boundaries",
+          ["MCP Package", "Boundaries"],
+          2,
+          "section",
+          {
+            docId: "package-doc",
+            path: "packages/mcp/docs/index.md",
+          },
+        ),
+        rankedHit(
+          "package-responsibilities",
+          ["MCP Package", "Responsibilities"],
+          1.9,
+          "section",
+          {
+            docId: "package-doc",
+            path: "packages/mcp/docs/index.md",
+          },
+        ),
+      ],
+      queryKind: "overview",
+      query:
+        "Explain the responsibilities and boundaries of packages/mcp as a module.",
+      state: {
+        budgetTokens: 200,
+        usedTokens: 0,
+        selected: [],
+        omitted: [],
+        warnings: [],
+      },
+      limit: 2,
+    });
+
+    expect(state.selected.map((item) => item.targetId)).toEqual([
+      "package-boundaries",
+      "package-responsibilities",
+    ]);
+  });
 
   test("recovers candidates for natural-language queries with no strict lexical AND match", () => {
     const plan = planContext({
@@ -247,6 +299,7 @@ function rankedHit(
   headingPath: readonly string[],
   score: number,
   targetType: RankedHit["targetType"] = "section",
+  provenance: { docId?: string; path?: string } = {},
 ): RankedHit {
   return {
     targetType,
@@ -257,8 +310,8 @@ function rankedHit(
     textPreview: `${headingPath.join(" ")} evidence`,
     provenance: {
       repoId,
-      docId: sessionDocId,
-      path: "packages/auth/docs/session.md",
+      docId: provenance.docId ?? sessionDocId,
+      path: provenance.path ?? "packages/auth/docs/session.md",
       headingPath: [...headingPath],
       sourceVersion: "rev_1",
       authority: "preferred",

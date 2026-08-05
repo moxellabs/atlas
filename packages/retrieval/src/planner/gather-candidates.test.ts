@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { RepoRepository } from "@atlas/store";
 
 import {
+  authPackageId,
   createSeededRetrievalFixture,
   repoDocId,
   repoId,
@@ -127,6 +128,37 @@ describe("gatherCandidates", () => {
           candidate.provenance.docId === sessionDocId &&
           candidate.targetType === "section" &&
           candidate.provenance.headingPath?.includes("Rotation") === true,
+      ),
+    ).toBe(true);
+  });
+  test("hydrates requested headings from scoped documents after sparse lexical search", () => {
+    const candidates = gatherCandidates(fixture!.retrievalStore, {
+      query: "rotation nonexistent",
+      expandedQuery: "rotation nonexistent",
+      repoId,
+      packageId: authPackageId,
+      scopes: [
+        {
+          level: "package",
+          id: authPackageId,
+          label: "@atlas/auth",
+          repoId,
+          packageId: authPackageId,
+          score: 1,
+          rationale: ["test exact scope"],
+        },
+      ],
+      candidateLimit: 40,
+      countTokens: () => 1,
+    });
+
+    expect(
+      candidates.some(
+        (candidate) =>
+          candidate.source === "scope" &&
+          candidate.provenance.docId === sessionDocId &&
+          candidate.targetType === "section" &&
+          candidate.provenance.headingPath?.at(-1) === "Rotation",
       ),
     ).toBe(true);
   });

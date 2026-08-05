@@ -59,6 +59,15 @@ const SIGNALS: readonly SignalRule[] = [
     ],
   },
   {
+    kind: "overview",
+    signal: "module-structure",
+    weight: 4,
+    patterns: [
+      /\b(responsibilit(?:y|ies)|boundar(?:y|ies))\b.*\b(module|package|app|service)\b/i,
+      /\b(module|package|app|service)\b.*\b(responsibilit(?:y|ies)|boundar(?:y|ies))\b/i,
+    ],
+  },
+  {
     kind: "exact-lookup",
     signal: "precise-passage",
     weight: 4,
