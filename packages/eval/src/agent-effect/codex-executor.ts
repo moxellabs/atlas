@@ -303,7 +303,10 @@ function citedPaths(...runs: readonly AgentRun[]): string[] {
   return [
     ...new Set(
       runs.flatMap(
-        (run) => run.answer?.citations.map((citation) => citation.path) ?? [],
+        (run) =>
+          run.answer?.citations
+            .slice(0, 6)
+            .map((citation) => citation.path) ?? [],
       ),
     ),
   ].slice(0, 12);
