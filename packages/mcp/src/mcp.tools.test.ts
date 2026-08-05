@@ -386,7 +386,9 @@ describe("MCP tool contracts", () => {
         sectionId,
         text: "Rotate session tokens by calling rotateSessionToken during renewal.",
       }),
-      nextActionGuidance: expect.stringContaining("Answer now"),
+      nextActionGuidance: expect.stringContaining(
+        "do not call another Atlas tool",
+      ),
     });
     expect(
       executeReadDocument(

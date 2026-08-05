@@ -124,6 +124,9 @@ describe("Codex command policy", () => {
     expect(prompt).toContain(
       "Preserve the task's distinguishing names, paths, quoted terms, and constraints verbatim",
     );
+    expect(prompt).toContain(
+      "Use the task's complete exact-lookup wording as the evidence query",
+    );
     expect(prompt).toContain("never broaden a compound noun or scoped term");
     expect(prompt).toContain(
       "Do not add repository, scope, profile, audience, purpose, or visibility filters",
@@ -134,13 +137,16 @@ describe("Codex command policy", () => {
     expect(prompt).toContain(
       "A request for one evidence packet permits one successful evidence call total",
     );
+    expect(prompt).toContain("For a mixed local-and-current-external task");
     expect(prompt).toContain(
       "Repository answer text is carried in context.evidence[].text",
     );
     expect(prompt).toContain(
-      "A successful evidence result with nextAction=answer_locally",
+      "After every evidence class explicitly required by the task has been collected",
     );
-    expect(prompt).toContain("Any tool call after that result is an error");
+    expect(prompt).toContain(
+      "Any tool call after that completed terminal result is an error",
+    );
     const baselineCommand = codexAgentCommand({
       ...commandInput,
       arm: "baseline",

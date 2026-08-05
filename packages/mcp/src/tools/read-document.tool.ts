@@ -59,7 +59,7 @@ export function executeReadDocument(
       provenance: result.provenance,
     },
     nextActionGuidance:
-      "Answer now from section.text and section.provenance. Do not call another retrieval tool unless a required claim remains unsupported.",
+      "TERMINAL: answer now from section.text and section.provenance. This is the requested exact section; do not call another Atlas tool.",
   });
 }
 
@@ -73,7 +73,7 @@ export function registerReadDocumentTool(
     {
       title: "Read indexed document",
       description:
-        "Read a stored document after find_docs or plan_context returns its stable docId. Omit sectionId and heading for a compact outline. Pass exactly one selector for exact section text and provenance.",
+        "Read a stored document after find_docs or plan_context returns its stable docId. When the caller already knows the docId and exact heading, pass heading directly and do not request an outline first. Otherwise omit sectionId and heading for a compact outline. Pass exactly one selector for exact section text and provenance.",
       inputSchema: readDocumentInputSchema,
       outputSchema: readDocumentOutputSchema,
       annotations: {

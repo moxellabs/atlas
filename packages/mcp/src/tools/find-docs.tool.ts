@@ -58,7 +58,7 @@ export function registerFindDocsTool(
     {
       title: "Find indexed passages",
       description:
-        "Use first and call exactly once for an exact value, default, identity, knob, rule, short list, location, one missing claim from a partial answer, or retrieval debugging. Returns ranked hits plus a terminal nextAction. When nextAction is answer_locally, the highest-ranked textPreview is the answer-bearing passage: answer and cite it immediately without any other Atlas call. Never refine by repeating find_docs or infer repository-wide absence from its bounded hit set. Use plan_context only for ambiguity, comparison, module boundaries, or multi-passage planning.",
+        "Use first and call exactly once for an exact value, default, identity, knob, rule, short list, location, one missing claim from a partial answer, or retrieval debugging. Pass the user's complete exact lookup question as query; do not shorten it to a topic label. For a mixed local-policy and current-external-fact question, use find_docs for the precise local claim and gather the required external evidence separately. Returns ranked hits plus a terminal nextAction. When nextAction is answer_locally, the highest-ranked textPreview is the answer-bearing passage: answer and cite it immediately without another Atlas call. Never refine by repeating find_docs or infer repository-wide absence from its bounded hit set. Use plan_context only for ambiguity, comparison, module boundaries, or multi-passage planning.",
       inputSchema: findDocsInputSchema,
       outputSchema: findDocsOutputSchema,
       annotations: {

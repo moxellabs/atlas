@@ -6,7 +6,7 @@ export const querySchema = z
   .trim()
   .min(1)
   .describe(
-    "Natural-language query. Preserve the user's named entities, paths, requested stages, and constraints; do not replace the question with a broad paraphrase.",
+    "Natural-language query. For an exact lookup, pass the user's complete question rather than a shortened topic label. Preserve named entities, paths, requested stages, and constraints.",
   );
 
 /** Shared positive limit schema. */
@@ -114,7 +114,13 @@ export const readDocumentInputSchema = z
   .object({
     docId: z.string().trim().min(1),
     sectionId: z.string().trim().min(1).optional(),
-    heading: z.array(z.string().trim().min(1)).min(1).optional(),
+    heading: z
+      .array(z.string().trim().min(1))
+      .min(1)
+      .optional()
+      .describe(
+        "Exact heading path. When the caller already knows it, pass it directly instead of requesting an outline first.",
+      ),
   })
   .strict()
   .refine(
