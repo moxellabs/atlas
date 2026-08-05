@@ -2,9 +2,18 @@ const QUERY_EXPANSIONS: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
   [
     /\bprefer-local\b|\babsent\b.*\bpartial\b.*\bstale\b|\bstale\b.*\bpartial\b.*\babsent\b/i,
     [
-      "covered-query-first",
+      "prefer-local fallback",
+      "absent partial stale local indexed coverage",
       "Agent and IDE integration",
+      "docs/runtime-surfaces.md",
+    ],
+  ],
+  [
+    /\bcovered-query-first\b|\binitialization guidance\b|\bconsult matching indexed sources\b/i,
+    [
+      "covered-query-first",
       "atlas agent install",
+      "Agent and IDE integration",
       "docs/runtime-surfaces.md",
     ],
   ],

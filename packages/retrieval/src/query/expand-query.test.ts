@@ -56,11 +56,17 @@ describe("expandQuery", () => {
     expect(expandQuery("configure Atlas scopes")).toContain(
       "docs/runtime-surfaces.md",
     );
+    const fallbackQuery = expandQuery(
+      "prefer-local behavior for absent, partial, or stale coverage",
+    );
+    expect(fallbackQuery).toContain("docs/runtime-surfaces.md");
+    expect(fallbackQuery).toContain(
+      "absent partial stale local indexed coverage",
+    );
+    expect(fallbackQuery).not.toContain("covered-query-first");
     expect(
-      expandQuery(
-        "prefer-local behavior for absent, partial, or stale coverage",
-      ),
-    ).toContain("docs/runtime-surfaces.md");
+      expandQuery("covered-query-first initialization guidance"),
+    ).toContain("atlas agent install");
     expect(expandQuery("generated vendor directories ignored")).toContain(
       "docs/troubleshooting.md",
     );
