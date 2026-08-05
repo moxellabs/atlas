@@ -106,6 +106,38 @@
       ]
     },
     {
+      "id": "exact-document-section",
+      "sourceCaseId": "routing-read-document",
+      "title": "Exact document section read",
+      "category": "exact-document",
+      "prompt": "A prior retrieval returned document ID doc_d4c49c8c77e916c7a95c7f7f for docs/retrieval-and-context.md. Read its exact `Token Budgets And Omissions` section, then state what `usedTokens` counts and what it excludes. Cite the document path. Do not search again or load the whole document.",
+      "routing": {
+        "firstTools": ["atlas:read_document"],
+        "maxAtlasCalls": 1,
+        "externalFallback": "forbidden"
+      },
+      "criteria": [
+        {
+          "id": "read-document-completion",
+          "kind": "completion",
+          "description": "States what usedTokens counts and excludes.",
+          "evidencePaths": ["docs/retrieval-and-context.md"]
+        },
+        {
+          "id": "read-document-grounding",
+          "kind": "grounding",
+          "description": "Uses the requested exact section rather than restarting retrieval.",
+          "evidencePaths": ["docs/retrieval-and-context.md"]
+        },
+        {
+          "id": "read-document-citation",
+          "kind": "citation",
+          "description": "Cites the repository-relative document path.",
+          "evidencePaths": ["docs/retrieval-and-context.md"]
+        }
+      ]
+    },
+    {
       "id": "partial-answer-followup",
       "sourceCaseId": "routing-partial",
       "title": "Partial-answer follow-up",

@@ -51,7 +51,7 @@ This work adds a first-class white-label runtime profile while preserving defaul
 - No automatic migration, copy, delete, or fallback between `.moxel/atlas` and custom roots.
 - Atlas CLI default remains `.moxel/atlas` for repo-local artifacts and `~/.moxel/atlas` for runtime storage.
 - `atlas.config.*` discovery and `--config` behavior remain compatible.
-- MCP generic tool names such as `find_docs`, `read_outline`, and `read_section` remain stable by default so existing agents do not break.
+- MCP generic tool names such as `find_docs` and `read_document` remain stable by default so existing agents do not break.
 - Artifacts still contain no secrets or absolute machine-local paths.
 
 ---
@@ -103,7 +103,7 @@ This work adds a first-class white-label runtime profile while preserving defaul
 | Automatic artifact migration/copy | Could duplicate stale corpora or hide mistakes | Later PRD/issue |
 | Reading fallback from `.moxel/atlas` when custom root missing | Violates clean separation between branded artifact universes | Later PRD/issue if needed |
 | Renaming package names such as `@atlas/core` | Build-time package identity is not user-facing runtime white-labeling | N/A |
-| Renaming generic MCP tools (`find_docs`, `read_outline`) | Tool name stability matters for agents and prompts; names are already brand-neutral | Later ADR if product wants prefixed tools |
+| Renaming generic MCP tools (`find_docs`, `read_document`) | Tool name stability matters for agents and prompts; names are already brand-neutral | Later ADR if product wants prefixed tools |
 | Registry publishing as branded package | Wrapper CLIs can consume Atlas source/packages directly | Later PRD/issue |
 | Full text rewrite from ATLAS to custom brand in every prompt | Could reduce clarity/provenance; phase 1 only changes LLM-visible server identity and Atlas-prefixed aliases | Later PRD/issue |
 

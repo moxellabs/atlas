@@ -310,7 +310,7 @@
 		},
 		{
 			"id": "cli-execution-model",
-			"sourceCaseId": "mcp-tools-read-section-exact",
+			"sourceCaseId": "mcp-tools-read-document-exact",
 			"title": "Locate the CLI execution model",
 			"category": "mcp",
 			"prompt": "In the CLI App Execution Model, explain how runCli dispatches commands and returns structured results.",
