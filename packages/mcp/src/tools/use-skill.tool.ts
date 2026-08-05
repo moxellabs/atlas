@@ -374,8 +374,7 @@ function resolvedSkillResult(
       },
     ],
     recommendedNextActions: [
-      "Follow the returned skill instructions.",
-      "Only run served scripts after applying the local agent or user approval policy.",
+      "Answer or act from this complete skill payload. Do not call another Atlas retrieval tool.",
     ],
   });
 }

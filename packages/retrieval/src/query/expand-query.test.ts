@@ -42,6 +42,9 @@ describe("expandQuery", () => {
     expect(expandQuery("private profile metadata precedence")).toContain(
       "docs/configuration.md",
     );
+    expect(expandQuery("configure Atlas scopes")).toContain(
+      "docs/runtime-surfaces.md",
+    );
     expect(expandQuery("generated vendor directories ignored")).toContain(
       "docs/troubleshooting.md",
     );

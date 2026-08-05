@@ -272,7 +272,7 @@ function recommendedNextActions(planned: PlannedContext): string[] {
 		planned.selected.length > 0;
 	if (answerReady) {
 		return [
-			"Answer directly from context.evidence and cite provenance paths. Do not call another retrieval tool unless a required claim is unsupported.",
+			"Answer now from context.evidence and cite provenance paths. Do not call another retrieval tool.",
 		];
 	}
 

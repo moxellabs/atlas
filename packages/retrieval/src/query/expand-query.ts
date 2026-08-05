@@ -4,6 +4,20 @@ const QUERY_EXPANSIONS: ReadonlyArray<readonly [RegExp, readonly string[]]> = [
 	[/\brepo\s+imports?\b/i, ["repo add", "artifact", "without cloning"]],
 	[/\bcorpus\b/i, ["SQLite", "store", "index"]],
 	[
+		/\bconfig(?:ure|ured|uration)?\b|\bsettings?\b/i,
+		[
+			"repository configuration",
+			"runtime configuration",
+			"MCP identity",
+			"artifactRoot runtimeRoot",
+			"atlasMcpName resourcePrefix",
+			"repoId repos refMode",
+			"config path precedence",
+			"docs/configuration.md",
+			"docs/runtime-surfaces.md",
+		],
+	],
+	[
 		/\bpublish(?:es|ed|ing)?\b/i,
 		["release", "build", "artifact", "docs/ingestion-build-flow.md"],
 	],

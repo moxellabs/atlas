@@ -117,7 +117,7 @@ function buildPlanContextResult(
     coverage === "partial"
       ? "Answer from context.evidence while stating the scope ambiguity and likely candidates. Do not call another retrieval tool."
       : nextAction === "answer_locally"
-        ? "Answer directly from context.evidence and cite provenance paths. Do not call another retrieval tool unless a required claim is unsupported."
+        ? "Answer now from context.evidence and cite provenance paths. Do not call another retrieval tool."
         : "Indexed coverage is absent or stale. Use an external source, cite it, and do not attribute the answer to Atlas.";
   const citations = uniqueCitations(selected);
   return planContextOutputSchema.parse({
@@ -188,8 +188,8 @@ export function registerSourcePlanContextTool(
     handle: server.registerTool(
       name,
       {
-        title: `Answer from ${source.title} documentation`,
-        description: `Use first for questions about ${source.title}. Returns the single strongest evidence passage from the ${source.fresh ? "fresh" : "stale"} indexed corpus with source-relative citations. When nextAction is answer_locally, answer only from that passage without another retrieval call. Aliases: ${source.aliases.slice(0, 5).join(", ")}. Topics: ${source.topics.slice(0, 12).join(", ")}.`,
+        title: `Broad ${source.title} documentation overview`,
+        description: `Use only for a broad overview of ${source.title}. Do not use for an exact rule, a missing claim, a known stable hit, a procedure, ambiguity, comparison, or module boundaries; use the matching specialist tool instead. Returns the single strongest evidence passage from the ${source.fresh ? "fresh" : "stale"} indexed corpus with source-relative citations. When nextAction is answer_locally, answer only from that passage without another retrieval call. Aliases: ${source.aliases.slice(0, 5).join(", ")}. Topics: ${source.topics.slice(0, 12).join(", ")}.`,
         inputSchema: sourcePlanContextInputSchema,
         outputSchema: planContextOutputSchema,
         annotations: {

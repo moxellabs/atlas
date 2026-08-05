@@ -166,12 +166,28 @@ export const planContextInputSchema = z
     scope: z
       .object({
         repoId: z.string().trim().min(1).optional(),
-        packageId: z.string().trim().min(1).optional(),
-        moduleId: z.string().trim().min(1).optional(),
+        packageId: z
+          .string()
+          .trim()
+          .min(1)
+          .optional()
+          .describe(
+            "Opaque package ID returned by Atlas. Omit for a human-readable package path and keep that path in query.",
+          ),
+        moduleId: z
+          .string()
+          .trim()
+          .min(1)
+          .optional()
+          .describe(
+            "Opaque module ID returned by Atlas. Omit for a human-readable module path and keep that path in query.",
+          ),
       })
       .strict()
       .optional()
-      .describe("Exact repository, package, or module constraints."),
+      .describe(
+        "Exact stored IDs only. Omit unknown package/module IDs; human-readable paths belong in query.",
+      ),
     budgetTokens: z.number().int().min(1).max(200_000).default(2_000),
     candidateLimit: limitSchema,
     summaryLimit: selectionLimitSchema,

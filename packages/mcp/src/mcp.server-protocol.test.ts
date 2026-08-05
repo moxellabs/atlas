@@ -201,7 +201,7 @@ describe("MCP server registration and in-memory protocol", () => {
       (tool) => tool.name === "answer_atlas_docs",
     );
     expect(facade).toMatchObject({
-      title: "Answer from atlas documentation",
+      title: "Broad atlas documentation overview",
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -211,7 +211,7 @@ describe("MCP server registration and in-memory protocol", () => {
       _meta: { "anthropic/alwaysLoad": true },
     });
     expect(facade?.description).toMatch(
-      /single strongest evidence passage.*session.*append/i,
+      /broad overview.*single strongest evidence passage.*session.*append/i,
     );
     expect(facade?.outputSchema).toMatchObject({ type: "object" });
     const result = await client.callTool({
@@ -235,7 +235,7 @@ describe("MCP server registration and in-memory protocol", () => {
           }),
         ]),
         recommendedNextActions: [
-          "Answer directly from context.evidence and cite provenance paths. Do not call another retrieval tool unless a required claim is unsupported.",
+          "Answer now from context.evidence and cite provenance paths. Do not call another retrieval tool.",
         ],
       },
       citations: expect.arrayContaining([expect.objectContaining({ repoId })]),

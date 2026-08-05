@@ -78,6 +78,7 @@
           "kind": "completion",
           "description": "States the documented division between broad answer preparation and precise retrieval.",
           "evidencePaths": [
+            "docs/retrieval-and-context.md",
             "docs/runtime-surfaces.md",
             "packages/mcp/README.md"
           ]
@@ -87,6 +88,7 @@
           "kind": "grounding",
           "description": "The rule is grounded in an indexed passage rather than inferred from tool names.",
           "evidencePaths": [
+            "docs/retrieval-and-context.md",
             "docs/runtime-surfaces.md",
             "packages/mcp/README.md"
           ]
@@ -96,6 +98,7 @@
           "kind": "citation",
           "description": "Cites the exact repository-relative source path.",
           "evidencePaths": [
+            "docs/retrieval-and-context.md",
             "docs/runtime-surfaces.md",
             "packages/mcp/README.md"
           ]
@@ -119,6 +122,8 @@
           "kind": "completion",
           "description": "Answers only the missing stale-coverage behavior.",
           "evidencePaths": [
+            "docs/configuration.md",
+            "docs/ingestion-build-flow.md",
             "docs/retrieval-and-context.md",
             "docs/runtime-surfaces.md"
           ]
@@ -128,6 +133,8 @@
           "kind": "grounding",
           "description": "Staleness behavior is supported by indexed documentation.",
           "evidencePaths": [
+            "docs/configuration.md",
+            "docs/ingestion-build-flow.md",
             "docs/retrieval-and-context.md",
             "docs/runtime-surfaces.md"
           ]
@@ -137,6 +144,8 @@
           "kind": "citation",
           "description": "Cites the path containing stale-coverage behavior.",
           "evidencePaths": [
+            "docs/configuration.md",
+            "docs/ingestion-build-flow.md",
             "docs/retrieval-and-context.md",
             "docs/runtime-surfaces.md"
           ]
@@ -148,7 +157,7 @@
       "sourceCaseId": "routing-ambiguity",
       "title": "Ambiguous scope question",
       "category": "ambiguity",
-      "prompt": "How does Atlas handle configuration? Distinguish the likely configuration scopes before answering, and cite the evidence packet used.",
+      "prompt": "Explain how Atlas configuration differs between repository/source settings and runtime/MCP identity settings. Use one evidence packet and cite both configuration scopes.",
       "routing": {
         "firstTools": ["atlas:answer_atlas_docs", "atlas:plan_context"],
         "maxAtlasCalls": 1,
@@ -159,19 +168,37 @@
           "id": "ambiguity-completion",
           "kind": "completion",
           "description": "Distinguishes repository configuration from runtime or MCP identity configuration.",
-          "evidencePaths": ["docs/configuration.md", "docs/runtime-surfaces.md"]
+          "evidencePaths": [
+            "docs/configuration.md",
+            "docs/retrieval-and-context.md",
+            "docs/runtime-surfaces.md",
+            "packages/retrieval/README.md",
+            "packages/retrieval/docs/index.md"
+          ]
         },
         {
           "id": "ambiguity-grounding",
           "kind": "grounding",
           "description": "Uses indexed scope-aware evidence instead of guessing one meaning.",
-          "evidencePaths": ["docs/configuration.md", "docs/runtime-surfaces.md"]
+          "evidencePaths": [
+            "docs/configuration.md",
+            "docs/retrieval-and-context.md",
+            "docs/runtime-surfaces.md",
+            "packages/retrieval/README.md",
+            "packages/retrieval/docs/index.md"
+          ]
         },
         {
           "id": "ambiguity-citation",
           "kind": "citation",
           "description": "Cites relevant configuration documentation.",
-          "evidencePaths": ["docs/configuration.md", "docs/runtime-surfaces.md"]
+          "evidencePaths": [
+            "docs/configuration.md",
+            "docs/retrieval-and-context.md",
+            "docs/runtime-surfaces.md",
+            "packages/retrieval/README.md",
+            "packages/retrieval/docs/index.md"
+          ]
         }
       ]
     },
@@ -180,10 +207,10 @@
       "sourceCaseId": "routing-expansion",
       "title": "Known-hit expansion",
       "category": "related-context",
-      "prompt": "Starting from the retrieval surface documentation for plan_context, identify the directly related document that explains ingestion and build flow. Use the stable hit you retrieve rather than restarting with multiple broad searches.",
+      "prompt": "A prior retrieval returned document ID doc_d4c49c8c77e916c7a95c7f7f for docs/retrieval-and-context.md. Using that stable hit, identify and explain the directly related ingestion/build-flow document without restarting search.",
       "routing": {
-        "firstTools": ["atlas:find_docs"],
-        "maxAtlasCalls": 2,
+        "firstTools": ["atlas:expand_related"],
+        "maxAtlasCalls": 1,
         "externalFallback": "forbidden"
       },
       "criteria": [
@@ -230,6 +257,8 @@
           "kind": "completion",
           "description": "Explains packages/mcp responsibilities and boundaries.",
           "evidencePaths": [
+            "docs/architecture.md",
+            "docs/runtime-surfaces.md",
             "packages/mcp/README.md",
             "packages/mcp/docs/index.md"
           ]
@@ -239,6 +268,8 @@
           "kind": "grounding",
           "description": "Uses a planner evidence packet rather than a fixed module helper.",
           "evidencePaths": [
+            "docs/architecture.md",
+            "docs/runtime-surfaces.md",
             "packages/mcp/README.md",
             "packages/mcp/docs/index.md"
           ]
@@ -248,6 +279,8 @@
           "kind": "citation",
           "description": "Cites MCP package documentation.",
           "evidencePaths": [
+            "docs/architecture.md",
+            "docs/runtime-surfaces.md",
             "packages/mcp/README.md",
             "packages/mcp/docs/index.md"
           ]

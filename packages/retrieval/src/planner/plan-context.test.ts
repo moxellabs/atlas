@@ -115,7 +115,7 @@ describe("planContext", () => {
       "Rotate session tokens by calling rotateSessionToken during renewal.",
     );
     expect(plan.contextPacket.recommendedNextActions).toEqual([
-      "Answer directly from context.evidence and cite provenance paths. Do not call another retrieval tool unless a required claim is unsupported.",
+      "Answer now from context.evidence and cite provenance paths. Do not call another retrieval tool.",
     ]);
   });
 

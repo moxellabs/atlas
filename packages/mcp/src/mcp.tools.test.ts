@@ -139,7 +139,7 @@ describe("MCP tool contracts", () => {
         { query: "session rotation", repoId, limit: 5 },
         dependencies,
       ).nextActionGuidance,
-    ).toContain("do not repeat find_docs");
+    ).toContain("Do not repeat find_docs");
     const filteredHits = executeFindDocs(
       {
         query: "session rotation",
@@ -219,7 +219,7 @@ describe("MCP tool contracts", () => {
           }),
         ]),
         recommendedNextActions: [
-          "Answer directly from context.evidence and cite provenance paths. Do not call another retrieval tool unless a required claim is unsupported.",
+          "Answer now from context.evidence and cite provenance paths. Do not call another retrieval tool.",
         ],
       },
       citations: expect.arrayContaining([
