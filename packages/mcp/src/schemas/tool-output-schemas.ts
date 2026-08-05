@@ -206,12 +206,12 @@ export const findScopesOutputSchema = z
 export const findDocsOutputSchema = z
   .object({
     query: z.string(),
+    nextActionGuidance: z.string(),
     classification: queryClassificationSchema,
     hits: z.array(rankedHitSchema),
     filters: metadataSchema.optional(),
     ambiguity: ambiguitySchema.optional(),
     diagnostics: z.array(diagnosticSchema),
-    nextActionGuidance: z.string(),
   })
   .strict();
 
@@ -410,6 +410,7 @@ const relatedChunkSchema = z
 
 export const expandRelatedOutputSchema = z
   .object({
+    nextActionGuidance: z.string(),
     anchor: z
       .object({
         targetType: z.enum([
@@ -437,7 +438,6 @@ export const expandRelatedOutputSchema = z
       })
       .strict(),
     diagnostics: z.array(diagnosticSchema),
-    nextActionGuidance: z.string(),
   })
   .strict();
 

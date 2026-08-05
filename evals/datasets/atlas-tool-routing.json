@@ -110,7 +110,7 @@
       "sourceCaseId": "routing-partial",
       "title": "Partial-answer follow-up",
       "category": "follow-up",
-      "prompt": "A prior answer established that Atlas artifacts are read-only but omitted one MCP rule. Return only the documented prefer-local behavior when local indexed coverage is absent, partial, or stale; do not investigate implementation details. Cite the passage.",
+      "prompt": "A prior answer established that Atlas artifacts are read-only but omitted one MCP rule. Retrieve one precise passage, then return only the documented prefer-local behavior when local indexed coverage is absent, partial, or stale; do not refine the retrieval or investigate implementation details. Cite that passage.",
       "routing": {
         "firstTools": ["atlas:find_docs"],
         "maxAtlasCalls": 1,
@@ -207,7 +207,7 @@
       "sourceCaseId": "routing-expansion",
       "title": "Known-hit expansion",
       "category": "related-context",
-      "prompt": "A prior retrieval returned document ID doc_d4c49c8c77e916c7a95c7f7f for docs/retrieval-and-context.md. Using that stable hit, identify and explain the directly related ingestion/build-flow document without restarting search.",
+      "prompt": "A prior retrieval returned document ID doc_d4c49c8c77e916c7a95c7f7f for docs/retrieval-and-context.md. Using that stable hit, retrieve one related-context packet and identify and explain the directly related ingestion/build-flow document from its returned summaries without loading every candidate or restarting search.",
       "routing": {
         "firstTools": ["atlas:expand_related"],
         "maxAtlasCalls": 2,
@@ -245,7 +245,7 @@
       "sourceCaseId": "routing-module",
       "title": "Module explanation through planner",
       "category": "module",
-      "prompt": "Explain the responsibilities and boundaries of packages/mcp as a module. Keep the answer within one coherent evidence budget and cite the relevant module documentation.",
+      "prompt": "Explain the responsibilities and boundaries of packages/mcp as a module. Keep the answer within one coherent evidence budget and cite at least one relevant documentation path under packages/mcp.",
       "routing": {
         "firstTools": ["atlas:answer_atlas_docs", "atlas:plan_context"],
         "maxAtlasCalls": 1,

@@ -11,6 +11,7 @@ import {
   ManifestRepository,
   openStore,
   RepoRepository,
+  SkillRepository,
 } from "@atlas/store";
 import { isolateCorpusSnapshot, readCorpusEvidence } from "./corpus-snapshot";
 
@@ -65,6 +66,34 @@ describe("corpus snapshots", () => {
       ],
       metadata: { tags: ["recovery", "append"] },
     });
+    const skillId = "skill_recovery";
+    new SkillRepository(source).upsert({
+      node: {
+        skillId,
+        repoId: targetRepoId,
+        path: evidencePath,
+        title: "Recovery Skill",
+        sourceDocPath: evidencePath,
+        topics: ["recovery"],
+        aliases: [],
+        tokenCount: 12,
+        diagnostics: [],
+      },
+      sourceDocId: docId,
+      headings: [["Recovery"]],
+      keySections: ["Repair the interrupted append."],
+      artifacts: [
+        {
+          skillId,
+          path: "agents/openai.yaml",
+          kind: "agent-profile",
+          contentHash: "artifact-hash",
+          sizeBytes: 31,
+          mimeType: "application/yaml",
+          content: "interface:\n  display_name: Recovery",
+        },
+      ],
+    });
     source.close();
     const provenance = await isolateCorpusSnapshot({
       sourcePath,
@@ -110,6 +139,20 @@ describe("corpus snapshots", () => {
       {
         path: evidencePath,
         text: "Recovery repairs only the interrupted append.\n\n```text\nscene-session-manifest.json\nscene-frames.jsonl\nscene-index.bin\n```",
+      },
+    ]);
+    expect(
+      readCorpusEvidence({
+        corpusPath: targetPath,
+        repoId: targetRepoId,
+        paths: [evidencePath, "agents/openai.yaml"],
+        ignoreMissing: true,
+      }),
+    ).toEqual([
+      expect.objectContaining({ path: evidencePath }),
+      {
+        path: "agents/openai.yaml",
+        text: `Skill artifact bundled by ${evidencePath}:\n\ninterface:\n  display_name: Recovery`,
       },
     ]);
     expect(() =>

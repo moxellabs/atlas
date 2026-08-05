@@ -9,6 +9,7 @@ import {
   openStore,
   RepoRepository,
   SectionRepository,
+  SkillRepository,
 } from "@atlas/store";
 
 export interface IsolatedCorpusProvenance {
@@ -88,9 +89,36 @@ export function readCorpusEvidence(input: {
       documents.map((document) => [document.path, document]),
     );
     const sections = new SectionRepository(store);
+    const requestedPaths = new Set(input.paths);
+    const artifactEvidence = new Map<string, CorpusEvidence | undefined>();
+    const skillRepository = new SkillRepository(store);
+    const skills = skillRepository
+      .listByRepo(input.repoId)
+      .filter((skill) => requestedPaths.has(skill.sourceDocPath));
+    for (const skill of skills) {
+      for (const artifact of skillRepository.listArtifacts(skill.skillId)) {
+        if (artifact.content === undefined) continue;
+        const evidence = {
+          path: artifact.path,
+          text: `Skill artifact bundled by ${skill.sourceDocPath}:\n\n${artifact.content}`,
+        };
+        artifactEvidence.set(
+          artifact.path,
+          artifactEvidence.has(artifact.path) ? undefined : evidence,
+        );
+        artifactEvidence.set(
+          `${skill.sourceDocPath.slice(0, skill.sourceDocPath.lastIndexOf("/") + 1)}${artifact.path}`,
+          evidence,
+        );
+      }
+    }
     return [...new Set(input.paths)].flatMap((path) => {
       const document = byPath.get(path);
       if (document === undefined) {
+        const artifact = artifactEvidence.get(path);
+        if (artifact !== undefined) {
+          return [{ ...artifact, path }];
+        }
         if (input.ignoreMissing === true) {
           return [];
         }
@@ -100,17 +128,17 @@ export function readCorpusEvidence(input: {
       }
       return [
         {
-        path,
-        text: sections
-          .listByDocument(document.docId)
-          .flatMap((section) => [
-            section.text,
-            ...section.codeBlocks.map(
-              (block) => `\`\`\`${block.lang ?? ""}\n${block.code}\n\`\`\``,
-            ),
-          ])
-          .filter((part) => part.length > 0)
-          .join("\n\n"),
+          path,
+          text: sections
+            .listByDocument(document.docId)
+            .flatMap((section) => [
+              section.text,
+              ...section.codeBlocks.map(
+                (block) => `\`\`\`${block.lang ?? ""}\n${block.code}\n\`\`\``,
+              ),
+            ])
+            .filter((part) => part.length > 0)
+            .join("\n\n"),
         },
       ];
     });

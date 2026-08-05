@@ -96,7 +96,7 @@ export function executeExpandRelated(
       },
     ],
     nextActionGuidance:
-      "Answer from the returned related records and their provenance. Do not restart retrieval or repeat expand_related.",
+      "STOP when a returned summary supports the missing claim: answer from the related records and their provenance. Do not restart retrieval, read every related candidate, or repeat expand_related.",
   });
 }
 
@@ -110,7 +110,7 @@ export function registerExpandRelatedTool(
     {
       title: "Expand one stored retrieval hit",
       description:
-        "Use once after find_docs, plan_context, or read_document returns a stable targetType and targetId and a related claim remains unsupported. Pass the missing claim in query to rank related documents around that anchor; omit query for scope locality. Answer from the result without restarting retrieval.",
+        "Use once after find_docs, plan_context, or read_document returns a stable targetType and targetId and a related claim remains unsupported. Pass the missing claim in query to rank related documents around that anchor; omit query for scope locality. Returned summaries are answer evidence: do not read every candidate, restart retrieval, or repeat expand_related.",
       inputSchema: expandRelatedInputSchema,
       outputSchema: expandRelatedOutputSchema,
       annotations: {

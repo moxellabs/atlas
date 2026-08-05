@@ -25,7 +25,7 @@ At query time, Atlas turns indexed repository documentation into an answer-ready
 
 - CLI: `atlas inspect retrieval`, `atlas list docs`, `atlas list sections`, and related inspection commands.
 - HTTP: search, context, document outline, document section, skill, and inspect routes.
-- MCP: the default agent surface exposes `plan_context`, `find_docs`, `read_document`, `expand_related`, `use_skill`, and one source-named answer facade. `plan_context` owns broad answer preparation, ambiguity handling, exact package or module constraints, freshness, and one deduplicated evidence budget. `find_docs` remains the precise retrieval primitive. `read_document` returns an outline or one exact section. The advanced profile also exposes `find_scopes`.
+- MCP: the default agent surface exposes `plan_context`, `find_docs`, `read_document`, `expand_related`, `use_skill`, and one source-named answer facade. `plan_context` owns broad answer preparation, ambiguity handling, exact package or module constraints, freshness, and one deduplicated evidence budget. `find_docs` remains the precise retrieval primitive for exact passages and one missing claim from a partial answer. `read_document` returns an outline or one exact section. The advanced profile also exposes `find_scopes`.
 
 ## Token Budgets And Omissions
 
